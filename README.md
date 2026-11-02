@@ -67,7 +67,7 @@
 
 > **First launch.** Beta builds are not signed with a developer certificate yet. On macOS, open the app, then **System Settings → Privacy & Security → Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/vutty.app`); step by step in [Installing on macOS](docs/InstallMac.md). On Windows, SmartScreen may warn: choose **More info → Run anyway**.
 
-**Updates:** **Settings → Check for updates** tells you when a newer release is out and opens its page; replace the old app with the new one and your data is kept.
+**Updates:** **Settings → Check for updates** tells you when a newer release is out and opens its page; replace the old app with the new one and your data is kept. Once a day, when the app opens, Vutty asks GitHub for the latest release (a plain request that sends nothing about you or your data); switch it off in **Settings → General → Check for updates automatically**.
 
 ### 2. First five minutes
 
@@ -95,7 +95,7 @@ Add hosts `127.0.0.1` port `2201` (bastion) and `2202`, username `demo`, passwor
 | --- | --- |
 | **Where it lives** | `~/Library/Application Support/vutty/` (one SQLite database plus a `known_hosts` file) |
 | **What is encrypted** | Keys and passwords: AES-256-GCM, with a key derived from your master password (Argon2id) |
-| **What leaves your Mac** | Nothing, unless you turn on Git sync, which only uploads encrypted data to *your* repository |
+| **What leaves your Mac** | No telemetry, no analytics, no account. Only what you turn on: Git or cloud-folder sync (encrypted data, to *your* repository or folder) and the AI assistant (redacted terminal text goes to the provider of the CLI you enabled). The one automatic request is the update check below |
 | **Unknown servers** | You confirm the fingerprint once. If a known server's key ever changes, the connection is **blocked with no override** |
 | **Forwards** | Listen on `127.0.0.1` only, unless you explicitly allow more |
 | **Auto-lock** | The vault locks after 15 idle minutes (configurable) |
