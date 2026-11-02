@@ -8,6 +8,8 @@
   <a href="https://github.com/vunguyenvu35/vvterm/releases/latest"><img src="https://img.shields.io/github/v/release/vunguyenvu35/vvterm?label=Download%20latest&style=for-the-badge&color=2ea44f" alt="Download the latest VVTerm release"></a>
 </p>
 
+<p align="center"><sub>macOS says the app "can't be opened"? Beta builds are not notarized yet: <a href="docs/InstallMac.md"><b>how to open it in three clicks</b></a>. · <a href="docs/Comparison.md">VVTerm vs Termius, Tabby and WindTerm</a></sub></p>
+
 <p align="center"><img src="docs/screenshots/20-split-panes.png" alt="VVTerm with two terminals side by side" width="900"></p>
 
 ## Why VVTerm
@@ -60,7 +62,7 @@
   Each release also lists `SHA256SUMS` so you can check your download.
 - **From source:** see the [Development guide](docs/Development.md) (three commands).
 
-> **First launch.** Beta builds are not signed with a developer certificate yet. On macOS, right-click **vvterm.app → Open → Open** once (or run `xattr -dr com.apple.quarantine /Applications/vvterm.app`). On Windows, SmartScreen may warn: choose **More info → Run anyway**.
+> **First launch.** Beta builds are not signed with a developer certificate yet. On macOS, open the app, then **System Settings → Privacy & Security → Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/vvterm.app`); step by step in [Installing on macOS](docs/InstallMac.md). On Windows, SmartScreen may warn: choose **More info → Run anyway**.
 
 **Updates:** **Settings → Check for updates** tells you when a newer release is out and opens its page; replace the old app with the new one and your data is kept.
 
@@ -178,6 +180,8 @@ TMXXHRNG7qauoFWJKYbqEbd4FGgt3DgjBK
 | [Release notes](RELEASE_NOTES.md) | what is new, quality results, known issues |
 | [Development guide](docs/Development.md) | build, test, Docker, deploy |
 | [Architecture](docs/CleanArchitecture.md) | layers, decisions, technical debt |
+| [Installing on macOS](docs/InstallMac.md) | opening a beta that is not notarized (Gatekeeper) |
+| [Comparison](docs/Comparison.md) | short table against Termius, Tabby and WindTerm |
 | [Assessment](docs/Assessment.md) | honest comparison with the original design |
 
 ## License
