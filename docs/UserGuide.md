@@ -1,8 +1,8 @@
-<p align="center"><img src="brand/logo-mark-256.png" alt="VuTerm" width="88"></p>
+<p align="center"><img src="brand/logo-mark-256.png" alt="Vutty" width="88"></p>
 
-# VuTerm user guide
+# Vutty user guide
 
-A step-by-step guide to every screen of VuTerm, from creating your vault to connecting, transferring files and getting help. The screenshots show the app as it looks today.
+A step-by-step guide to every screen of Vutty, from creating your vault to connecting, transferring files and getting help. The screenshots show the app as it looks today.
 
 ## Contents
 
@@ -111,7 +111,7 @@ Groups appear as cards with their host count. Click one to open it (a breadcrumb
 
 ## 6. Connect
 
-Double-click a host card (or press ▶), or use **Connect** in the New host form. The first time, VuTerm shows the server fingerprint. Verify it out of band, then choose **Trust and connect**. With a jump host you confirm each machine once.
+Double-click a host card (or press ▶), or use **Connect** in the New host form. The first time, Vutty shows the server fingerprint. Verify it out of band, then choose **Trust and connect**. With a jump host you confirm each machine once.
 
 ![Host key prompt](screenshots/13-host-key-prompt.png)
 
@@ -137,9 +137,9 @@ A terminal must be open and connected. Snippets sync with Git and are included i
 
 **Command suggestions.** While you type in a terminal, a **list** of the commands you used before that match appears under the cursor, each row marked *typed*, *snippet* or *host*: **↓ ↑** choose a row, then **Enter** or **Tab** put it on the line (it is never run for you), **Esc** closes the list until the next line. A row is only taken when you chose it with the arrows: until then Enter runs what you typed, **Tab** is the shell's own completion and the arrows go to the shell, as always. **⌘⇧J** (Ctrl+Shift+J on Windows and Linux; changeable in Settings → Shortcuts) opens the list by hand, also for an empty line; with nothing to show it says "No matching commands". **Ctrl/⌘+Shift+G** turns suggestions off and on at once and tells you which. Both are also in the **View** menu (*Command Suggestions* and *Show Suggestions*), which shows their keys.
 
-- The suggestions come from the commands you ran **at the same host** in VuTerm (the command that ran, as the screen shows it: a line completed with Tab or finished with the shell's own suggestion is kept whole). Each host has its own list, so a command typed on this computer is never offered at a server, and the other way round, the shell history of this computer (`~/.zsh_history` and `~/.bash_history`) in the **local** terminal, your Snippets of **one line** (a snippet of several lines is never suggested, because its first lines would run at once; a snippet is also found by its name) and, if you turn it on, the shell history of an SSH server.
+- The suggestions come from the commands you ran **at the same host** in Vutty (the command that ran, as the screen shows it: a line completed with Tab or finished with the shell's own suggestion is kept whole). Each host has its own list, so a command typed on this computer is never offered at a server, and the other way round, the shell history of this computer (`~/.zsh_history` and `~/.bash_history`) in the **local** terminal, your Snippets of **one line** (a snippet of several lines is never suggested, because its first lines would run at once; a snippet is also found by its name) and, if you turn it on, the shell history of an SSH server.
 - **Settings → Terminal → Suggest commands** switches it all off. **Suggest from the host's shell history** is off by default and is about SSH servers: it reads the last 3000 commands of `~/.bash_history` and `~/.zsh_history` over the open SSH connection when the terminal opens, keeps them in memory only, and leaves out any command that holds a secret.
-- A suggestion is only offered when VuTerm is sure what is on the line and the screen shows it at the cursor: not in vim or htop, not at a password prompt, and not while the shell is changing the line (after Tab or an arrow key the line is read from the screen again). A line that looks like a password, token or key is never suggested.
+- A suggestion is only offered when Vutty is sure what is on the line and the screen shows it at the cursor: not in vim or htop, not at a password prompt, and not while the shell is changing the line (after Tab or an arrow key the line is read from the screen again). A line that looks like a password, token or key is never suggested.
 
 
 ## 8. Split panes and search
@@ -150,7 +150,7 @@ Use the two buttons at the top right to split the focused pane right or down. Ev
 
 ## 9. SFTP: browse and transfer files
 
-Use the **folder button** on a host card to open a file browser in its own tab (the tab has a folder icon). VuTerm opens a separate SSH connection, through the jump hosts if the host has any, so you do not need an open terminal. The first time you connect to an unknown server you are asked to trust its key, exactly as for a terminal.
+Use the **folder button** on a host card to open a file browser in its own tab (the tab has a folder icon). Vutty opens a separate SSH connection, through the jump hosts if the host has any, so you do not need an open terminal. The first time you connect to an unknown server you are asked to trust its key, exactly as for a terminal.
 
 ![SFTP browser](screenshots/29-sftp-browser.png)
 
@@ -167,7 +167,7 @@ Transfers run **in the background**, two at a time, and are listed in the **Tran
 - **Pause** stops a transfer where it is and **Resume** continues it **from the bytes already copied**, not from the start. A transfer that fails (the network drops, the disk is full) keeps what it had: **Retry** continues it. The same holds if you close and reopen the connection: send the file again and the partial copy is continued, as long as the file has not changed in between.
 - **Cancel** ends a transfer for good and deletes the partial file it left.
 - **Clear finished** removes the done, failed and cancelled lines.
-- A partial copy is a hidden file next to the target (`.vuterm-part-…`) until the transfer is complete; then it is renamed into place, so a half-written file never has the real name.
+- A partial copy is a hidden file next to the target (`.vutty-part-…`) until the transfer is complete; then it is renamed into place, so a half-written file never has the real name.
 
 ### Sync folders
 
@@ -177,14 +177,14 @@ A sync **never deletes anything**: files that only the target has are listed and
 
 ### Edit a remote file
 
-Right-click a file on the server and choose **Edit and save back**. VuTerm downloads it, opens it in the program your computer uses for that kind of file, and **uploads it again every time you save**, keeping the permissions the file had. If the file on the server changed since you opened it, nothing is overwritten: you are asked whether to replace the server's copy with yours. (A change is noticed by size and by time to the second, so two edits in the same second that leave the size unchanged are not told apart.)
+Right-click a file on the server and choose **Edit and save back**. Vutty downloads it, opens it in the program your computer uses for that kind of file, and **uploads it again every time you save**, keeping the permissions the file had. If the file on the server changed since you opened it, nothing is overwritten: you are asked whether to replace the server's copy with yours. (A change is noticed by size and by time to the second, so two edits in the same second that leave the size unchanged are not told apart.)
 
 ### Files in the terminal sidebar
 
 The sidebar of a terminal has a **Files (SFTP)** section for the host of the focused pane: browse its folders, upload files or a folder, download, with the same queue. It opens its own connection when you open the section and closes it when you leave. It is not offered for a terminal on this computer, a serial port or Telnet.
 
 - If the connection drops, a banner offers **Reconnect**.
-- **Limits:** transfers do not preserve the modification time of the files; stale `.vuterm-part-…` files from a transfer you abandoned are not cleaned up by themselves (delete them by hand); no drag and drop of files from Finder into the window (use the buttons). Closing an SFTP tab asks first (see *Confirm before closing a tab*).
+- **Limits:** transfers do not preserve the modification time of the files; stale `.vutty-part-…` files from a transfer you abandoned are not cleaned up by themselves (delete them by hand); no drag and drop of files from Finder into the window (use the buttons). Closing an SFTP tab asks first (see *Confirm before closing a tab*).
 
 ## 10. Port forwarding
 
@@ -223,23 +223,23 @@ Anything unsupported (for example `ProxyCommand`) is listed as a warning instead
 
 ## 12. Settings
 
-Open **Settings** from the navigation, the gear in the title bar, or **⌘/Ctrl + ,** (it works from a terminal tab too). It opens as **a window of its own** (with the usual red, yellow and green buttons): move it anywhere, resize it, or use the green button for macOS full screen. Opening it again brings the existing window to the front, and it closes when you quit VuTerm. (Screenshots below show the same content in the in-app variant that the test run uses.)
+Open **Settings** from the navigation, the gear in the title bar, or **⌘/Ctrl + ,** (it works from a terminal tab too). It opens as **a window of its own** (with the usual red, yellow and green buttons): move it anywhere, resize it, or use the green button for macOS full screen. Opening it again brings the existing window to the front, and it closes when you quit Vutty. (Screenshots below show the same content in the in-app variant that the test run uses.)
 
 ![Settings window](screenshots/45-settings-general.png)
 
 The menu on the left has **General, Account, Terminal, Security, AI assistant, Sync, Shortcuts, Storage**, then **Theme**, help links (documentation, feature requests, bug reports, release notes, Ko-fi) and the **version**. Changes apply immediately.
 
-**Updates.** **Check for updates** (under the help links) asks GitHub for the latest release and compares it with your version. If there is a newer one, **Version X is available** appears: click it to open the release page and download the build for your system (macOS `.dmg` or `.zip`, Windows `.exe`, Linux `.tar.gz`). To update, quit VuTerm and replace the old app with the new one; your data is kept outside the app, so nothing is lost. The check only runs when you click it, and only the release information is read: nothing about you is sent. A pre-release is not offered as an update.
+**Updates.** **Check for updates** (under the help links) asks GitHub for the latest release and compares it with your version. If there is a newer one, **Version X is available** appears: click it to open the release page and download the build for your system (macOS `.dmg` or `.zip`, Windows `.exe`, Linux `.tar.gz`). To update, quit Vutty and replace the old app with the new one; your data is kept outside the app, so nothing is lost. The check only runs when you click it, and only the release information is read: nothing about you is sent. A pre-release is not offered as an update.
 
-When VuTerm opens it also looks by itself, at most once a day (switch it off with **Check for updates automatically** in General). If a newer release exists, an **Update** chip appears in the top right corner; click it to see the news.
+When Vutty opens it also looks by itself, at most once a day (switch it off with **Check for updates automatically** in General). If a newer release exists, an **Update** chip appears in the top right corner; click it to see the news.
 
 ![The Update chip in the top right corner](updates/update-chip.png)
 
-![About VuTerm with a newer version available](updates/about-update-available.png)
+![About Vutty with a newer version available](updates/about-update-available.png)
 
 ![The switch in Settings → General](updates/settings-auto-update.png)
 
-**Help → About VuTerm** and **Help → Check for Updates…** open the same window, also while the vault is locked.
+**Help → About Vutty** and **Help → Check for Updates…** open the same window, also while the vault is locked.
 
 - **General:** **Zoom** makes the whole interface larger or smaller (80 % to 160 %, also with the zoom shortcuts), **Reduce motion** turns animations off, and **Confirm before closing a tab** asks before ending a terminal or SFTP connection.
 - **Account:** a local profile (display name and email, stored only in your settings file), your plan, and a disabled **Sign in** for the cloud features planned for later. Nothing is sent anywhere. The **Donate** card lists USDT addresses (Tron and BSC), each with a **Copy** button, if you want to support the project.
@@ -251,7 +251,7 @@ When VuTerm opens it also looks by itself, at most once a day (switch it off wit
 ![Maximised settings](screenshots/47-settings-maximized.png)
 
 - **Shortcuts:** every action has a default, shown as key caps (⇧ ⌘ T). Click it, press the new combination and it is saved. To make a **two-step shortcut** such as ⌘K then M, press the first combination and, within about a second, the second key (it needs no modifier); wait instead and it stays a one-step shortcut. While a two-step shortcut is running, a small note at the bottom says it is waiting for the next key; Esc cancels it. Two-step shortcuts have no key hint in the menu bar. One shortcut cannot be both a one-step shortcut and the first step of another. A combination already in use is refused and tells you which action owns it; plain keys are refused (add Ctrl, Alt or ⌘; F-keys are allowed). *Reset* returns one action to its default, *Reset all* all of them. Esc and a few terminal keys are fixed and listed below the table.
-- **Storage:** **Clear cache** removes files VuTerm can make again and what it remembers about your AI tools (they are looked up again; it reports what it removed). **Reset settings** puts appearance, terminal, general options, shortcuts and auto-lock back to their defaults after you confirm. Your profile, sync target, hosts, keys and the vault are never touched.
+- **Storage:** **Clear cache** removes files Vutty can make again and what it remembers about your AI tools (they are looked up again; it reports what it removed). **Reset settings** puts appearance, terminal, general options, shortcuts and auto-lock back to their defaults after you confirm. Your profile, sync target, hosts, keys and the vault are never touched.
 
 ![Shortcuts](screenshots/51-settings-shortcuts.png)
 
@@ -278,7 +278,7 @@ Open **Settings → Sync**.
 2. **Repository URL → Save repository → Sync now.**
 3. On a new Mac open **Settings → Sync**, enter the URL, and choose **Restore from repository** with the master password of the synced vault (only before a local vault exists).
 
-**No Git? Use a cloud folder instead.** Choose **Cloud folder**, then **Browse…** and pick a folder that Google Drive for Desktop, iCloud Drive, Dropbox or OneDrive keeps in step (for example `~/Google Drive/VuTerm`), then **Use this folder → Sync now**. There is no sign-in and no token: VuTerm only writes `bundle.enc` and `vault-header.json` into that folder and the cloud client uploads them. On a new Mac, pick the same folder, wait until the files have downloaded, and choose **Restore from folder**. If two Macs save at the same moment, the cloud client may keep an extra copy such as `bundle (1).enc`; the next sync merges every copy per record and deletes the extra ones. A copy that is still downloading or belongs to another vault is left alone.
+**No Git? Use a cloud folder instead.** Choose **Cloud folder**, then **Browse…** and pick a folder that Google Drive for Desktop, iCloud Drive, Dropbox or OneDrive keeps in step (for example `~/Google Drive/Vutty`), then **Use this folder → Sync now**. There is no sign-in and no token: Vutty only writes `bundle.enc` and `vault-header.json` into that folder and the cloud client uploads them. On a new Mac, pick the same folder, wait until the files have downloaded, and choose **Restore from folder**. If two Macs save at the same moment, the cloud client may keep an extra copy such as `bundle (1).enc`; the next sync merges every copy per record and deletes the extra ones. A copy that is still downloading or belongs to another vault is left alone.
 
 The repository (or folder) only holds `bundle.enc` and `vault-header.json`, both encrypted: hostnames and IPs are not visible. Conflicts are merged per record (newest edit wins; a newer edit beats an older delete and the reverse).
 
@@ -300,7 +300,7 @@ If you have an **encrypted backup**, restore it from **Import / Export** after u
 
 | Symptom | What it means / what to do |
 | --- | --- |
-| Red banner *connection lost… Press Enter to reconnect* | The link dropped. VuTerm never reconnects by itself so commands are not replayed by surprise: press Enter in the pane. |
+| Red banner *connection lost… Press Enter to reconnect* | The link dropped. Vutty never reconnects by itself so commands are not replayed by surprise: press Enter in the pane. |
 | *HOST KEY CHANGED* | The server shows a different key than the one you trusted. The connection is blocked with no override. Check with the server's owner; if the change is legitimate, remove the old line from `known_hosts` by hand. |
 | *vault is locked* | Unlock the vault and retry. |
 | *identity is used by host …* | Detach the identity from its hosts before deleting it. |
@@ -319,14 +319,14 @@ In a narrow window the layout adapts: the navigation becomes icons and the New h
 
 ## 16. Where your data lives
 
-| Item | macOS path (`~/Library/Application Support/vuterm/`) |
+| Item | macOS path (`~/Library/Application Support/vutty/`) |
 | --- | --- |
-| Hosts, groups, identities (metadata), forwards, snippets, encrypted vault | `data/vuterm.db` (SQLite) |
+| Hosts, groups, identities (metadata), forwards, snippets, encrypted vault | `data/vutty.db` (SQLite) |
 | Trusted host keys | `data/known_hosts` |
 | Appearance, terminal theme, auto-lock, sync URL | `data/settings.json` |
 | Git working copy (ciphertext only) | `sync/` |
 
-Set `VUTERM_DATA_DIR` to relocate everything. Back up with **Import / Export → Encrypted backup**; losing the master password without a backup means losing the vault.
+Set `VUTTY_DATA_DIR` to relocate everything. Back up with **Import / Export → Encrypted backup**; losing the master password without a backup means losing the vault.
 
 ## 17. Connecting: protocol, progress and errors
 
@@ -336,7 +336,7 @@ Opening a host first asks **which protocol** to use (SSH, Mosh, Telnet), like Te
 
 Then the **connecting screen** shows who you are connecting to and a line from the plug to the terminal. The line moves **smoothly**: slowly while the server answers, further once the login is done, and to the end when the shell is open, and only then does the terminal show. If it fails, the line stops where it got to and turns red, with the reason and **Retry**, **Show logs** (opens the Logs page) and **Close**.
 
-The state of every tab is a small badge on its icon: a spinner while connecting, a **green** dot while connected, a **red** dot when the connection is lost (press Enter in the pane, or Retry, to reconnect: VuTerm never reconnects by itself).
+The state of every tab is a small badge on its icon: a spinner while connecting, a **green** dot while connected, a **red** dot when the connection is lost (press Enter in the pane, or Retry, to reconnect: Vutty never reconnects by itself).
 
 ## 18. Tabs: order, split, new window
 
@@ -385,11 +385,11 @@ The panel on the right of every terminal (the last button of the title bar shows
 
 ## 22. AI assistant
 
-Ask an AI about what is on a terminal. VuTerm uses the AI command-line tool you already have and are signed in to (Claude Code, Codex CLI, Gemini CLI, or a command you add), so your own subscription is used and no key is stored.
+Ask an AI about what is on a terminal. Vutty uses the AI command-line tool you already have and are signed in to (Claude Code, Codex CLI, Gemini CLI, or a command you add), so your own subscription is used and no key is stored.
 
 ![Settings → AI assistant: providers, models and privacy](assistant/assistant-settings.png)
 
-1. **Settings → AI assistant** lists the tools VuTerm found. Switch one on. It stays off until you do, and it must pass a short isolation test (the tool is asked to run a command and must be unable to). If a tool says *Needs sign-in*, run the command shown next to it in a terminal first.
+1. **Settings → AI assistant** lists the tools Vutty found. Switch one on. It stays off until you do, and it must pass a short isolation test (the tool is asked to run a command and must be unable to). If a tool says *Needs sign-in*, run the command shown next to it in a terminal first.
 2. Pick the model for each tool. The list is read from the tool itself; you choose from that list. A tool that cannot list its models uses its default one.
 3. Open a terminal, then the sparkle icon in the sidebar. Choose the provider and model from the chip under the message box, type a question, press Enter. **Ask about selection** sends only the text you selected. To change the model without the mouse, press **⌘ ⇧ M** (Ctrl Shift M elsewhere): it moves to the next model of the provider, wrapping round at the end, and shows the name in a short message.
 4. The assistant only *suggests* commands. **Insert** puts one on the prompt without pressing Enter. **Run** sends a command that only reads at once; a command that can change something shows **Run…** and asks in its card first (and the word `run` for a risky one). A command that contains a hidden value cannot be run from the panel.
@@ -398,7 +398,7 @@ Ask an AI about what is on a terminal. VuTerm uses the AI command-line tool you 
 
 ![The provider and model menu](assistant/assistant-model-menu.png)
 
-**Files and screenshots.** Drag a log, a config file or a screenshot onto the panel, paste a screenshot, or use the paperclip. Text files are redacted like the screen. A picture cannot be redacted, so VuTerm asks you to confirm each time and only sends pictures to tools that take them (Claude Code, Codex CLI).
+**Files and screenshots.** Drag a log, a config file or a screenshot onto the panel, paste a screenshot, or use the paperclip. Text files are redacted like the screen. A picture cannot be redacted, so Vutty asks you to confirm each time and only sends pictures to tools that take them (Claude Code, Codex CLI).
 
 ![A log and a screenshot added to a question; the picture is confirmed in the chat](assistant/assistant-attach.png)
 
