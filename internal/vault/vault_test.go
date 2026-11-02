@@ -468,3 +468,109 @@ func TestKeychainNeedsTheAuthenticator(t *testing.T) {
 }
 
 var errCancelled = os.ErrPermission
+
+// ---- the key check: a key that comes from the keychain must be the vault's own ----
+
+func TestKeychainRefusesAStaleKeyEvenWhenTheVaultHasNoSecrets(t *testing.T) {
+	v, dir, kc := newVault(t)
+	if err := v.Create(pw); err != nil {
+		t.Fatal(err)
+	}
+	if len(v.f.Header.KeyCheck) == 0 {
+		t.Fatal("a new vault must carry a key check")
+	}
+	// the keychain holds a key left by an older vault of the same place
+	stale := bytes.Repeat([]byte{7}, dekLen)
+	if err := kc.Set("vvterm", dir, stale); err != nil {
+		t.Fatal(err)
+	}
+	v.Lock()
+	if err := v.UnlockKeychain(); err != ErrNoKeychain {
+		t.Fatalf("a stale key was accepted: %v", err)
+	}
+	if st := v.Status(); st.Unlocked {
+		t.Fatal("unlocked with a key of another vault")
+	}
+	if _, err := kc.Get("vvterm", dir); err == nil {
+		t.Fatal("the stale key must be removed so it is not offered again")
+	}
+	// the master password still opens it
+	if err := v.Unlock(pw); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestKeychainUnlockStillWorksWithTheRightKey(t *testing.T) {
+	v, _, _ := newVault(t)
+	if err := v.Create(pw); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.EnableKeychain(); err != nil {
+		t.Fatal(err)
+	}
+	v.Lock()
+	if err := v.UnlockKeychain(); err != nil {
+		t.Fatalf("the vault's own key must open it: %v", err)
+	}
+}
+
+func TestAVaultFromBeforeTheKeyCheckGetsOneAtTheNextPasswordUnlock(t *testing.T) {
+	v, dir, kc := newVault(t)
+	if err := v.Create(pw); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.EnableKeychain(); err != nil {
+		t.Fatal(err)
+	}
+	v.f.Header.KeyCheck = nil // what an older vault looks like
+	if err := v.flush(); err != nil {
+		t.Fatal(err)
+	}
+	v.Lock()
+	// with no check and no secret a key from outside cannot be trusted: the password is asked for, the entry stays
+	if err := v.UnlockKeychain(); err != ErrNoKeychain {
+		t.Fatalf("an unverifiable key was accepted: %v", err)
+	}
+	if _, err := kc.Get("vvterm", dir); err != nil {
+		t.Fatal("an entry that could not be checked must not be deleted")
+	}
+	if err := v.Unlock(pw); err != nil {
+		t.Fatal(err)
+	}
+	if len(v.f.Header.KeyCheck) == 0 {
+		t.Fatal("the password unlock must add the check")
+	}
+	v.Lock()
+	if err := v.UnlockKeychain(); err != nil {
+		t.Fatalf("with the check in place the keychain works again: %v", err)
+	}
+}
+
+func TestKeyCheckSurvivesChangePasswordAndAdopt(t *testing.T) {
+	v, _, _ := newVault(t)
+	if err := v.Create(pw); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.ChangePassword(pw, "a brand new master password"); err != nil {
+		t.Fatal(err)
+	}
+	h, _ := v.Header()
+	if len(h.KeyCheck) == 0 {
+		t.Fatal("ChangePassword lost the key check")
+	}
+	v.Lock()
+	if err := v.UnlockKeychain(); err == nil {
+		t.Fatal("no keychain entry: it must not unlock")
+	}
+	// a header from a repository made before the check existed gets one when it is adopted
+	old := h
+	old.KeyCheck = nil
+	v2, _, _ := newVault(t)
+	if err := v2.Adopt("a brand new master password", old, nil); err != nil {
+		t.Fatal(err)
+	}
+	h2, _ := v2.Header()
+	if len(h2.KeyCheck) == 0 {
+		t.Fatal("Adopt must add the check")
+	}
+}

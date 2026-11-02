@@ -194,6 +194,33 @@ func open(key, ct, nonce, aad []byte) ([]byte, error) {
 // format: the app was renamed from VVTerm, but changing them would make existing vaults and backups unreadable.
 var headerAAD = []byte("vvterm/dek/v1")
 
+// keyCheckAAD and keyCheckText make the KeyCheck of a header: a fixed text sealed with the DEK.
+const (
+	keyCheckAAD  = "vutty/key-check/v1"
+	keyCheckText = "this key opens the vault"
+)
+
+// makeKeyCheck seals the known text with dek (nonce first).
+func makeKeyCheck(dek []byte) ([]byte, error) {
+	ct, nonce, err := seal(dek, []byte(keyCheckText), []byte(keyCheckAAD))
+	if err != nil {
+		return nil, err
+	}
+	return append(nonce, ct...), nil
+}
+
+// keyMatchesHeader reports whether dek is the key of h: true or false when h has a KeyCheck, errUnverifiable when it has none.
+func keyMatchesHeader(dek []byte, h Header) (bool, error) {
+	if len(h.KeyCheck) < 12 {
+		return false, errUnverifiable
+	}
+	plain, err := open(dek, h.KeyCheck[12:], h.KeyCheck[:12], []byte(keyCheckAAD))
+	return err == nil && string(plain) == keyCheckText, nil
+}
+
+// errUnverifiable: nothing in the vault can tell whether a key from outside is the right one.
+var errUnverifiable = errors.New("the key cannot be checked")
+
 func newHeader(pw string, p KDFParams, dek []byte) (Header, error) {
 	p.Salt = make([]byte, saltLen)
 	if _, err := rand.Read(p.Salt); err != nil {
@@ -205,7 +232,27 @@ func newHeader(pw string, p KDFParams, dek []byte) (Header, error) {
 	if err != nil {
 		return Header{}, err
 	}
-	return Header{Version: fileVersion, KDF: p, WrappedDEK: ct, Nonce: nonce}, nil
+	check, err := makeKeyCheck(dek)
+	if err != nil {
+		return Header{}, err
+	}
+	return Header{Version: fileVersion, KDF: p, WrappedDEK: ct, Nonce: nonce, KeyCheck: check}, nil
+}
+
+// ensureKeyCheck gives a header made before KeyCheck existed its check, now that dek is known to be right (it was
+// just unwrapped with the master password). A failure to save is not an error: it is tried again at the next unlock.
+func (v *Vault) ensureKeyCheck(dek []byte) {
+	if v.f == nil || len(v.f.Header.KeyCheck) > 0 {
+		return
+	}
+	check, err := makeKeyCheck(dek)
+	if err != nil {
+		return
+	}
+	v.f.Header.KeyCheck = check
+	if err := v.flush(); err != nil {
+		v.f.Header.KeyCheck = nil
+	}
 }
 
 func unwrap(pw string, h Header) ([]byte, error) {
@@ -272,6 +319,7 @@ func (v *Vault) Unlock(pw string) error {
 		return err
 	}
 	v.dek = dek
+	v.ensureKeyCheck(dek)
 	v.armTimer()
 	return nil
 }
@@ -327,8 +375,10 @@ func (v *Vault) UnlockKeychain() error {
 	}
 	// verify the DEK really belongs to this vault before trusting it
 	if err := v.verifyDEK(dek); err != nil {
-		_ = v.kc.Delete("vvterm", v.account)
-		return ErrNoKeychain
+		if !errors.Is(err, errUnverifiable) {
+			_ = v.kc.Delete("vvterm", v.account) // a key of another vault: it must not be offered again
+		}
+		return ErrNoKeychain // when it cannot be checked, the master password is asked for (and makes the check)
 	}
 	v.dek = dek
 	v.armTimer()
@@ -336,11 +386,22 @@ func (v *Vault) UnlockKeychain() error {
 }
 
 func (v *Vault) verifyDEK(dek []byte) error {
+	ok, err := keyMatchesHeader(dek, v.f.Header)
+	if err == nil {
+		if !ok {
+			return errors.New("the key does not belong to this vault")
+		}
+		return nil
+	}
+	// a vault from before KeyCheck: a secret can tell
 	for _, s := range v.f.Secrets {
+		if s.Deleted() {
+			continue
+		}
 		_, err := open(dek, s.Ciphertext, s.Nonce, []byte(s.ID))
 		return err
 	}
-	return nil
+	return errUnverifiable // an empty vault with no check: any key would pass, so none is trusted
 }
 
 // Lock wipes the DEK from memory.
@@ -567,6 +628,11 @@ func (v *Vault) Adopt(pw string, h Header, secrets []domain.Secret) error {
 	if err != nil {
 		return err
 	}
+	if len(h.KeyCheck) == 0 {
+		if h.KeyCheck, err = makeKeyCheck(dek); err != nil {
+			return err
+		}
+	}
 	v.f = &Snapshot{Header: h, Secrets: append([]domain.Secret(nil), secrets...)}
 	if err := v.flush(); err != nil {
 		v.f = nil
@@ -575,6 +641,81 @@ func (v *Vault) Adopt(pw string, h Header, secrets []domain.Secret) error {
 	v.dek = dek
 	v.armTimer()
 	return nil
+}
+
+// AdoptKey makes this unlocked vault use the key of another vault (the one a sync repository belongs to) while
+// keeping what it holds: pw must unwrap h's DEK, every secret is sealed again under that DEK, and the header becomes
+// h, so from now on the master password is that vault's. The vault stays unlocked. Nothing changes when the password
+// is wrong or when the new state cannot be saved. Tombstones are kept as they are.
+func (v *Vault) AdoptKey(pw string, h Header) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.f == nil {
+		return ErrNoVault
+	}
+	if v.dek == nil {
+		return ErrLocked
+	}
+	newDEK, err := unwrap(pw, h)
+	if err != nil {
+		return err
+	}
+	sealed := make([]domain.Secret, 0, len(v.f.Secrets))
+	for _, s := range v.f.Secrets {
+		if s.Deleted() {
+			sealed = append(sealed, s)
+			continue
+		}
+		plain, err := open(v.dek, s.Ciphertext, s.Nonce, []byte(s.ID))
+		if err != nil {
+			zero(newDEK)
+			return fmt.Errorf("secret %s: %w", s.ID, err)
+		}
+		ct, nonce, err := seal(newDEK, plain, []byte(s.ID))
+		zero(plain)
+		if err != nil {
+			zero(newDEK)
+			return err
+		}
+		s.Ciphertext, s.Nonce = ct, nonce
+		sealed = append(sealed, s)
+	}
+	if len(h.KeyCheck) == 0 {
+		if h.KeyCheck, err = makeKeyCheck(newDEK); err != nil {
+			zero(newDEK)
+			return err
+		}
+	}
+	old := v.f
+	v.f = &Snapshot{Header: h, Secrets: sealed}
+	if err := v.flush(); err != nil {
+		v.f = old
+		zero(newDEK)
+		return err
+	}
+	zero(v.dek)
+	v.dek = newDEK
+	// the quick-unlock key of the old vault would no longer open this one: keep quick unlock working if it was on
+	if v.kc != nil && v.keychainHas() {
+		if err := v.kc.Set("vvterm", v.account, newDEK); err != nil {
+			_ = v.kc.Delete("vvterm", v.account)
+		}
+	}
+	return nil
+}
+
+// OpenWithHeader opens a blob sealed with the DEK that h wraps, using that vault's master password. It lets a caller
+// check a password against a sync repository before any change is made.
+func OpenWithHeader(pw string, h Header, blob, aad []byte) ([]byte, error) {
+	dek, err := unwrap(pw, h)
+	if err != nil {
+		return nil, err
+	}
+	defer zero(dek)
+	if len(blob) < 12 {
+		return nil, errors.New("blob too short")
+	}
+	return open(dek, blob[12:], blob[:12], aad)
 }
 
 // SealBlob encrypts arbitrary data (the sync bundle) with the DEK.
