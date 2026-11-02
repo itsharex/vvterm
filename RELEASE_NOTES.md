@@ -1,10 +1,10 @@
 <p align="center"><img src="docs/brand/logo-mark-256.png" alt="Vutty" width="88"></p>
 
-# Vutty 1.1.2
+# Vutty 1.2.0
 
-Release date: 2026-10-30 · Platform: macOS (arm64 build verified) · Status: beta. Read [Known issues](#known-issues) first.
+Release date: 2026-11-02 · Platform: macOS (arm64 build verified) · Status: beta. Read [Known issues](#known-issues) first.
 
-## Unreleased
+## What's new in 1.2.0
 
 - **VuTerm is now Vutty.** The VuTerm name was used for a few days only, and Vutty is shorter and says more (a *tty* is a terminal). The logo mark is unchanged, the wordmark now reads Vutty. Your data comes with you from VuTerm and from VVTerm alike: on first start the data folder (`vuterm` or `vvterm`) is renamed to `vutty`, the database file is renamed too, saved view settings are copied to the new names, `$VUTERM_DATA_DIR` and `$VVTERM_DATA_DIR` still work next to the new `$VUTTY_DATA_DIR`, and Quick unlock (Touch ID) and `.vvbak` / `.vubak` backups keep working. The app is now `vutty.app`, and the update check and the links point to `github.com/vunguyenvu35/vutty`.
 
@@ -268,7 +268,7 @@ Open the new build: the database migrates itself (v1 → v2) on first start. Bac
 ```bash
 make test        # all unit, integration and component tests
 make e2e         # walkthrough against the real backend; refreshes docs/screenshots
-make build       # build/bin/vvterm.app
+make build       # build/bin/vutty.app
 scripts/deploy.sh prod --dry-run   # the release pipeline without side effects
 ```
 
