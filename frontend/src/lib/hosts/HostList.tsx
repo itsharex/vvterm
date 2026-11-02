@@ -31,6 +31,8 @@ interface Props {
   onMoveHost?(h: Host, groupId: string): void
   onEditGroup(g: Group): void
   onDeleteGroup(g: Group): void
+  /** the group being shown changed ('' = All hosts); also called once on mount */
+  onGroupChange?(groupId: string): void
   /** Text being typed in the New host panel: shown as a highlighted draft card. `undefined` = no draft. */
   draft?: string
   /** The typed text is `[ssh ][user@]host[:port]` and matches no saved host. */
@@ -94,6 +96,8 @@ export function HostList(p: Props) {
   const groupIds = useMemo(() => new Set(p.groups.map(g => g.id)), [p.groups])
   // a group whose id vanished (deleted elsewhere) falls back to the root
   const current = groupId && groupIds.has(groupId) ? groupId : ''
+  const onGroupChange = p.onGroupChange
+  useEffect(() => { onGroupChange?.(current) }, [current, onGroupChange])
   const filtering = q.trim() !== '' || env !== '' || activeTags.length > 0
 
   const matches = useMemo(() => {

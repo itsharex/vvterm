@@ -44,6 +44,18 @@ describe('HostList', () => {
     expect(labels().sort()).toEqual(['box', 'cdn-1', 'db-1', 'web-1'])
   })
 
+  it('tells the page which group is open, so a new host or group can start in it', async () => {
+    const onGroupChange = vi.fn()
+    setup({onGroupChange})
+    expect(onGroupChange).toHaveBeenLastCalledWith('')
+    await userEvent.click(screen.getByRole('button', {name: 'Open group prod-cluster'}))
+    expect(onGroupChange).toHaveBeenLastCalledWith('g1')
+    await userEvent.click(screen.getByRole('button', {name: 'Open group edge'}))
+    expect(onGroupChange).toHaveBeenLastCalledWith('g2')
+    await userEvent.click(screen.getByRole('button', {name: 'All hosts'}))
+    expect(onGroupChange).toHaveBeenLastCalledWith('')
+  })
+
   it('searches across all groups by label, hostname, user and tag', async () => {
     setup()
     const box = screen.getByLabelText('Search hosts')

@@ -34,6 +34,29 @@ describe('HostForm: AI assistant', () => {
   })
 })
 
+describe('HostForm: group of a new host', () => {
+  it('starts in the group that is open on the hosts page and saves it', async () => {
+    const {be} = setup(undefined, {defaultGroupId: 'g1'})
+    await userEvent.type(screen.getByLabelText('Hostname'), 'a.example.com')
+    await userEvent.click(screen.getByRole('button', {name: 'Save'}))
+    await waitFor(() => expect(savedPayload(be)).toMatchObject({group_id: 'g1'}))
+  })
+
+  it('does not move an existing host into the open group', async () => {
+    const {be} = setup(host({id: 'h1', hostname: 'a.example.com'}), {defaultGroupId: 'g1'})
+    await userEvent.click(screen.getByRole('button', {name: 'Save'}))
+    await waitFor(() => expect(savedPayload(be)).toMatchObject({group_id: ''}))
+  })
+
+  it('a new group is created inside the open group', async () => {
+    const be = makeFake({})
+    render(<Providers be={be}><GroupForm groups={[{id: 'g1', name: 'prod', sort_order: 0}]} defaultParentId="g1" onClose={vi.fn()} onSaved={vi.fn()} /></Providers>)
+    await userEvent.type(screen.getByLabelText('Group name'), 'edge')
+    await userEvent.click(screen.getByRole('button', {name: /^(Save|Create)/}))
+    await waitFor(() => expect(be.state.groups.find(g => g.name === 'edge')).toMatchObject({parent_id: 'g1'}))
+  })
+})
+
 describe('HostForm', () => {
   it('follows the Termius flow: address, general, port, credentials, options', () => {
     setup()

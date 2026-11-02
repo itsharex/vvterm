@@ -70,6 +70,7 @@ export default function App({initial}: {/** an app window opened for this place 
   const [tabs, setTabs] = useState<Tab[]>(() => [pinnedSftpTab()])
   const [active, setActive] = useState('home') // 'home' or a tab id
   const [page, setPage] = useState<Page>('hosts')
+  const [openGroupId, setOpenGroupId] = useState('') // the group open on the hosts page: new hosts and groups start in it
   const [hostsReset, setHostsReset] = useState(0) // bumped when Hosts is pressed while already on it
   const [settingsOpen, setSettingsOpen] = useState(false)
   // the panel on the right of a terminal (hosts, snippets, history, themes): open or closed is remembered
@@ -478,7 +479,7 @@ export default function App({initial}: {/** an app window opened for this place 
           <Nav page={page} onPage={p => { if (p === 'hosts' && page === 'hosts') { setHostsReset(n => n + 1); setDialog(null) } else changePage(p) }} shortcuts={bindings} onData={() => setDialog({k: 'data'})} settingsOpen={settingsOpen} onSettings={() => openSettings()} onLock={() => { void be.vault.lock().then(refreshVault) }} />
           <main className="main">
             {page === 'hosts' && (
-              <HostList resetKey={hostsReset} groups={groups} hosts={hosts} onMoveHost={moveHost} draft={dialog?.k === 'host' && !dialog.host?.id ? draft : undefined}
+              <HostList resetKey={hostsReset} onGroupChange={setOpenGroupId} groups={groups} hosts={hosts} onMoveHost={moveHost} draft={dialog?.k === 'host' && !dialog.host?.id ? draft : undefined}
                 toolbar={<>
                   <span className="split-wrap">
                     <button className="split-btn" aria-label="New host" onClick={() => setDialog({k: 'host'})}><IconPlus size={14} /> New host</button>
@@ -510,11 +511,11 @@ export default function App({initial}: {/** an app window opened for this place 
             <HostForm key={dialog.host?.id ?? dialog.prefill?.hostname ?? 'new'}
               host={dialog.host ?? (dialog.prefill ? ({id: '', label: '', hostname: dialog.prefill.hostname, port: dialog.prefill.port, username: dialog.prefill.username, keepalive_sec: 30} as Host) : undefined)}
               isNew={!dialog.host}
-              groups={groups} hosts={hosts} identities={identities} onClose={close}
+              groups={groups} defaultGroupId={openGroupId} hosts={hosts} identities={identities} onClose={close}
               onSaved={() => { close(); void refreshData() }}
               onConnect={h => { connect(h) }} onDraft={setDraft} />
           )}
-          {dialog?.k === 'group' && <GroupForm group={dialog.group} groups={groups} onClose={close} onSaved={() => { close(); void refreshData() }} />}
+          {dialog?.k === 'group' && <GroupForm group={dialog.group} groups={groups} defaultParentId={openGroupId} onClose={close} onSaved={() => { close(); void refreshData() }} />}
           {dialog?.k === 'forward' && (
             <ForwardPanel key={dialog.forward?.id ?? 'new-' + (dialog.hostId ?? '')} hosts={hosts} groups={groups} forward={dialog.forward} hostId={dialog.hostId}
               onClose={close} onChanged={() => setFwTick(n => n + 1)} onDraft={setFwDraft} />

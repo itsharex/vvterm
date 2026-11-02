@@ -14,6 +14,8 @@ interface Props {
   /** the host is a draft (for example from quick connect), not an existing record */
   isNew?: boolean
   groups: Group[]
+  /** the group open on the hosts page: a new host starts in it */
+  defaultGroupId?: string
   hosts: Host[]
   identities: Identity[]
   onClose(): void
@@ -33,7 +35,7 @@ let testSeq = 0
  * (username + password, or a key identity) → options. Test connection checks the typed values without
  * saving anything; Connect saves and opens a terminal.
  */
-export function HostForm({host, isNew, groups, hosts, identities, onClose, onSaved, onConnect, onDraft}: Props) {
+export function HostForm({host, isNew, groups, defaultGroupId, hosts, identities, onClose, onSaved, onConnect, onDraft}: Props) {
   const be = useBackend()
   const [appSetting, setAppSetting] = useState('auto')
   const [appTheme, setAppTheme] = useState<Settings['theme']>('dark')
@@ -46,7 +48,7 @@ export function HostForm({host, isNew, groups, hosts, identities, onClose, onSav
     username: host?.username ?? '',
     password: '',
     identity_id: host?.identity_id ?? '',
-    group_id: host?.group_id ?? '',
+    group_id: host?.group_id || (host?.id ? '' : defaultGroupId ?? ''),
     jump_host_id: host?.jump_host_id ?? '',
     env: host?.env ?? '',
     tags: (host?.tags ?? []).join(', '),
@@ -268,10 +270,10 @@ export function HostForm({host, isNew, groups, hosts, identities, onClose, onSav
   )
 }
 
-export function GroupForm({group, groups, onClose, onSaved}: {group?: Group; groups: Group[]; onClose(): void; onSaved(): void}) {
+export function GroupForm({group, groups, defaultParentId, onClose, onSaved}: {group?: Group; groups: Group[]; /** the group open on the hosts page: a new group is created inside it */ defaultParentId?: string; onClose(): void; onSaved(): void}) {
   const be = useBackend()
   const [name, setName] = useState(group?.name ?? '')
-  const [parent, setParent] = useState(group?.parent_id ?? '')
+  const [parent, setParent] = useState(group?.parent_id || (group ? '' : defaultParentId ?? ''))
   const [color, setColor] = useState(group?.color ?? '')
   const [err, setErr] = useState('')
   const save = async () => {

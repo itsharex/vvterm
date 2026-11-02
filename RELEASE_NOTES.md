@@ -4,6 +4,10 @@
 
 Release date: 2026-11-02 · Platform: macOS (arm64 build verified) · Status: beta. Read [Known issues](#known-issues) first.
 
+## Unreleased
+
+- **New host and New group start in the group you are in.** Open a group on the Hosts page and press *New host*: the *Group* field is already filled in with it (you can still change it). The same goes for *New group*, which is created inside the open group. Editing an existing host never moves it.
+
 ## What's new in 1.2.0
 
 - **VuTerm is now Vutty.** The VuTerm name was used for a few days only, and Vutty is shorter and says more (a *tty* is a terminal). The logo mark is unchanged, the wordmark now reads Vutty. Your data comes with you from VuTerm and from VVTerm alike: on first start the data folder (`vuterm` or `vvterm`) is renamed to `vutty`, the database file is renamed too, saved view settings are copied to the new names, `$VUTERM_DATA_DIR` and `$VVTERM_DATA_DIR` still work next to the new `$VUTTY_DATA_DIR`, and Quick unlock (Touch ID) and `.vvbak` / `.vubak` backups keep working. The app is now `vutty.app`, and the update check and the links point to `github.com/vunguyenvu35/vutty`.
