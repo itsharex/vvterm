@@ -227,7 +227,7 @@ export function TerminalPane(p: Props) {
       })
     }
 
-    // Termius-style colouring of finished lines, a moment after output stops arriving
+    // Colouring of finished lines, a moment after output stops arriving
     const hl = createHighlighter(t as unknown as HighlightTerm)
     highlighter.current = hl
     let hlTimer = 0

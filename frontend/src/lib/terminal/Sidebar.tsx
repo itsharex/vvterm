@@ -74,7 +74,7 @@ export function ThemeThumb({colors}: {colors: {bg: string; fg: string; green: st
 }
 
 /**
- * The panel on the right of a terminal, like Termius: hosts to open, snippets to run, the commands typed
+ * The panel on the right of a terminal: hosts to open, snippets to run, the commands typed
  * before, the files on the server, and the colours and font of the terminal.
  */
 export function TerminalSidebar(p: Props) {

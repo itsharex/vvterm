@@ -68,7 +68,7 @@ interface Props {
 }
 
 /**
- * Settings as its own window (like Termius): a floating window with a title bar, a menu on the left
+ * Settings as its own window: a floating window with a title bar, a menu on the left
  * (categories, theme, help links, version) and cards on the right. The dots work like macOS: red closes,
  * yellow rolls the window up to its title bar, green maximises (double-click the title bar too). Drag the
  * title bar to move it and the bottom-right corner to resize. Wails v2 can only create one OS window, so
@@ -267,7 +267,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                       <Switch label="Check for updates automatically" checked={s.auto_update_check} onChange={v => update({auto_update_check: v})} />
                     </div>
                     <div className="setting-row">
-                      <div><b>Ask which protocol to use</b><div className="muted">Opening a host first shows SSH, Mosh and Telnet to choose from, like Termius. Turn it off to connect with SSH straight away (hosts that have Telnet still ask).</div></div>
+                      <div><b>Ask which protocol to use</b><div className="muted">Opening a host first shows SSH, Mosh and Telnet to choose from. Turn it off to connect with SSH straight away (hosts that have Telnet still ask).</div></div>
                       <Switch label="Ask which protocol to use" checked={s.ask_protocol} onChange={v => update({ask_protocol: v})} />
                     </div>
                   </section>
@@ -360,7 +360,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                     <div className="setting-row">
                       <div><b>Right click</b><div className="muted">What a right click does inside a terminal. Copy and paste keys are in Shortcuts.</div></div>
                       <Select label="Right click" className="inline" value={s.right_click} onChange={v => update({right_click: v as Settings['right_click']})}
-                        options={[{value: 'paste', label: 'Paste', hint: 'like Termius'}, {value: 'menu', label: 'Show a menu', hint: 'Copy, Paste, Select all, Clear'}, {value: 'none', label: 'Do nothing'}]} />
+                        options={[{value: 'paste', label: 'Paste', hint: 'Right-click pastes'}, {value: 'menu', label: 'Show a menu', hint: 'Copy, Paste, Select all, Clear'}, {value: 'none', label: 'Do nothing'}]} />
                     </div>
                     <div className="setting-row">
                       <div><b>Highlight output</b><div className="muted">Colour URLs, IP addresses, paths, dates and the words error, warning and success. Colours chosen by a program are kept.</div></div>

@@ -31,7 +31,7 @@ describe('SettingsWindow', () => {
     expect(document.querySelector('.win-back')).not.toBeNull()
   })
 
-  it('has categories on the left and theme, help links and version below them (Termius layout)', async () => {
+  it('has categories on the left and theme, help links and version below them', async () => {
     setup()
     const nav = screen.getByRole('navigation', {name: 'Settings menu'})
     expect(within(nav).getAllByRole('tab').map(t => t.querySelector('span')?.textContent)).toEqual(['General', 'Account', 'Terminal', 'Security', 'AI assistant', 'Sync', 'Shortcuts', 'Storage'])

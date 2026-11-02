@@ -65,7 +65,7 @@ type Sort = 'name' | 'name-desc' | 'recent' | 'env'
 const SORTS: SortOption<Sort>[] = [{value: 'name', label: 'Name A–Z'}, {value: 'name-desc', label: 'Name Z–A'}, {value: 'recent', label: 'Recently connected'}, {value: 'env', label: 'Environment'}]
 const ENV_RANK: Record<string, number> = {prod: 0, staging: 1, dev: 2, '': 3}
 
-/** Termius-style hosts page: find/connect bar, environment filter, group cards and host cards. */
+/** Hosts page: find/connect bar, environment filter, group cards and host cards. */
 export function HostList(p: Props) {
   const [q, setQ] = useState('')
   const [env, setEnv] = useState<Env>('')

@@ -19,7 +19,7 @@ interface RemoteTab {key: string; host: RemoteHost}
 let tabSeq = 0
 const nextTabKey = () => 'rt' + tabSeq++
 /**
- * The SFTP screen, like Termius: this computer on the left, a saved host on the right. Select one or more
+ * The SFTP screen: this computer on the left, a saved host on the right. Select one or more
  * files and folders (Cmd/Ctrl-click, Shift-click), then drag them across or use Upload (in the Actions menu) / Download
  * buttons. Folders go with everything inside. Nothing is replaced without asking, and the question comes
  * once for the whole batch. Transfers run in a queue in the background: they can be paused, resumed, cancelled and

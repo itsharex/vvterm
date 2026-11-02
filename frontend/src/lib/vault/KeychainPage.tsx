@@ -31,7 +31,7 @@ interface Props {
   onChanged(): void
 }
 
-/** Keychain, like Termius: a toolbar, then one card per key, password or agent identity. */
+/** Keychain: a toolbar, then one card per key, password or agent identity. */
 export function KeychainPage({identities, draft, onNew, onChanged}: Props) {
   const be = useBackend()
   const toast = useToast()

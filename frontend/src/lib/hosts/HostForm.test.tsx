@@ -58,7 +58,7 @@ describe('HostForm: group of a new host', () => {
 })
 
 describe('HostForm', () => {
-  it('follows the Termius flow: address, general, port, credentials, options', () => {
+  it('follows the flow: address, general, port, credentials, options', () => {
     setup()
     const order = ['Hostname', 'Label', 'Group', 'Environment', 'Tags', 'Port', 'Username', 'Password', 'Identity', 'Jump host', 'Keepalive']
     const els = order.map(l => screen.getByLabelText(l))

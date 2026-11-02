@@ -31,7 +31,7 @@ interface Props {
   onEdit(f: PortForward): void
 }
 
-/** Port Forwarding, like Termius: one card per rule (L / R / D), a New forwarding button, and a docked panel to add or edit. */
+/** Port Forwarding: one card per rule (L / R / D), a New forwarding button, and a docked panel to add or edit. */
 export function PortForwardsPage({hosts, draft, reloadKey = 0, onNew, onEdit}: Props) {
   const be = useBackend()
   const toast = useToast()

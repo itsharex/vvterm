@@ -477,7 +477,7 @@ try {
   await waitTerm('echo vutty-local-$((6*7))')
   await page.keyboard.press('Enter')
   await waitTerm('vutty-local-42')
-  // finished lines get Termius-style colours: the word ERROR is red, an IP address yellow, a path blue
+  // finished lines get colours: the word ERROR is red, an IP address yellow, a path blue
   await page.keyboard.type('echo ERROR 10.0.0.1 /tmp/vutty')
   await waitTerm('echo ERROR 10.0.0.1 /tmp/vutty')
   await page.keyboard.press('Enter')

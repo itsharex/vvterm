@@ -330,7 +330,7 @@ Set `VUTTY_DATA_DIR` to relocate everything. Back up with **Import / Export → 
 
 ## 17. Connecting: protocol, progress and errors
 
-Opening a host first asks **which protocol** to use (SSH, Mosh, Telnet), like Termius. SSH is chosen for you: press **Continue** (or double-click it). Mosh is shown but not supported yet; Telnet can be picked once the host has Telnet turned on (see [section 20](#20-this-computer-telnet-and-serial-ports)). Turn the question off in **Settings → Terminal → Ask which protocol to use**; a host that has Telnet still asks.
+Opening a host first asks **which protocol** to use (SSH, Mosh, Telnet). SSH is chosen for you: press **Continue** (or double-click it). Mosh is shown but not supported yet; Telnet can be picked once the host has Telnet turned on (see [section 20](#20-this-computer-telnet-and-serial-ports)). Turn the question off in **Settings → Terminal → Ask which protocol to use**; a host that has Telnet still asks.
 
 ![Choose protocol](screenshots/12-choose-protocol.png)
 

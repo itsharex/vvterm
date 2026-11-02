@@ -25,7 +25,7 @@ type Settings struct {
 	FontFamily    string `json:"font_family"`
 	CursorStyle   string `json:"cursor_style"` // block | bar | underline
 	CursorBlink   bool   `json:"cursor_blink"`
-	// CopyOnSelect copies the selection to the clipboard as soon as it is made, like Termius.
+	// CopyOnSelect copies the selection to the clipboard as soon as it is made.
 	CopyOnSelect bool `json:"copy_on_select"`
 	// RightClick is what a right click in a terminal does: paste | menu | none.
 	RightClick      string `json:"right_click"`
