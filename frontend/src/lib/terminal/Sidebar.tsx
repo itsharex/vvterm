@@ -114,7 +114,7 @@ export function TerminalSidebar(p: Props) {
       <div className="side-body">
         {p.tab === 'hosts' && <HostsTab hosts={p.hosts} groups={p.groups ?? []} tabs={p.tabs ?? []} activeTab={p.activeTab ?? ''} onConnect={p.onConnect} onSelectTab={p.onSelectTab} onCloseTab={p.onCloseTab} />}
         {p.tab === 'snippets' && <SnippetsTab snippets={p.snippets} onInsert={p.onInsert} onNew={p.onNewSnippet} />}
-        {p.tab === 'history' && <HistoryTab onInsert={p.onInsert} />}
+        {p.tab === 'history' && <HistoryTab hostId={p.hostId ?? ''} onInsert={p.onInsert} />}
         {p.tab === 'files' && <FilesTab host={p.hosts.find(h => h.id === p.hostId) ?? null} />}
         {p.tab === 'themes' && <ThemesTab settings={p.settings} appearance={p.appearance} onSettings={p.onSettings} />}
         {p.tab === 'assistant' && <AssistantTab paneId={p.paneId ?? ''} onOpenSettings={() => p.onOpenSettings?.()} />}
@@ -278,16 +278,20 @@ function SnippetsTab({snippets, onInsert, onNew}: {snippets: Snippet[]; onInsert
   )
 }
 
-function HistoryTab({onInsert}: {onInsert(text: string, run: boolean): void}) {
+/** The commands typed at the host of the focused pane: another host has its own list. */
+function HistoryTab({hostId, onInsert}: {hostId: string; onInsert(text: string, run: boolean): void}) {
   const [q, setQ] = useState('')
-  const [items, setItems] = useState(getHistory)
-  useEffect(() => subscribeHistory(() => setItems(getHistory())), [])
+  const [items, setItems] = useState(() => getHistory(hostId))
+  useEffect(() => {
+    setItems(getHistory(hostId))
+    return subscribeHistory(() => setItems(getHistory(hostId)))
+  }, [hostId])
   const shown = useMemo(() => items.filter(c => c.toLowerCase().includes(q.trim().toLowerCase())), [items, q])
   return (
     <>
       <div className="side-bar">
         <SearchBox value={q} onChange={setQ} label="Search history" />
-        <button className="icon ghost danger" aria-label="Clear history" title="Clear history" disabled={items.length === 0} onClick={clearHistory}><IconTrash size={15} /></button>
+        <button className="icon ghost danger" aria-label="Clear history" title="Clear history" disabled={items.length === 0} onClick={() => clearHistory(hostId)}><IconTrash size={15} /></button>
       </div>
       <div className="side-list" role="list" aria-label="History">
         {shown.map(c => (
@@ -296,7 +300,7 @@ function HistoryTab({onInsert}: {onInsert(text: string, run: boolean): void}) {
             <span className="side-main"><span className="side-cmd">{c}</span></span>
           </button>
         ))}
-        {shown.length === 0 && <div className="side-empty">{items.length ? 'Nothing matches.' : 'Commands you type will show up here.'}</div>}
+        {shown.length === 0 && <div className="side-empty">{items.length ? 'Nothing matches.' : 'Commands you type on this host will show up here.'}</div>}
       </div>
     </>
   )

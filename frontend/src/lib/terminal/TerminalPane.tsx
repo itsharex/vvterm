@@ -222,8 +222,8 @@ export function TerminalPane(p: Props) {
     if (host.current?.parentElement) {
       suggester = createSuggester({
         term: t as unknown as SuggestTerm, container: host.current.parentElement, send: d => sendKeys(d),
-        sources: () => ({typed: getHistory(), snippets, host: hostCmds.current}),
-        enabled: () => suggestOn.current, ready: () => stateRef.current === 'ready', popupCombo: () => suggestCombo.current, onCommand: recordCommand,
+        sources: () => ({typed: getHistory(p.hostId), snippets, host: hostCmds.current}),
+        enabled: () => suggestOn.current, ready: () => stateRef.current === 'ready', popupCombo: () => suggestCombo.current, onCommand: line => recordCommand(p.hostId, line),
       })
     }
 

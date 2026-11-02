@@ -6,6 +6,7 @@ Release date: 2026-10-30 · Platform: macOS (arm64 build verified) · Status: be
 
 ## Unreleased
 
+- **Command suggestions and History are kept for each host.** The list of commands you typed was shared by every terminal, so a `cd Data/projects/...` typed on your Mac was offered at a server where that folder does not exist. Each host (a saved host, or *local*, a serial port, a Telnet host) now has its own list, used by the suggestions and shown in the sidebar's History tab, and *Clear history* clears only that host's. Commands typed before this update are not carried over (they cannot be told apart by host); snippets are still offered everywhere, as they are yours on purpose.
 ### SFTP is complete
 
 - **A transfer queue.** Uploads and downloads run in the background, two at a time, and are listed in a **Transfers** panel with a bar for each one and **Pause**, **Resume**, **Cancel**, **Retry** and **Clear finished**. You can keep browsing, or start more transfers, while they run. The batch still asks **once** before replacing files that already exist.
