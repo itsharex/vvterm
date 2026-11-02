@@ -152,6 +152,27 @@ func (f *Folder) Sync(local syncgit.Bundle, header vault.Header, s syncgit.Seale
 	return res, nil
 }
 
+// Replace writes local as the whole content of the folder, without reading what is there: for a folder whose bundle
+// no key of this vault can open. Conflict copies of other vaults are left alone.
+func (f *Folder) Replace(local syncgit.Bundle, header vault.Header, s syncgit.Sealer) error {
+	if err := f.Check(); err != nil {
+		return err
+	}
+	plain, err := json.Marshal(local)
+	if err != nil {
+		return err
+	}
+	blob, err := s.SealBlob(plain, []byte(syncgit.BundleAAD))
+	if err != nil {
+		return err
+	}
+	hb, _ := json.MarshalIndent(header, "", "  ")
+	if err := fsutil.WriteFileAtomic(filepath.Join(f.Dir, syncgit.BundleFile), blob, 0o600); err != nil {
+		return err
+	}
+	return fsutil.WriteFileAtomic(filepath.Join(f.Dir, syncgit.HeaderFile), hb, 0o600)
+}
+
 func same(merged, remote syncgit.Bundle, h, remoteH vault.Header) bool {
 	a, e1 := json.Marshal(merged)
 	b, e2 := json.Marshal(remote)

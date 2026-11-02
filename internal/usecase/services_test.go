@@ -580,6 +580,143 @@ func TestSyncTwoMachinesEndToEnd(t *testing.T) {
 	}
 }
 
+// A machine that already has its own vault can join the vault a repository belongs to: it takes that vault's
+// key and master password, keeps its own hosts and saved passwords, and a copy of what it had is saved first.
+func TestJoinRemoteVaultKeepsLocalHostsAndSecrets(t *testing.T) {
+	remote := bareRepo(t)
+	a := newHarness(t).unlocked(t)
+	aHost, err := a.app.Host.SaveHost(domain.Host{Label: "from-a", Hostname: "a.example"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := a.app.Sync.Configure(remote); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.app.Sync.SyncNow(); err != nil {
+		t.Fatal(err)
+	}
+
+	// B has a vault of its own, with a host that has a saved password
+	const bPW = "another master password 42"
+	b := newHarness(t)
+	if err := b.app.Vault.Create(bPW); err != nil {
+		t.Fatal(err)
+	}
+	srv := startServer(t)
+	bHost := b.sshHost(t, "from-b", srv, "")
+	if err := b.app.Sync.Configure(remote); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.app.Sync.SyncNow(); err == nil || !strings.Contains(err.Error(), "different vault key") {
+		t.Fatalf("a plain sync must stop on different keys: %v", err)
+	}
+
+	// a wrong password changes nothing
+	if err := b.app.Sync.JoinRemoteVault("not the password at all"); err == nil {
+		t.Fatal("joined with a wrong password")
+	}
+	b.app.Vault.Lock()
+	if err := b.app.Vault.Unlock(bPW); err != nil {
+		t.Fatalf("after a refused join the old password must still work: %v", err)
+	}
+
+	if err := b.app.Sync.JoinRemoteVault(masterPW); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := b.app.Host.GetHost(aHost.ID); err != nil {
+		t.Fatalf("B did not receive A's host: %v", err)
+	}
+	if got, err := b.app.Host.GetHost(bHost.ID); err != nil || got.Label != "from-b" {
+		t.Fatalf("B lost its own host: %v %+v", err, got)
+	}
+	sid, _ := b.open(bHost.ID, 80, 24)
+	b.trust(t, sid)
+	b.rec.waitOutput(t, sid, "READY") // B's saved password was sealed again and still decrypts
+
+	// the master password is now the synced vault's
+	b.app.Vault.Lock()
+	if err := b.app.Vault.Unlock(bPW); err == nil {
+		t.Fatal("the old password still opens the vault")
+	}
+	if err := b.app.Vault.Unlock(masterPW); err != nil {
+		t.Fatal(err)
+	}
+	// a copy of what B had was saved before the change
+	matches, _ := filepath.Glob(filepath.Join(b.core.Dir, "backups", "before-joining-*", "vault-before-joining.json"))
+	if len(matches) != 1 {
+		t.Fatalf("no backup of the vault before joining: %v", matches)
+	}
+
+	// and from now on both machines simply sync
+	if err := a.app.Sync.SyncNow(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.app.Host.GetHost(bHost.ID); err != nil {
+		t.Fatalf("A did not receive B's host: %v", err)
+	}
+	if err := b.app.Sync.SyncNow(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A repository that nobody can open any more is replaced with this vault's data; what was there is kept in backups.
+func TestReplaceRemoteOverwritesAnUnreadableRepositoryAndKeepsACopy(t *testing.T) {
+	remote := bareRepo(t)
+	a := newHarness(t).unlocked(t)
+	a.app.Host.SaveHost(domain.Host{Label: "old-data", Hostname: "old.example"})
+	a.app.Sync.Configure(remote)
+	if err := a.app.Sync.SyncNow(); err != nil {
+		t.Fatal(err)
+	}
+
+	b := newHarness(t)
+	if err := b.app.Vault.Create("another master password 42"); err != nil {
+		t.Fatal(err)
+	}
+	mine, _ := b.app.Host.SaveHost(domain.Host{Label: "mine", Hostname: "mine.example"})
+	b.app.Sync.Configure(remote)
+	if err := b.app.Sync.SyncNow(); err == nil || !strings.Contains(err.Error(), "different vault key") {
+		t.Fatalf("expected a key mismatch: %v", err)
+	}
+	if err := b.app.Sync.ReplaceRemote(); err != nil {
+		t.Fatal(err)
+	}
+	if matches, _ := filepath.Glob(filepath.Join(b.core.Dir, "backups", "replaced-remote-*", "bundle.enc")); len(matches) != 1 {
+		t.Fatalf("the files that were replaced must be kept: %v", matches)
+	}
+	if err := b.app.Sync.SyncNow(); err != nil {
+		t.Fatalf("after replacing, B syncs normally: %v", err)
+	}
+
+	// a third machine restores from it with B's password and gets B's data, not the old one
+	c := newHarness(t)
+	c.app.Sync.Configure(remote)
+	if err := c.app.Sync.JoinExisting("another master password 42"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.app.Host.GetHost(mine.ID); err != nil {
+		t.Fatalf("C did not get B's host: %v", err)
+	}
+
+	// it refuses when this vault can read the repository
+	if err := b.app.Sync.ReplaceRemote(); err == nil || !strings.Contains(err.Error(), "can read the repository") {
+		t.Fatalf("a readable repository must not be replaced: %v", err)
+	}
+}
+
+func TestJoinRemoteVaultNeedsAnUnlockedVaultAndABundle(t *testing.T) {
+	remote := bareRepo(t)
+	h := newHarness(t).unlocked(t)
+	h.app.Sync.Configure(remote)
+	if err := h.app.Sync.JoinRemoteVault(masterPW); err == nil || !strings.Contains(err.Error(), "nothing to join") {
+		t.Fatalf("an empty repository: %v", err)
+	}
+	h.app.Vault.Lock()
+	if err := h.app.Sync.JoinRemoteVault(masterPW); err == nil {
+		t.Fatal("joined with a locked vault")
+	}
+}
+
 func TestSyncRequiresUnlockedVaultAndRepoWithBundle(t *testing.T) {
 	remote := bareRepo(t)
 	h := newHarness(t).unlocked(t)

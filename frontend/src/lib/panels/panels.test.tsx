@@ -1,4 +1,4 @@
-import {render, screen, waitFor} from '@testing-library/react'
+import {render, screen, waitFor, within} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {DataPanel} from './DataPanel'
 import {SyncPanel} from './SyncPanel'
@@ -110,6 +110,59 @@ describe('SyncPanel', () => {
 })
 
 describe('null slices from Go (regression)', () => {
+  it('offers to join the vault of the repository when the keys differ, and syncs after it', async () => {
+    const be = makeFake()
+    be.sync.syncNow = async () => { throw 'remote bundle was encrypted with a different vault key' }
+    render(<Providers be={be}><SyncPanel vault={vaultSt} onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+    await userEvent.click(await screen.findByRole('button', {name: 'Sync now'}))
+    const box = await screen.findByRole('group', {name: 'Join the synced vault'})
+    const join = within(box).getByRole('button', {name: 'Join this vault and sync'})
+    expect(join).toBeDisabled()
+    await userEvent.type(within(box).getByLabelText("Master password of the repository's vault"), 'remote password')
+    await userEvent.click(join)
+    await waitFor(() => expect(be.state.calls).toContainEqual(['sync.joinRemoteVault', 'remote password']))
+  })
+
+  it('replaces an unreadable repository only after REPLACE is typed', async () => {
+    const be = makeFake()
+    be.sync.syncNow = async () => { throw 'remote bundle was encrypted with a different vault key' }
+    render(<Providers be={be}><SyncPanel vault={vaultSt} onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+    await userEvent.click(await screen.findByRole('button', {name: 'Sync now'}))
+    const box = await screen.findByRole('group', {name: 'Join the synced vault'})
+    const replace = within(box).getByRole('button', {name: /Replace the repository with this Mac/})
+    expect(replace).toBeDisabled()
+    await userEvent.type(within(box).getByLabelText('Type REPLACE to confirm'), 'replace')
+    expect(replace).toBeDisabled() // it has to be the word in capitals
+    await userEvent.clear(within(box).getByLabelText('Type REPLACE to confirm'))
+    await userEvent.type(within(box).getByLabelText('Type REPLACE to confirm'), 'REPLACE')
+    await userEvent.click(replace)
+    await waitFor(() => expect(be.state.calls.some(c => c[0] === 'sync.replaceRemote')).toBe(true))
+  })
+
+  it('keeps the join / replace box after a failed join, so Replace stays reachable', async () => {
+    const be = makeFake()
+    be.sync.syncNow = async () => { throw 'remote bundle was encrypted with a different vault key' }
+    be.sync.joinRemoteVault = async () => { throw 'the password is right, but this repository bundle was not locked with that vault key, so nobody can open it: use Replace below' }
+    render(<Providers be={be}><SyncPanel vault={vaultSt} onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+    await userEvent.click(await screen.findByRole('button', {name: 'Sync now'}))
+    const box = await screen.findByRole('group', {name: 'Join the synced vault'})
+    await userEvent.type(within(box).getByLabelText("Master password of the repository's vault"), 'whatever it is')
+    await userEvent.click(within(box).getByRole('button', {name: 'Join this vault and sync'}))
+    expect(await screen.findByText(/was not locked with that vault key/)).toBeInTheDocument()
+    expect(screen.getByRole('group', {name: 'Join the synced vault'})).toBeInTheDocument() // still there
+    expect(screen.getByRole('button', {name: /Replace the repository with this Mac/})).toBeInTheDocument()
+    expect(screen.getByText('The password does not work, or nobody can open that repository any more').closest('details')).toHaveAttribute('open') // opened for the user
+  })
+
+  it('does not offer to join on other errors', async () => {
+    const be = makeFake()
+    be.sync.syncNow = async () => { throw 'could not reach the repository' }
+    render(<Providers be={be}><SyncPanel vault={vaultSt} onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+    await userEvent.click(await screen.findByRole('button', {name: 'Sync now'}))
+    await screen.findByRole('alert')
+    expect(screen.queryByRole('group', {name: 'Join the synced vault'})).toBeNull()
+  })
+
   it('DataPanel renders an import report whose arrays are null', async () => {
     const be = makeFake()
     be.data.importSSHConfig = async () => ({hosts_added: 1, groups_added: 0, forwards_added: 0, keys_imported: 0, skipped: null as never, warnings: null as never})

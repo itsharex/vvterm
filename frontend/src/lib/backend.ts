@@ -68,6 +68,10 @@ export interface Backend {
     configureFolder(dir: string): Promise<void>
     syncNow(): Promise<void>
     join(masterPassword: string): Promise<void>
+    /** this machine has its own vault and the repository belongs to another: take that vault's key and merge into it */
+    joinRemoteVault(masterPassword: string): Promise<void>
+    /** the repository cannot be opened by anyone: make it hold this vault's data (the old files are kept in backups) */
+    replaceRemote(): Promise<void>
     status(): Promise<SyncStatus>
   }
   data: {
@@ -299,6 +303,8 @@ export function wailsBackend(): Backend {
       configureFolder: dir => u('SyncService', 'ConfigureFolder', dir),
       syncNow: () => u('SyncService', 'SyncNow'),
       join: pw => u('SyncService', 'JoinExisting', pw),
+      joinRemoteVault: pw => u('SyncService', 'JoinRemoteVault', pw),
+      replaceRemote: () => u('SyncService', 'ReplaceRemote'),
       status: () => u('SyncService', 'Status'),
     },
     data: {
@@ -475,6 +481,8 @@ export function bridgeBackend(): Backend {
       configureFolder: dir => rpc('SyncService', 'ConfigureFolder', dir),
       syncNow: () => rpc('SyncService', 'SyncNow'),
       join: pw => rpc('SyncService', 'JoinExisting', pw),
+      joinRemoteVault: pw => rpc('SyncService', 'JoinRemoteVault', pw),
+      replaceRemote: () => rpc('SyncService', 'ReplaceRemote'),
       status: () => rpc('SyncService', 'Status'),
     },
     // the AI page of Settings: providers, models, options and MCP servers; never a terminal

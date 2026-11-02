@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -135,6 +136,11 @@ func (s *SyncService) SyncNow() (err error) {
 		return err
 	}
 	defer func() { s.end(err) }()
+	return s.doSync()
+}
+
+// doSync is SyncNow once the run has begun (SyncNow and JoinRemoteVault share it).
+func (s *SyncService) doSync() error {
 	if !s.c.Vault.Status().Unlocked {
 		return errNotUnlocked
 	}
@@ -160,6 +166,141 @@ func (s *SyncService) SyncNow() (err error) {
 		return err
 	}
 	return s.c.Vault.ReplaceSecrets(res.Merged.Secrets)
+}
+
+// remote reads the header and the encrypted bundle that the repository or folder holds (nothing is changed).
+func (s *SyncService) remote() (hdr vault.Header, enc []byte, exists bool, err error) {
+	if f, ok := s.folder(); ok {
+		if err = f.Check(); err != nil {
+			return
+		}
+		return f.Remote()
+	}
+	r := s.repo()
+	if err = r.Init(); err != nil {
+		return
+	}
+	if err = r.Fetch(); err != nil {
+		return
+	}
+	return r.Remote()
+}
+
+// JoinRemoteVault is for a machine that already has a vault of its own while the repository (or folder) holds the
+// bundle of another one: their keys differ, so a plain sync stops with "encrypted with a different vault key".
+// With the master password of the synced vault this machine takes that vault's key and master password, keeps its
+// own hosts and saved keys (sealed again under the new key), merges them with what the repository holds and syncs.
+// The vault as it was is first saved in <data>/backups, so nothing is lost if this was not what the user wanted.
+func (s *SyncService) JoinRemoteVault(masterPassword string) (err error) {
+	if err = s.begin(); err != nil {
+		return err
+	}
+	defer func() { s.end(err) }()
+	if !s.c.Vault.Status().Unlocked {
+		return errNotUnlocked
+	}
+	hdr, enc, exists, err := s.remote()
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("nothing to join: no bundle was found there yet, use Sync now")
+	}
+	// the password must open the repository's bundle before anything here is touched
+	if _, err = vault.OpenWithHeader(masterPassword, hdr, enc, []byte(syncgit.BundleAAD)); err != nil {
+		if errors.Is(err, vault.ErrBadPassword) {
+			return errors.New("that is not the master password of the synced vault")
+		}
+		return errors.New("the password is right, but this repository's bundle was not locked with that vault's key, so nobody can open it: use Replace below to make the repository hold this Mac's data")
+	}
+	if err = s.backupBeforeJoin(); err != nil {
+		return fmt.Errorf("could not save a copy of this vault first, nothing was changed: %w", err)
+	}
+	if err = s.c.Vault.AdoptKey(masterPassword, hdr); err != nil {
+		return err
+	}
+	return s.doSync()
+}
+
+// ReplaceRemote makes the repository (or folder) hold this vault's data and nothing else. It is for a repository whose
+// bundle this vault cannot open and whose own vault is out of reach (its password is lost, or the bundle was written
+// with a key that does not match its header). It refuses when this vault can read the repository (use Sync now then),
+// and the files that were there are first copied to <data>/backups, so they can be put back.
+func (s *SyncService) ReplaceRemote() (err error) {
+	if err = s.begin(); err != nil {
+		return err
+	}
+	defer func() { s.end(err) }()
+	if !s.c.Vault.Status().Unlocked {
+		return errNotUnlocked
+	}
+	hdr, err := s.c.Vault.Header()
+	if err != nil {
+		return err
+	}
+	rhdr, enc, exists, err := s.remote()
+	if err != nil {
+		return err
+	}
+	if exists {
+		if _, e := s.c.Vault.OpenBlob(enc, []byte(syncgit.BundleAAD)); e == nil {
+			return errors.New("this vault can read the repository: use Sync now, nothing needs replacing")
+		}
+		if err = s.backupRemote(rhdr, enc); err != nil {
+			return fmt.Errorf("could not save a copy of what the repository holds first, nothing was changed: %w", err)
+		}
+	}
+	local := syncgit.Bundle{Data: s.c.Store.Snapshot(), Secrets: s.c.Vault.Secrets()}
+	if f, ok := s.folder(); ok {
+		return f.Replace(local, hdr, s.c.Vault)
+	}
+	r := s.repo()
+	if err = r.Init(); err != nil {
+		return err
+	}
+	return r.Replace(local, hdr, s.c.Vault)
+}
+
+// backupRemote copies the header and the bundle of the repository into <data>/backups before they are replaced.
+func (s *SyncService) backupRemote(hdr vault.Header, enc []byte) error {
+	dir := filepath.Join(s.c.Dir, "backups", "replaced-remote-"+time.Now().UTC().Format("20060102-150405"))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	hb, err := json.MarshalIndent(hdr, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(dir, syncgit.HeaderFile), hb, 0o600); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, syncgit.BundleFile), enc, 0o600)
+}
+
+// backupBeforeJoin writes the vault file (still under its own key and password) and the data as they are now.
+func (s *SyncService) backupBeforeJoin() error {
+	hdr, err := s.c.Vault.Header()
+	if err != nil {
+		return err
+	}
+	dir := filepath.Join(s.c.Dir, "backups", "before-joining-"+time.Now().UTC().Format("20060102-150405"))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	files := map[string]any{
+		"vault-before-joining.json": vault.Snapshot{Header: hdr, Secrets: s.c.Vault.Secrets()},
+		"data-before-joining.json":  s.c.Store.Snapshot(),
+	}
+	for name, v := range files {
+		b, err := json.MarshalIndent(v, "", "  ")
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), b, 0o600); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // JoinExisting sets up a new machine from a repo that already holds a bundle: the master

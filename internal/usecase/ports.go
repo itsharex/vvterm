@@ -75,6 +75,8 @@ type SecretVault interface {
 	Secrets() []domain.Secret
 	ReplaceSecrets([]domain.Secret) error
 	Adopt(masterPassword string, h domain.VaultHeader, secrets []domain.Secret) error
+	// AdoptKey switches an unlocked vault to the key (and master password) of the vault a sync repository belongs to.
+	AdoptKey(masterPassword string, h domain.VaultHeader) error
 	SealBlob(plain, aad []byte) ([]byte, error)
 	OpenBlob(blob, aad []byte) ([]byte, error)
 }

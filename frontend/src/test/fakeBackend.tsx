@@ -270,6 +270,8 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       configureFolder: async d => { rec('sync.configureFolder', d) },
       syncNow: async () => { rec('sync.syncNow') },
       join: async pw => { rec('sync.join', pw) },
+      joinRemoteVault: async pw => { rec('sync.joinRemoteVault', pw) },
+      replaceRemote: async () => { rec('sync.replaceRemote') },
       status: async () => ({configured: true, repo_url: 'git@example.com:me/sync.git', folder: '', last_sync: '0001-01-01T00:00:00Z', syncing: false}),
     },
     data: {
