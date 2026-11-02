@@ -1,11 +1,16 @@
 <p align="center"><img src="docs/brand/logo-mark-256.png" alt="Vutty" width="88"></p>
 
-# Vutty 1.2.0
+# Vutty 1.2.1
 
 Release date: 2026-11-02 · Platform: macOS (arm64 build verified) · Status: beta. Read [Known issues](#known-issues) first.
 
-## Unreleased
+## What's new in 1.2.1
 
+- **Sync now works between two machines that made their own vaults.** Each vault has its own random key, and a plain sync stopped with *encrypted with a different vault key* even when both machines used the same master password. **Settings → Sync** now shows a box for this: enter the master password of the vault that made the repository and choose **Join this vault and sync**. This machine keeps its hosts, groups, snippets and saved keys, merges them in and, from then on, uses that vault's master password. A copy of what it had is saved first in `backups/before-joining-…`; a wrong password changes nothing.
+- **Replace a repository that nobody can open.** If the bundle in the repository was not locked with the key of its own header (it cannot be opened even with the right password), Join cannot help. The same box has *The password does not work…*: type `REPLACE` and the repository then holds this machine's data. The two files that were there are copied to `backups/replaced-remote-…` first, and a repository that this vault can read is never replaced.
+- **Quick unlock checks its key against the vault.** The key kept in the OS keychain was checked only against the first saved secret, so a vault with no secret yet accepted any key left by an older vault, and then sealed the sync bundle with that wrong key. The header now carries a key check (older vaults get one at the next unlock with the password). A key that does not belong to the vault is refused and removed, and the master password is asked for.
+- **The Join / Replace box stays after a failed join**, with a message that says what is wrong, so the way out is not taken away.
+- Sync and the Settings window: the Settings window used an old helper after a rebuild or an update of the app (it showed an old version of everything); it now runs only the program that is running, and a window of another version is refused.
 - **New host and New group start in the group you are in.** Open a group on the Hosts page and press *New host*: the *Group* field is already filled in with it (you can still change it). The same goes for *New group*, which is created inside the open group. Editing an existing host never moves it.
 
 ## What's new in 1.2.0
