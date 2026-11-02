@@ -2,15 +2,11 @@ import {Modal} from '../ui/Modal'
 import {useBackend} from '../backend'
 import {useToast} from '../ui/Toast'
 import {errMsg} from '../util'
+import {DONATE_NETWORKS, KOFI, SHOW_CRYPTO_DONATE} from '../donate'
 
-const KOFI = 'https://ko-fi.com/vunguyenvu'
+export {DONATE_NETWORKS}
 
-export const DONATE_NETWORKS = [
-  {id: 'tron', name: 'USDT · Tron', chain: 'TRC20', address: 'TMXXHRNG7qauoFWJKYbqEbd4FGgt3DgjBK', qr: '/donate/usdt-tron.png'},
-  {id: 'bsc', name: 'USDT · BSC', chain: 'BEP20', address: '0x4bdfd1d6456c28d06e3f8456ddac59e6168e5153', qr: '/donate/usdt-bsc.png'},
-]
-
-/** Support Vutty: Ko-fi, the suggested amounts, and the USDT addresses as QR codes with a Copy button. */
+/** Support Vutty: Ko-fi, the suggested amounts, and (when SHOW_CRYPTO_DONATE is on) the USDT addresses as QR codes with a Copy button. */
 export function SupportPanel({onClose}: {onClose(): void}) {
   const be = useBackend()
   const toast = useToast()
@@ -31,6 +27,7 @@ export function SupportPanel({onClose}: {onClose(): void}) {
           ))}
         </div>
         <button className="primary" onClick={() => void be.system.openUrl(KOFI)}>Support on Ko-fi</button>
+        {SHOW_CRYPTO_DONATE && <>
         <div className="muted">Prefer crypto? Scan a code or copy an address, and check the network before you send.</div>
         <div style={{display: 'flex', gap: 24, flexWrap: 'wrap', justifyContent: 'center'}}>
           {DONATE_NETWORKS.map(n => (
@@ -42,6 +39,7 @@ export function SupportPanel({onClose}: {onClose(): void}) {
             </div>
           ))}
         </div>
+        </>}
       </div>
     </Modal>
   )

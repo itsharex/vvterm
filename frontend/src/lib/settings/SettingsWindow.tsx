@@ -13,6 +13,7 @@ import {ShortcutsEditor} from './ShortcutsEditor'
 import {capture, formatCombo, matches} from '../shortcuts/shortcuts'
 import type {Appearance} from './appearance'
 import type {CursorStyle, Settings, ThemeMode, VaultStatus} from '../types'
+import {DONATE_NETWORKS, KOFI, SHOW_CRYPTO_DONATE} from '../donate'
 
 // what is not on the first page is loaded when it is first needed, so the window opens and answers clicks at once
 const SupportPanel = lazy(() => import('../panels/SupportPanel').then(m => ({default: m.SupportPanel})))
@@ -48,10 +49,7 @@ const LINKS: [string, string][] = [
   ['Release notes', REPO + '/blob/main/RELEASE_NOTES.md'],
 ]
 
-const DONATE: [string, string][] = [
-  ['USDT / Tron (TRC20)', 'TMXXHRNG7qauoFWJKYbqEbd4FGgt3DgjBK'],
-  ['USDT / BSC (BEP20)', '0x4bdfd1d6456c28d06e3f8456ddac59e6168e5153'],
-]
+const DONATE: [string, string][] = DONATE_NETWORKS.map(n => [`${n.name.replace(' · ', ' / ')} (${n.chain})`, n.address])
 
 interface Props {
   settings: Settings
@@ -291,9 +289,12 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                   </section>
                   <section className="card-section">
                     <h4>Donate</h4>
-                    <div className="muted">Vutty is free and open source. If it saves you time, you can send USDT. Check the network before you send.</div>
+                    <div className="muted">{SHOW_CRYPTO_DONATE
+                      ? 'Vutty is free and open source. If it saves you time, you can send USDT. Check the network before you send.'
+                      : 'Vutty is free and open source. If it saves you time, you can support it on Ko-fi.'}</div>
                     <div className="muted">☕ $3 – a cup of coffee · 🍜 $10 – a lunch · 🚀 $25 – fuel new features</div>
-                    {DONATE.map(([label, addr]) => (
+                    {!SHOW_CRYPTO_DONATE && <div><button className="primary" onClick={() => void be.system.openUrl(KOFI)}>Support on Ko-fi</button></div>}
+                    {SHOW_CRYPTO_DONATE && DONATE.map(([label, addr]) => (
                       <div className="setting-row" key={addr}>
                         <div><b>{label}</b><div className="muted" style={{wordBreak: 'break-all', userSelect: 'text'}}>{addr}</div></div>
                         <button aria-label={'Copy ' + label + ' address'} onClick={() => { void be.system.writeClipboard(addr).then(() => toast.info('Address copied')).catch(e => toast.error(errMsg(e))) }}>Copy</button>

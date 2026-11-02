@@ -16,6 +16,7 @@ vi.mock('./lib/terminal/TerminalPane', async () => {
 })
 
 import App from './App'
+import {SHOW_CRYPTO_DONATE} from './lib/donate'
 
 function setup(extra: Parameters<typeof makeFake>[0] = {}) {
   const be = makeFake({hosts: [host({id: 'h1', label: 'web-1'}), host({id: 'h2', label: 'db-1'})], ...extra})
@@ -1085,13 +1086,18 @@ describe('App: the application menu bar', () => {
     localStorage.removeItem('vutty.update.checked')
   })
 
-  it('Help → Support Vutty opens the Support dialog with the USDT addresses, also while the vault is locked', async () => {
+  it('Help → Support Vutty opens the Support dialog (USDT addresses only when enabled), also while the vault is locked', async () => {
     const be = setup()
     await screen.findByLabelText('Master password')
     menu(be, 'support')
     const dlg = await screen.findByRole('dialog', {name: 'Support Vutty'})
-    expect(within(dlg).getByText(/Prefer crypto/)).toBeInTheDocument()
-    expect(within(dlg).getByText('TMXXHRNG7qauoFWJKYbqEbd4FGgt3DgjBK')).toBeInTheDocument()
+    if (SHOW_CRYPTO_DONATE) {
+      expect(within(dlg).getByText(/Prefer crypto/)).toBeInTheDocument()
+      expect(within(dlg).getByText('TMXXHRNG7qauoFWJKYbqEbd4FGgt3DgjBK')).toBeInTheDocument()
+    } else {
+      expect(within(dlg).queryByText(/Prefer crypto|USDT/)).toBeNull()
+      expect(within(dlg).getByRole('button', {name: 'Support on Ko-fi'})).toBeInTheDocument()
+    }
   })
 
   it('Help → About and Check for Updates still work while the vault is locked', async () => {

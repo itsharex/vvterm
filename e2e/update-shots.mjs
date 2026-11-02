@@ -41,10 +41,10 @@ try {
   await win.getByText('Donate').first().waitFor()
   await shot('settings-donate')
 
-  // Support Vutty: Ko-fi, the amounts, and the USDT addresses as QR codes
+  // Support Vutty: Ko-fi and the amounts (plus the USDT QR codes when crypto donations are on)
   await win.getByRole('button', {name: 'Support Vutty'}).click()
   const support = page.getByRole('dialog', {name: 'Support Vutty'})
-  await support.getByText(/Prefer crypto/).waitFor()
+  await support.getByRole('button', {name: 'Support on Ko-fi'}).waitFor() // the USDT part only shows when SHOW_CRYPTO_DONATE is on (frontend/src/lib/donate.ts)
   await shot('support-dialog')
 } finally {
   await browser.close()

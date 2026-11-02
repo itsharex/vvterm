@@ -7,6 +7,7 @@ import {SettingsWindow} from './SettingsWindow'
 import {Switch} from '../ui/Switch'
 import {makeFake, Providers} from '../../test/fakeBackend'
 import type {Settings, VaultStatus} from '../types'
+import {SHOW_CRYPTO_DONATE} from '../donate'
 
 const vaultSt: VaultStatus = {exists: true, unlocked: true, keychain_enabled: false, auto_lock_minutes: 15}
 
@@ -235,7 +236,16 @@ describe('SettingsWindow', () => {
     expect(be.state.calls).toContainEqual(['system.openUrl', 'https://github.com/vunguyenvu35/vutty/issues/new'])
   })
 
-  it('Support Vutty opens Ko-fi and the USDT addresses (QR code, Copy)', async () => {
+  it('Support Vutty opens Ko-fi, and hides the USDT addresses while crypto donations are off', async () => {
+    const {be} = setup()
+    await userEvent.click(screen.getByRole('button', {name: 'Support Vutty'}))
+    const dlg = await screen.findByRole('dialog', {name: 'Support Vutty'})
+    if (!SHOW_CRYPTO_DONATE) expect(within(dlg).queryByText(/USDT|Prefer crypto/)).toBeNull()
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Support on Ko-fi'}))
+    expect(be.state.calls).toContainEqual(['system.openUrl', 'https://ko-fi.com/vunguyenvu'])
+  })
+
+  it.skipIf(!SHOW_CRYPTO_DONATE)('Support Vutty opens Ko-fi and the USDT addresses (QR code, Copy)', async () => {
     const {be} = setup()
     await userEvent.click(screen.getByRole('button', {name: 'Support Vutty'}))
     const dlg = await screen.findByRole('dialog', {name: 'Support Vutty'})

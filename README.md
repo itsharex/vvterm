@@ -143,6 +143,7 @@ Your feedback is the point of this beta. Please [open an issue](../../issues/new
   <a href="https://ko-fi.com/vunguyenvu"><img src="https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white&style=for-the-badge" alt="Support Vutty on Ko-fi"></a>
 </p>
 
+<!-- CRYPTO-DONATE: hidden for now. To show it again, remove this comment line and the matching end line.
 <p align="center"><b>Prefer crypto?</b> Scan a code or copy an address, and check the network before you send.</p>
 
 <table align="center">
@@ -172,6 +173,7 @@ TMXXHRNG7qauoFWJKYbqEbd4FGgt3DgjBK
 ```
 
 </details>
+CRYPTO-DONATE end -->
 
 <p align="center"><sub>Stars, bug reports and pull requests help just as much. Thank you!</sub></p>
 

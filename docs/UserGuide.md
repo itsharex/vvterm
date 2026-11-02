@@ -242,9 +242,11 @@ When Vutty opens it also looks by itself, at most once a day (switch it off with
 **Help → About Vutty** and **Help → Check for Updates…** open the same window, also while the vault is locked.
 
 - **General:** **Zoom** makes the whole interface larger or smaller (80 % to 160 %, also with the zoom shortcuts), **Reduce motion** turns animations off, and **Confirm before closing a tab** asks before ending a terminal or SFTP connection.
-- **Account:** a local profile (display name and email, stored only in your settings file), your plan, and a disabled **Sign in** for the cloud features planned for later. Nothing is sent anywhere. The **Donate** card lists USDT addresses (Tron and BSC), each with a **Copy** button, if you want to support the project.
+- **Account:** a local profile (display name and email, stored only in your settings file), your plan, and a disabled **Sign in** for the cloud features planned for later. Nothing is sent anywhere. The **Donate** card links to Ko-fi if you want to support the project.
 
+<!-- CRYPTO-DONATE: screenshot shows the USDT addresses, hidden for now
 ![The Donate card](updates/settings-donate.png)
+-->
 
 ![Account](screenshots/46-settings-account.png)
 
