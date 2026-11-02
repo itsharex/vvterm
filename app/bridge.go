@@ -20,11 +20,11 @@ import (
 	"sync"
 	"time"
 
-	"vuterm/internal/usecase"
+	"vutty/internal/usecase"
 )
 
 // The Settings window is a second native window. Wails v2 can only create one window per process, so it
-// is a second VuTerm process that holds no data of its own: every read and write goes through this bridge
+// is a second Vutty process that holds no data of its own: every read and write goes through this bridge
 // to the main process, which owns the vault and the database. The bridge listens on loopback only, needs
 // a random token that is stored in a 0600 file inside the data directory, and exposes an explicit
 // allow-list of use case methods.
@@ -433,7 +433,7 @@ type BridgeClient struct {
 func ConnectBridge(dir string) (*BridgeClient, error) {
 	raw, err := os.ReadFile(filepath.Join(dir, bridgeFile))
 	if err != nil {
-		return nil, errors.New("VuTerm is not running: open Settings from the main window")
+		return nil, errors.New("Vutty is not running: open Settings from the main window")
 	}
 	var info bridgeInfo
 	if err := json.Unmarshal(raw, &info); err != nil || info.Port == 0 || info.Token == "" {
@@ -469,7 +469,7 @@ func (c *BridgeClient) Call(service, method, argsJSON string) (string, error) {
 	body, _ := json.Marshal(callRequest{Service: service, Method: method, Args: args})
 	resp, err := c.do(context.Background(), http.MethodPost, "/call", body)
 	if err != nil {
-		return "", errors.New("VuTerm is not running")
+		return "", errors.New("Vutty is not running")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -486,7 +486,7 @@ func (c *BridgeClient) Call(service, method, argsJSON string) (string, error) {
 }
 
 // versionHeader carries the app's version on /ping, so a window of another version can tell.
-const versionHeader = "X-VuTerm-Version"
+const versionHeader = "X-Vutty-Version"
 
 // Ping reports whether the main process still answers, and that it is the same version as this process.
 func (c *BridgeClient) Ping() error {
@@ -503,7 +503,7 @@ func (c *BridgeClient) Ping() error {
 	// A window left over from another version of the app (the app was updated while it was open) must not keep
 	// talking to the new main process: it would show, and ask for, things the two versions do not agree on.
 	if v := resp.Header.Get(versionHeader); v != Version {
-		return fmt.Errorf("this window is VuTerm %s but the app is %s: close it and open it again", Version, v)
+		return fmt.Errorf("this window is Vutty %s but the app is %s: close it and open it again", Version, v)
 	}
 	return nil
 }
@@ -575,7 +575,7 @@ func (c *BridgeClient) CallApp(service, method, argsJSON string) (string, error)
 	body, _ := json.Marshal(callRequest{Service: service, Method: method, Args: args})
 	resp, err := c.do(context.Background(), http.MethodPost, "/appcall", body)
 	if err != nil {
-		return "", errors.New("VuTerm is not running")
+		return "", errors.New("Vutty is not running")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {

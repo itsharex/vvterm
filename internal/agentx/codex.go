@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"vuterm/internal/domain/assistant"
+	"vutty/internal/domain/assistant"
 )
 
 // Codex drives the Codex CLI through `codex exec`.

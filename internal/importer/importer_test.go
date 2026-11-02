@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"vuterm/internal/domain"
+	"vutty/internal/domain"
 )
 
 func write(t *testing.T, path, content string) {
@@ -111,19 +111,21 @@ func TestParseMissingFile(t *testing.T) {
 
 func TestParseMetaComment(t *testing.T) {
 	dir := t.TempDir()
-	write(t, filepath.Join(dir, "config"), "# vuterm: env=prod tags=a,b\nHost x\n  HostName x\nHost y\n  HostName y\n")
+	write(t, filepath.Join(dir, "config"), "# vutty: env=prod tags=a,b\nHost x\n  HostName x\nHost y\n  HostName y\n")
 	p, _ := ParseFile(filepath.Join(dir, "config"))
 	if p.Entries[0].Env != "prod" || len(p.Entries[0].Tags) != 2 || p.Entries[1].Env != "" {
 		t.Fatalf("%+v", p.Entries)
 	}
 }
 
-func TestParseMetaCommentFromBeforeTheRename(t *testing.T) {
-	dir := t.TempDir()
-	write(t, filepath.Join(dir, "config"), "# vvterm: env=prod tags=a,b\nHost x\n  HostName x\n")
-	p, _ := ParseFile(filepath.Join(dir, "config"))
-	if p.Entries[0].Env != "prod" || len(p.Entries[0].Tags) != 2 {
-		t.Fatalf("%+v", p.Entries)
+func TestParseMetaCommentFromBeforeTheRenames(t *testing.T) {
+	for _, marker := range []string{"# vvterm:", "# vuterm:"} {
+		dir := t.TempDir()
+		write(t, filepath.Join(dir, "config"), marker+" env=prod tags=a,b\nHost x\n  HostName x\n")
+		p, _ := ParseFile(filepath.Join(dir, "config"))
+		if p.Entries[0].Env != "prod" || len(p.Entries[0].Tags) != 2 {
+			t.Fatalf("%s: %+v", marker, p.Entries)
+		}
 	}
 }
 

@@ -1,5 +1,5 @@
 // Package localtty runs a shell on this computer behind a pseudo-terminal: the "Terminal" tab, like
-// the Terminal app but inside VuTerm. It implements the usecase.Shell port.
+// the Terminal app but inside Vutty. It implements the usecase.Shell port.
 package localtty
 
 import (

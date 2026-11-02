@@ -74,12 +74,12 @@ describe('Brand wordmark', () => {
     expect(Number(spacing![1])).toBeGreaterThanOrEqual(0)
   })
 
-  it('renders logo and wordmark in one flex row with the accessible name VuTerm', () => {
+  it('renders logo and wordmark in one flex row with the accessible name Vutty', () => {
     render(<Brand size="lg" heading />)
-    const el = screen.getByRole('heading', {name: 'VuTerm'})
+    const el = screen.getByRole('heading', {name: 'Vutty'})
     expect(el).toHaveClass('brand-lockup', 'lg')
     expect(el.querySelector('img')).not.toBeNull()
-    expect(el.querySelector('.wordmark')).toHaveTextContent('VuTerm_')
+    expect(el.querySelector('.wordmark')).toHaveTextContent('Vutty_')
   })
 })
 

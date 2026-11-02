@@ -16,13 +16,13 @@ help:
 # binary (frontend/dist), not the Vite dev server, so build it first: otherwise they show the last build.
 dev:
 	cd frontend && npm run build
-	@# the macOS Vietnamese input method logs this line for every key typed; it is not from VuTerm and means nothing
+	@# the macOS Vietnamese input method logs this line for every key typed; it is not from Vutty and means nothing
 	$(WAILS) dev 2>&1 | grep --line-buffered -v 'getApplicationProperty: called with invalid property' || true
 
 build:
-	$(WAILS) build -ldflags "-X vuterm/app.Version=$(VERSION)"
-	@if [ "$$(uname)" = Darwin ]; then ./scripts/macos-settings-helper.sh build/bin/vuterm.app; fi
-	@if [ "$$(uname)" = Darwin ]; then codesign --force --deep --sign - build/bin/vuterm.app; fi
+	$(WAILS) build -ldflags "-X vutty/app.Version=$(VERSION)"
+	@if [ "$$(uname)" = Darwin ]; then ./scripts/macos-settings-helper.sh build/bin/vutty.app; fi
+	@if [ "$$(uname)" = Darwin ]; then codesign --force --deep --sign - build/bin/vutty.app; fi
 
 test: test-go test-web
 
@@ -43,7 +43,7 @@ package:
 	./scripts/package-macos.sh --build
 
 release: test build
-	@shasum -a 256 build/bin/vuterm.app/Contents/MacOS/vuterm
+	@shasum -a 256 build/bin/vutty.app/Contents/MacOS/vutty
 
 deploy-dev:
 	./scripts/deploy.sh dev

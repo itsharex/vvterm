@@ -211,13 +211,13 @@ export function movePane(tabs: Tab[], fromTabId: string, paneId: string, toTabId
 }
 
 /** What a dragged tab carries, and which tab it is (a drag cannot be read before it is dropped). */
-export const TAB_DRAG = 'application/x-vuterm-tab'
+export const TAB_DRAG = 'application/x-vutty-tab'
 let dragging = ''
 export const setDraggingTab = (id: string) => { dragging = id }
 export const draggingTab = () => dragging
 
 /** What a dragged pane header carries (a drag cannot be read before it is dropped, so the pane is also kept here). */
-export const PANE_DRAG = 'application/x-vuterm-pane'
+export const PANE_DRAG = 'application/x-vutty-pane'
 let draggedPane: {tabId: string; paneId: string} | null = null
 export const setDraggingPane = (p: {tabId: string; paneId: string} | null) => { draggedPane = p }
 export const draggingPane = () => draggedPane

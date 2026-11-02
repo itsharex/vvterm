@@ -41,7 +41,7 @@ export default function SettingsApp() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = appearance
-    try { localStorage.setItem('vuterm.appearance', appearance) } catch { /* not remembered */ }
+    try { localStorage.setItem('vutty.appearance', appearance) } catch { /* not remembered */ }
   }, [appearance])
   useEffect(() => { document.documentElement.style.setProperty('zoom', String((settings.zoom || 100) / 100)) }, [settings.zoom])
   useEffect(() => { document.documentElement.dataset.motion = settings.reduce_motion ? 'reduced' : 'full' }, [settings.reduce_motion])

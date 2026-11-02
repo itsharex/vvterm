@@ -13,14 +13,14 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"vuterm/internal/sftpx"
-	"vuterm/internal/sqlitedb"
-	"vuterm/internal/sshx"
-	"vuterm/internal/store"
+	"vutty/internal/sftpx"
+	"vutty/internal/sqlitedb"
+	"vutty/internal/sshx"
+	"vutty/internal/store"
 
-	"vuterm/internal/domain"
-	"vuterm/internal/testssh"
-	"vuterm/internal/vault"
+	"vutty/internal/domain"
+	"vutty/internal/testssh"
+	"vutty/internal/vault"
 )
 
 const masterPW = "a long master password"
@@ -130,7 +130,7 @@ func testCore(t *testing.T, dir string, emit Emitter) (*Core, error) {
 	if err := os.MkdirAll(data, 0o700); err != nil {
 		return nil, err
 	}
-	db, err := sqlitedb.Open(filepath.Join(data, "vuterm.db"))
+	db, err := sqlitedb.Open(filepath.Join(data, "vutty.db"))
 	if err != nil {
 		return nil, err
 	}

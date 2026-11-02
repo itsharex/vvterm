@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const latestReleaseURL = "https://api.github.com/repos/vunguyenvu35/vuterm/releases/latest"
+const latestReleaseURL = "https://api.github.com/repos/vunguyenvu35/vutty/releases/latest"
 
 // UpdateInfo is the answer of CheckUpdate: whether a newer release exists on GitHub.
 type UpdateInfo struct {
@@ -29,7 +29,7 @@ func (s *SystemService) CheckUpdate() (UpdateInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	url := latestReleaseURL
-	if u := os.Getenv("VUTERM_UPDATE_URL"); u != "" {
+	if u := os.Getenv("VUTTY_UPDATE_URL"); u != "" {
 		url = u // tests and screenshots point this at a local stand-in for GitHub
 	}
 	return checkUpdate(ctx, http.DefaultClient, url, Version)
@@ -41,7 +41,7 @@ func checkUpdate(ctx context.Context, c *http.Client, url, current string) (Upda
 		return UpdateInfo{}, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "vuterm/"+current)
+	req.Header.Set("User-Agent", "vutty/"+current)
 	resp, err := c.Do(req)
 	if err != nil {
 		return UpdateInfo{}, errors.New("could not reach GitHub: check your connection")

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"vuterm/internal/domain"
+	"vutty/internal/domain"
 )
 
 // gateFS is a remote file system whose uploads can be held, so a test decides when a copy is in flight.

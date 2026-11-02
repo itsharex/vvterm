@@ -6,12 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-	"vuterm/internal/fsutil"
+	"vutty/internal/fsutil"
 
-	"vuterm/internal/domain"
-	"vuterm/internal/exporter"
-	"vuterm/internal/importer"
-	"vuterm/internal/syncgit"
+	"vutty/internal/domain"
+	"vutty/internal/exporter"
+	"vutty/internal/importer"
+	"vutty/internal/syncgit"
 )
 
 // ImportReport summarises an import for the UI.
@@ -31,7 +31,7 @@ type ExportReport struct {
 	Warnings []string `json:"warnings"`
 }
 
-// ImportExportService converts between VuTerm data and standard formats.
+// ImportExportService converts between Vutty data and standard formats.
 type ImportExportService struct{ c *Core }
 
 func NewImportExportService(c *Core) *ImportExportService { return &ImportExportService{c} }

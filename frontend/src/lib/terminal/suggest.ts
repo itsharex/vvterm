@@ -12,7 +12,7 @@ export interface Suggestion {
 }
 
 export interface Sources {
-  /** commands typed in VuTerm, newest first */
+  /** commands typed in Vutty, newest first */
   typed: string[]
   snippets: Snippet[]
   /** commands in the shell history of the server, newest first */
@@ -33,7 +33,7 @@ export const looksSecret = (line: string) => SECRETISH.test(line)
 const oneLine = (s: string) => !/[\r\n]/.test(s.trim())
 
 /**
- * The suggestions for what has been typed so far. Commands that start with it come first (typed in VuTerm, then
+ * The suggestions for what has been typed so far. Commands that start with it come first (typed in Vutty, then
  * snippets, then the host's history, each newest first); a snippet whose name starts with it follows. Nothing is
  * suggested for text that is only spaces, and a command the same as what is typed is not a suggestion.
  */

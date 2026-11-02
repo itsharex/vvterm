@@ -202,13 +202,13 @@ func menuViaMain(c *BridgeClient, ctx func() context.Context) *menu.Menu {
 // bundled helper is used only when it is the same program as exe; otherwise the one in the cache is used, which
 // is made again whenever exe differs.
 func settingsExecutable(exe string) string {
-	helper := filepath.Join(filepath.Dir(exe), "..", "Helpers", "VuTerm Settings.app", "Contents", "MacOS", "vuterm-settings")
+	helper := filepath.Join(filepath.Dir(exe), "..", "Helpers", "Vutty Settings.app", "Contents", "MacOS", "vutty-settings")
 	if st, err := os.Stat(helper); err == nil && st.Mode().IsRegular() && sameProgram(exe, helper) {
 		return helper
 	}
 	if goruntime.GOOS == "darwin" {
 		if cache, err := os.UserCacheDir(); err == nil {
-			if h, err := prepareSettingsHelper(exe, filepath.Join(cache, "vuterm")); err == nil {
+			if h, err := prepareSettingsHelper(exe, filepath.Join(cache, "vutty")); err == nil {
 				return h
 			}
 		}
@@ -260,9 +260,9 @@ const settingsHelperPlist = `<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleName</key><string>VuTerm Settings</string>
-  <key>CFBundleExecutable</key><string>vuterm-settings</string>
-  <key>CFBundleIdentifier</key><string>com.wails.vuterm.settings</string>
+  <key>CFBundleName</key><string>Vutty Settings</string>
+  <key>CFBundleExecutable</key><string>vutty-settings</string>
+  <key>CFBundleIdentifier</key><string>com.wails.vutty.settings</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
@@ -270,12 +270,12 @@ const settingsHelperPlist = `<?xml version="1.0" encoding="UTF-8"?>
 </plist>
 `
 
-// prepareSettingsHelper makes (or refreshes) root/VuTerm Settings.app around exe and returns the helper's
+// prepareSettingsHelper makes (or refreshes) root/Vutty Settings.app around exe and returns the helper's
 // executable. It is a hard link to exe, so a rebuilt exe gets a new link the next time and nothing is copied;
 // across disks it falls back to a copy.
 func prepareSettingsHelper(exe, root string) (string, error) {
-	bundle := filepath.Join(root, "VuTerm Settings.app")
-	bin := filepath.Join(bundle, "Contents", "MacOS", "vuterm-settings")
+	bundle := filepath.Join(root, "Vutty Settings.app")
+	bin := filepath.Join(bundle, "Contents", "MacOS", "vutty-settings")
 	if _, err := os.Stat(exe); err != nil {
 		return "", err
 	}

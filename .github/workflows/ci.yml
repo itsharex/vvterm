@@ -48,4 +48,4 @@ jobs:
         with:
           node-version: '22'
       - run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.17.0
-      - run: $(go env GOPATH)/bin/wails build -ldflags "-X vuterm/app.Version=${{ github.sha }}"
+      - run: $(go env GOPATH)/bin/wails build -ldflags "-X vutty/app.Version=${{ github.sha }}"

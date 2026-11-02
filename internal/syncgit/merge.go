@@ -1,6 +1,6 @@
 package syncgit
 
-import "vuterm/internal/domain"
+import "vutty/internal/domain"
 
 // Bundle and the merge rules are domain concepts; syncgit only transports them.
 type Bundle = domain.Bundle

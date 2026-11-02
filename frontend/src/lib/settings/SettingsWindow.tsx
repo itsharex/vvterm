@@ -40,7 +40,7 @@ const FONTS = [
   {label: 'Courier New', value: "'Courier New', monospace"},
 ]
 
-const REPO = 'https://github.com/vunguyenvu35/vuterm'
+const REPO = 'https://github.com/vunguyenvu35/vutty'
 const LINKS: [string, string][] = [
   ['Documentation', REPO + '#readme'],
   ['Request a feature', REPO + '/issues/new'],
@@ -227,7 +227,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
               {LINKS.map(([label, url]) => (
                 <button key={label} className="win-link" onClick={() => be.system.openUrl(url)}>{label}<IconArrowUpRight size={15} /></button>
               ))}
-              <button className="win-link" onClick={() => setSupportOpen(true)}>Support VuTerm</button>
+              <button className="win-link" onClick={() => setSupportOpen(true)}>Support Vutty</button>
               <div className="spacer" />
               {newer?.available && (
                 <button className="win-link" onClick={() => be.system.openUrl(newer.url)}>Version {newer.latest} is available<IconArrowUpRight size={15} /></button>
@@ -263,7 +263,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                       <Switch label="Confirm before closing a tab" checked={s.confirm_tab_close} onChange={v => update({confirm_tab_close: v})} />
                     </div>
                     <div className="setting-row">
-                      <div><b>Check for updates automatically</b><div className="muted">When VuTerm opens, ask GitHub (at most once a day) whether a newer release exists. Only the release information is read; nothing about you is sent.</div></div>
+                      <div><b>Check for updates automatically</b><div className="muted">When Vutty opens, ask GitHub (at most once a day) whether a newer release exists. Only the release information is read; nothing about you is sent.</div></div>
                       <Switch label="Check for updates automatically" checked={s.auto_update_check} onChange={v => update({auto_update_check: v})} />
                     </div>
                     <div className="setting-row">
@@ -291,7 +291,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                   </section>
                   <section className="card-section">
                     <h4>Donate</h4>
-                    <div className="muted">VuTerm is free and open source. If it saves you time, you can send USDT. Check the network before you send.</div>
+                    <div className="muted">Vutty is free and open source. If it saves you time, you can send USDT. Check the network before you send.</div>
                     <div className="muted">☕ $3 – a cup of coffee · 🍜 $10 – a lunch · 🚀 $25 – fuel new features</div>
                     {DONATE.map(([label, addr]) => (
                       <div className="setting-row" key={addr}>
@@ -367,7 +367,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                       <Switch label="Highlight output" checked={s.highlight} onChange={v => update({highlight: v})} />
                     </div>
                     <div className="setting-row">
-                      <div><b>Suggest commands</b><div className="muted">While you type, a list of the commands that match appears under the cursor (↓ ↑ choose a row, Enter or Tab put it on the line, Esc closes it), and ⌘⇧J (Ctrl+Shift+J elsewhere) opens it by hand. It uses the commands you ran in VuTerm, the shell history of this computer (~/.zsh_history, ~/.bash_history) in the local terminal, and your Snippets of one line; it is not offered in vim or at a password prompt, and a line that looks like a secret is never suggested.</div></div>
+                      <div><b>Suggest commands</b><div className="muted">While you type, a list of the commands that match appears under the cursor (↓ ↑ choose a row, Enter or Tab put it on the line, Esc closes it), and ⌘⇧J (Ctrl+Shift+J elsewhere) opens it by hand. It uses the commands you ran in Vutty, the shell history of this computer (~/.zsh_history, ~/.bash_history) in the local terminal, and your Snippets of one line; it is not offered in vim or at a password prompt, and a line that looks like a secret is never suggested.</div></div>
                       <Switch label="Suggest commands" checked={s.suggest} onChange={v => update({suggest: v})} />
                     </div>
                     <div className="setting-row">
@@ -416,14 +416,14 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                     </div>
                     {vault.biometric_available && vault.keychain_enabled && (
                       <div className="setting-row">
-                        <div><b>Ask as soon as VuTerm opens</b><div className="muted">The lock screen shows the {biometricName()} sheet by itself. Off: press "Use {biometricName()}" yourself.</div></div>
+                        <div><b>Ask as soon as Vutty opens</b><div className="muted">The lock screen shows the {biometricName()} sheet by itself. Off: press "Use {biometricName()}" yourself.</div></div>
                         <Switch label="Ask on open" checked={s.biometric_on_open} onChange={v => update({biometric_on_open: v})} />
                       </div>
                     )}
                   </section>
                   <section className="card-section">
                     <h4>Password hint</h4>
-                    <div className="muted">A reminder shown on the lock screen if you forget the master password. Anyone who opens VuTerm can read it, so never write the password in it.</div>
+                    <div className="muted">A reminder shown on the lock screen if you forget the master password. Anyone who opens Vutty can read it, so never write the password in it.</div>
                     <div className="input-row">
                       <input aria-label="Password hint" className="control wide" maxLength={120} placeholder="A reminder only you understand" value={hint} onChange={e => setHint(e.target.value)} />
                       <button disabled={hint.trim() === (vault.hint ?? '')}
@@ -452,7 +452,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                 <section className="card-section">
                   <h4>Storage</h4>
                   <div className="setting-row">
-                    <div><b>Clear cache</b><div className="muted">Removes files VuTerm can make again and what it remembers about your AI tools (they are looked up again). Your hosts, keys, vault, settings and history are not touched.</div></div>
+                    <div><b>Clear cache</b><div className="muted">Removes files Vutty can make again and what it remembers about your AI tools (they are looked up again). Your hosts, keys, vault, settings and history are not touched.</div></div>
                     <button disabled={busyStorage} onClick={() => void clearCache()}>Clear cache</button>
                   </div>
                   <div className="setting-row">

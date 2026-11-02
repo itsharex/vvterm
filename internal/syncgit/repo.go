@@ -9,9 +9,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"vuterm/internal/fsutil"
+	"vutty/internal/fsutil"
 
-	"vuterm/internal/vault"
+	"vutty/internal/vault"
 )
 
 const (
@@ -52,7 +52,7 @@ func (r *Repo) run(args ...string) (string, error) {
 	if g == "" {
 		g = "git"
 	}
-	full := append([]string{"-c", "user.name=VuTerm", "-c", "user.email=vuterm@localhost",
+	full := append([]string{"-c", "user.name=Vutty", "-c", "user.email=vutty@localhost",
 		"-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null"}, args...)
 	cmd := exec.Command(g, full...)
 	cmd.Dir = r.Dir
@@ -192,7 +192,7 @@ func (r *Repo) Sync(local Bundle, header vault.Header, s Sealer) (Result, error)
 		if err != nil {
 			return res, err
 		}
-		pushed, err := r.commitPush(header, blob, "VuTerm sync")
+		pushed, err := r.commitPush(header, blob, "Vutty sync")
 		if err == nil {
 			res.Merged, res.Pushed = cur, pushed
 			return res, nil

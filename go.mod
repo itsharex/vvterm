@@ -1,4 +1,4 @@
-module vuterm
+module vutty
 
 go 1.26.0
 

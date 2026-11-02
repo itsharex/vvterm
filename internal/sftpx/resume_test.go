@@ -13,9 +13,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"vuterm/internal/domain"
-	"vuterm/internal/sshx"
-	"vuterm/internal/testssh"
+	"vutty/internal/domain"
+	"vutty/internal/sshx"
+	"vutty/internal/testssh"
 )
 
 var errPause = errors.New("paused")

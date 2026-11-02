@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"vuterm/internal/domain"
-	"vuterm/internal/syncgit"
-	"vuterm/internal/vault"
+	"vutty/internal/domain"
+	"vutty/internal/syncgit"
+	"vutty/internal/vault"
 )
 
 var t0 = time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)

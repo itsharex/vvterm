@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"vuterm/internal/domain/assistant"
+	"vutty/internal/domain/assistant"
 )
 
 // TestMain lets the test binary act as a tiny stdio MCP server.

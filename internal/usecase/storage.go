@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"vuterm/internal/domain/assistant"
+	"vutty/internal/domain/assistant"
 )
 
 // CacheReport says what Clear cache removed.

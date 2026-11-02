@@ -10,7 +10,7 @@ export const DONATE_NETWORKS = [
   {id: 'bsc', name: 'USDT · BSC', chain: 'BEP20', address: '0x4bdfd1d6456c28d06e3f8456ddac59e6168e5153', qr: '/donate/usdt-bsc.png'},
 ]
 
-/** Support VuTerm: Ko-fi, the suggested amounts, and the USDT addresses as QR codes with a Copy button. */
+/** Support Vutty: Ko-fi, the suggested amounts, and the USDT addresses as QR codes with a Copy button. */
 export function SupportPanel({onClose}: {onClose(): void}) {
   const be = useBackend()
   const toast = useToast()
@@ -18,9 +18,9 @@ export function SupportPanel({onClose}: {onClose(): void}) {
     void be.system.writeClipboard(address).then(() => toast.info(name + ' address copied')).catch(e => toast.error(errMsg(e)))
 
   return (
-    <Modal title="Support VuTerm" wide onClose={onClose} footer={<button onClick={onClose}>Close</button>}>
+    <Modal title="Support Vutty" wide onClose={onClose} footer={<button onClick={onClose}>Close</button>}>
       <div style={{display: 'grid', gap: 16, justifyItems: 'center', textAlign: 'center'}}>
-        <div className="muted">VuTerm is free and open source, built and maintained in spare time. If it saves you time, you can help keep it going.</div>
+        <div className="muted">Vutty is free and open source, built and maintained in spare time. If it saves you time, you can help keep it going.</div>
         <div style={{display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center'}}>
           {[['☕', '$3', 'a cup of coffee'], ['🍜', '$10', 'a lunch'], ['🚀', '$25', 'fuel new features']].map(([icon, amount, what]) => (
             <div key={amount} style={{minWidth: 140, padding: '12px 16px', borderRadius: 12, border: '1px solid var(--line, #2c3244)'}}>

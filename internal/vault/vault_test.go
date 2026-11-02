@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"vuterm/internal/domain"
+	"vutty/internal/domain"
 )
 
 const pw = "correct horse battery"
@@ -347,7 +347,7 @@ func TestPasswordBackupRoundTrip(t *testing.T) {
 }
 
 func TestGenerateAndParseKey(t *testing.T) {
-	priv, pub, err := GenerateEd25519("vuterm-test")
+	priv, pub, err := GenerateEd25519("vutty-test")
 	if err != nil {
 		t.Fatal(err)
 	}

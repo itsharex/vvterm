@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	"vuterm/internal/domain"
+	"vutty/internal/domain"
 )
 
 // HostService manages groups and hosts. Deletes are tombstones.

@@ -19,7 +19,7 @@ import (
 
 	"golang.org/x/crypto/argon2"
 
-	"vuterm/internal/domain"
+	"vutty/internal/domain"
 )
 
 const (
@@ -287,7 +287,7 @@ func (v *Vault) EnableKeychain() error {
 		return errors.New("keychain not available")
 	}
 	if v.auth != nil {
-		if err := v.auth("turn on quick unlock for VuTerm"); err != nil {
+		if err := v.auth("turn on quick unlock for Vutty"); err != nil {
 			return err
 		}
 	}
@@ -637,7 +637,7 @@ func OpenWithPassword(pw string, blob []byte) ([]byte, error) {
 		Ciphertext []byte    `json:"ciphertext"`
 	}
 	if err := json.Unmarshal(blob, &e); err != nil || e.Version != 1 {
-		return nil, errors.New("not a VuTerm backup file")
+		return nil, errors.New("not a Vutty backup file")
 	}
 	if err := validKDF(e.KDF); err != nil {
 		return nil, err

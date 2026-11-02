@@ -33,7 +33,7 @@ describe('Workspace: per-host terminal theme', () => {
 
   it('an unknown theme id falls back to the app appearance rather than breaking', () => {
     render(<Workspace {...base} tabs={[newTab('h1', 'a')]} hosts={[host({id: 'h1', terminal_theme: 'removed-theme'} as never)]} />)
-    expect(seen[0].bg).toBe(bg('vuterm-dark'))
+    expect(seen[0].bg).toBe(bg('vutty-dark'))
   })
 
   it('works without a host list', () => {

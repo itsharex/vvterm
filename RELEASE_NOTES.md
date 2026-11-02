@@ -1,10 +1,12 @@
-<p align="center"><img src="docs/brand/logo-mark-256.png" alt="VuTerm" width="88"></p>
+<p align="center"><img src="docs/brand/logo-mark-256.png" alt="Vutty" width="88"></p>
 
-# VuTerm 1.1.2
+# Vutty 1.1.2
 
 Release date: 2026-10-30 · Platform: macOS (arm64 build verified) · Status: beta. Read [Known issues](#known-issues) first.
 
 ## Unreleased
+
+- **VuTerm is now Vutty.** The VuTerm name was used for a few days only, and Vutty is shorter and says more (a *tty* is a terminal). The logo mark is unchanged, the wordmark now reads Vutty. Your data comes with you from VuTerm and from VVTerm alike: on first start the data folder (`vuterm` or `vvterm`) is renamed to `vutty`, the database file is renamed too, saved view settings are copied to the new names, `$VUTERM_DATA_DIR` and `$VVTERM_DATA_DIR` still work next to the new `$VUTTY_DATA_DIR`, and Quick unlock (Touch ID) and `.vvbak` / `.vubak` backups keep working. The app is now `vutty.app`, and the update check and the links point to `github.com/vunguyenvu35/vutty`.
 
 - **VVTerm is now VuTerm.** Another project already used the name VVTerm, so this one is renamed. The logo mark is unchanged. Your data comes with you: on first start the data folder `vvterm` is renamed to `vuterm`, the database file is renamed too, saved view settings are copied to the new names, Quick unlock keeps working, and backups, sync bundles and `~/.ssh/config` files exported by VVTerm are still read. The old `VVTERM_DATA_DIR` setting still works (the new one is `VUTERM_DATA_DIR`). The app is now `vuterm.app` / `vuterm-<version>-…`, and the GitHub repository is `vunguyenvu35/vuterm` (the old address redirects). Backups you save get the extension `.vubak`; `.vvbak` files still open. Some screenshots in the docs still show the old name.
 

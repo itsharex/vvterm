@@ -13,9 +13,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"vuterm/internal/domain"
-	"vuterm/internal/testssh"
-	"vuterm/internal/vault"
+	"vutty/internal/domain"
+	"vutty/internal/testssh"
+	"vutty/internal/vault"
 )
 
 func echoLn(t *testing.T) int {
@@ -966,7 +966,7 @@ func TestOldSettingsWithoutShortcutsGetsNonNilMap(t *testing.T) {
 // and not asked again.
 func TestFirstConnectionLearnsTheServerType(t *testing.T) {
 	h := newHarness(t).unlocked(t)
-	srv, err := testssh.Start(testssh.Config{User: "root", Password: "pw", ExecReply: "Linux\n---VUTERM---\nPRETTY_NAME=\"Ubuntu 24.04\"\nID=ubuntu\nID_LIKE=debian\n"})
+	srv, err := testssh.Start(testssh.Config{User: "root", Password: "pw", ExecReply: "Linux\n---VUTTY---\nPRETTY_NAME=\"Ubuntu 24.04\"\nID=ubuntu\nID_LIKE=debian\n"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1034,7 +1034,7 @@ func TestUnknownServerTypeStaysEmpty(t *testing.T) {
 
 func TestSFTPConnectionAlsoLearnsTheServerType(t *testing.T) {
 	h := newHarness(t).unlocked(t)
-	srv, err := testssh.Start(testssh.Config{User: "root", Password: "pw", SFTP: true, ExecReply: "FreeBSD\n---VUTERM---\n"})
+	srv, err := testssh.Start(testssh.Config{User: "root", Password: "pw", SFTP: true, ExecReply: "FreeBSD\n---VUTTY---\n"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"vuterm/internal/domain"
+	"vutty/internal/domain"
 )
 
 type pairFixture struct {

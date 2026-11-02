@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"vuterm/internal/domain"
+	"vutty/internal/domain"
 )
 
 func writeTree(t *testing.T, root string, files map[string]string) {

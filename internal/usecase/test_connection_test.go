@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"vuterm/internal/domain"
+	"vutty/internal/domain"
 )
 
 // runTest calls TestConnection in the background and answers the host key prompt.

@@ -22,7 +22,7 @@ type Msg =
   | {kind: 'assistant'; rid: string; text: string; streaming: boolean; steps: AiStep[]; confirms: ConfirmReq[]; commands: AiCommand[]; meta?: string; error?: {message: string; code: string}}
 
 /** Fired by the "next model" shortcut; the open assistant moves to the next model of its provider. */
-export const AI_NEXT_MODEL = 'vuterm:ai-next-model'
+export const AI_NEXT_MODEL = 'vutty:ai-next-model'
 
 const store = {
   get: (k: string) => { try { return localStorage.getItem(k) ?? '' } catch { return '' } },
@@ -35,7 +35,7 @@ const POLICY_LABEL: Record<string, string> = {off: 'Off', ask: 'Ask first', on: 
 
 /**
  * The AI assistant of a terminal, in the sidebar. It asks a command-line AI the user is signed in to about
- * the text on the screen. VuTerm redacts secrets on the way out and in (shown as *******); the assistant
+ * the text on the screen. Vutty redacts secrets on the way out and in (shown as *******); the assistant
  * only proposes commands, and the user decides.
  */
 export function AssistantTab({paneId, onOpenSettings}: {paneId: string; onOpenSettings(): void}) {
@@ -69,7 +69,7 @@ export function AssistantTab({paneId, onOpenSettings}: {paneId: string; onOpenSe
       setProvider(cur => {
         const ready = list.filter(p => p.enabled && p.status.state === 'ready')
         if (ready.some(p => p.id === cur)) return cur
-        const remembered = store.get('vuterm.ai.provider')
+        const remembered = store.get('vutty.ai.provider')
         return (ready.find(p => p.id === remembered) ?? ready.find(p => p.default) ?? ready[0])?.id ?? ''
       })
       setLoadErr('')
@@ -110,7 +110,7 @@ export function AssistantTab({paneId, onOpenSettings}: {paneId: string; onOpenSe
     try {
       const l = await be.assistant.models(provider, refresh)
       setModels(l)
-      const want = store.get('vuterm.ai.model.' + provider) || providersRef.current.find(p => p.id === provider)?.model || ''
+      const want = store.get('vutty.ai.model.' + provider) || providersRef.current.find(p => p.id === provider)?.model || ''
       setModel(l.models.some(m => m.id === want) ? want : '')
     } catch (e) {
       setModels({models: [{id: '', name: 'Default (CLI decides)'}], error: errMsg(e), can_list: true})
@@ -226,7 +226,7 @@ export function AssistantTab({paneId, onOpenSettings}: {paneId: string; onOpenSe
 
   const pickModel = (v: string) => {
     setModel(v)
-    store.set('vuterm.ai.model.' + provider, v)
+    store.set('vutty.ai.model.' + provider, v)
   }
   const modelsRef = useRef({models, model, busy})
   modelsRef.current = {models, model, busy}
@@ -260,7 +260,7 @@ export function AssistantTab({paneId, onOpenSettings}: {paneId: string; onOpenSe
     return (
       <div className="ai-empty" data-testid="ai-setup">
         <b>AI assistant</b>
-        <p className="muted">Ask an AI about what is on this terminal. VuTerm uses the AI command-line tool you already have, so no key is needed.</p>
+        <p className="muted">Ask an AI about what is on this terminal. Vutty uses the AI command-line tool you already have, so no key is needed.</p>
         {waiting.length > 0 && <p className="muted">Not signed in: {waiting.map(p => `${p.name}${p.status.hint ? ' (run ' + p.status.hint + ')' : ''}`).join(', ')}.</p>}
         <button className="primary" onClick={onOpenSettings}>Enable a provider in Settings</button>
       </div>
@@ -315,7 +315,7 @@ export function AssistantTab({paneId, onOpenSettings}: {paneId: string; onOpenSe
                   <>
                     <b>Send pictures as they are?</b>
                     <div className="ai-chips">{m.files.filter(f => f.kind === 'image').map(f => <FileChip key={f.id} file={f} />)}</div>
-                    <p>VuTerm hides secrets in text, but it <b>cannot find a secret inside a picture</b>. Anything you can see in {m.files.filter(f => f.kind === 'image').length === 1 ? 'it' : 'them'} goes to <b>{current?.name}</b> as it is. The terminal text and text files are still redacted. Check that no password, token or key is visible.</p>
+                    <p>Vutty hides secrets in text, but it <b>cannot find a secret inside a picture</b>. Anything you can see in {m.files.filter(f => f.kind === 'image').length === 1 ? 'it' : 'them'} goes to <b>{current?.name}</b> as it is. The terminal text and text files are still redacted. Check that no password, token or key is visible.</p>
                     <div className="ai-cmd-actions"><button className="primary" onClick={() => void answerCard(m, true)}>Send pictures</button><button onClick={() => void answerCard(m, false)}>Cancel</button></div>
                   </>
                 )}
@@ -353,7 +353,7 @@ export function AssistantTab({paneId, onOpenSettings}: {paneId: string; onOpenSe
           </div>
           <Composer value={input} onChange={setInput} files={files} onRemoveFile={id => setFiles(fs => fs.filter(f => f.id !== id))} onAddFiles={list => void addFiles(list)}
             onSend={() => void send(input, '')} onUseSelection={askSelection} onStop={cancel} busy={busy} ready={!!sid} images={!!current?.supports_images}
-            leading={<ModelPicker providers={enabled} provider={provider} onProvider={v => { setProvider(v); store.set('vuterm.ai.provider', v); setMsgs([]) }} models={models} model={model}
+            leading={<ModelPicker providers={enabled} provider={provider} onProvider={v => { setProvider(v); store.set('vutty.ai.provider', v); setMsgs([]) }} models={models} model={model}
               onModel={pickModel} loading={modelsBusy} onRetry={() => void loadModels(true)} disabled={busy} />} />
         </>
       )}

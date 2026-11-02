@@ -21,8 +21,8 @@ const firstLine = (s: string) => s.split(/\r?\n/).find(l => l.trim()) ?? ''
 /** Reusable scripts. Run types the script into the focused terminal pane and presses Enter. */
 export function SnippetsPage(p: Props) {
   const [q, setQ] = useState('')
-  const [sort, setSort] = usePref<Sort>('vuterm.snippets.sort', SORTS.map(o => o.value), 'name')
-  const [view, setView] = usePref('vuterm.snippets.view', VIEWS, 'grid')
+  const [sort, setSort] = usePref<Sort>('vutty.snippets.sort', SORTS.map(o => o.value), 'name')
+  const [view, setView] = usePref('vutty.snippets.view', VIEWS, 'grid')
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase()
     const list = p.snippets.filter(s => !needle || (s.label + '\n' + (s.description ?? '') + '\n' + s.script).toLowerCase().includes(needle))

@@ -7,9 +7,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"vuterm/internal/domain"
-	"vuterm/internal/sshx"
-	"vuterm/internal/vault"
+	"vutty/internal/domain"
+	"vutty/internal/sshx"
+	"vutty/internal/vault"
 )
 
 // hopFor turns a host into a dialable hop, decrypting its identity inside Go.

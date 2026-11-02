@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"vuterm/internal/vault"
+	"vutty/internal/vault"
 )
 
 func newBridgeApp(t *testing.T) (*App, *Bridge, *[]string, string) {
@@ -221,7 +221,7 @@ func TestOpenSettingsFallsBackWithoutNativeWindows(t *testing.T) {
 	if err := s.OpenSettings(); err != nil || called != 1 {
 		t.Fatalf("%v %d", err, called)
 	}
-	t.Setenv("VUTERM_NO_NATIVE_DIALOGS", "1")
+	t.Setenv("VUTTY_NO_NATIVE_DIALOGS", "1")
 	if err := s.OpenSettings(); err == nil || called != 1 {
 		t.Fatal("the e2e switch must keep the in-app window")
 	}

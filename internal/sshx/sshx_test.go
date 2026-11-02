@@ -16,8 +16,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"vuterm/internal/testssh"
-	"vuterm/internal/vault"
+	"vutty/internal/testssh"
+	"vutty/internal/vault"
 )
 
 func hopFor(label string, s *testssh.Server, auth ...ssh.AuthMethod) Hop {

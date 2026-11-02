@@ -8,10 +8,10 @@ import (
 	"sync"
 	"testing"
 
-	"vuterm/internal/agentx"
-	"vuterm/internal/domain/assistant"
-	"vuterm/internal/domain/secretpolicy"
-	"vuterm/internal/mcpgw"
+	"vutty/internal/agentx"
+	"vutty/internal/domain/assistant"
+	"vutty/internal/domain/secretpolicy"
+	"vutty/internal/mcpgw"
 )
 
 type probeServer struct {
@@ -31,11 +31,11 @@ func (p *probeServer) Call(n string, a json.RawMessage) (assistant.ToolResult, e
 }
 func (p *probeServer) Close() {}
 
-// VUTERM_LIVE=1 go test ./internal/agentx -run LiveGateway -v
-// Claude Code must reach the tool through the VuTerm gateway only, and the result must come back masked.
+// VUTTY_LIVE=1 go test ./internal/agentx -run LiveGateway -v
+// Claude Code must reach the tool through the Vutty gateway only, and the result must come back masked.
 func TestLiveClaudeThroughTheGateway(t *testing.T) {
-	if os.Getenv("VUTERM_LIVE") != "1" {
-		t.Skip("set VUTERM_LIVE=1")
+	if os.Getenv("VUTTY_LIVE") != "1" {
+		t.Skip("set VUTTY_LIVE=1")
 	}
 	c := &agentx.Claude{}
 	if st := c.Detect(context.Background()); st.State != assistant.StateReady {

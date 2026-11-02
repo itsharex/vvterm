@@ -162,7 +162,7 @@ describe('AssistantSettings: the host list', () => {
 
   it('a host list that cannot be read does not break the page or show an error', async () => {
     const be = makeFake()
-    be.hosts.listHosts = async () => { throw new Error('VuTerm cannot reach its backend from this window.') }
+    be.hosts.listHosts = async () => { throw new Error('Vutty cannot reach its backend from this window.') }
     render(<Providers be={be}><AssistantSettings /></Providers>)
     await userEvent.click(await screen.findByRole('button', {name: 'Add server'}))
     expect(screen.queryByText(/cannot reach its backend/)).toBeNull()

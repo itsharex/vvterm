@@ -1,4 +1,4 @@
-// Package domain holds the plain data types shared by all VuTerm packages.
+// Package domain holds the plain data types shared by all Vutty packages.
 // None of these types ever contain decrypted secrets.
 package domain
 

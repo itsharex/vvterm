@@ -84,7 +84,7 @@ describe('SettingsApp (the Settings window process)', () => {
 
   it('stays on its loading page, and nothing breaks, when the main window is gone', async () => {
     const be = makeFake()
-    be.vault.status = async () => { throw new Error('VuTerm is not running') }
+    be.vault.status = async () => { throw new Error('Vutty is not running') }
     render(<Providers be={be}><SettingsApp /></Providers>)
     expect(within(screen.getByRole('dialog', {name: 'Settings'})).getByRole('status')).toHaveTextContent('Loading…')
   })

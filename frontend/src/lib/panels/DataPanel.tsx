@@ -69,7 +69,7 @@ export function DataPanel({onClose, onChanged}: {onClose(): void; onChanged(): v
           setMsg(`Wrote ${(r.files ?? []).length} config file(s) and ${(r.key_files ?? []).length} key file(s).${r.warnings?.length ? ' Warnings: ' + r.warnings.join('; ') : ''}`)
         })}>Export…</button>{' '}
         <button onClick={() => guard(async () => {
-          const p = await choose('Save host list', 'save', 'vuterm-hosts.json')
+          const p = await choose('Save host list', 'save', 'vutty-hosts.json')
           if (!p) return
           await be.data.exportPlainJSON(p)
           setMsg('Host list (no secrets) exported.')
@@ -79,7 +79,7 @@ export function DataPanel({onClose, onChanged}: {onClose(): void; onChanged(): v
       <div className="section">Encrypted backup</div>
       <Field label="Backup password (separate from your master password)"><input aria-label="Backup password" type="password" value={bpw} onChange={e => setBpw(e.target.value)} /></Field>
       <button disabled={bpw.length < 8} onClick={() => guard(async () => {
-        const p = await choose('Save backup', 'save', 'vuterm.vubak')
+        const p = await choose('Save backup', 'save', 'vutty.vubak')
         if (!p) return
         await be.data.exportBackup(p, bpw)
         setMsg('Backup written.')

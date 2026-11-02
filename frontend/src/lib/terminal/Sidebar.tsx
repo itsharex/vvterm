@@ -132,7 +132,7 @@ function SearchBox({value, onChange, label}: {value: string; onChange(v: string)
   )
 }
 
-const FOLD_KEY = 'vuterm.sidebar.folded'
+const FOLD_KEY = 'vutty.sidebar.folded'
 function loadFolded(): Set<string> {
   try { return new Set<string>(JSON.parse(localStorage.getItem(FOLD_KEY) || '[]')) } catch { return new Set() }
 }

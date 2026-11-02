@@ -32,7 +32,7 @@ func TestCheckUpdate(t *testing.T) {
 			http.NotFound(w, r)
 			return
 		}
-		w.Write([]byte(`{"tag_name":"v1.3.0","html_url":"https://github.com/vunguyenvu35/vuterm/releases/tag/v1.3.0","body":"notes"}`))
+		w.Write([]byte(`{"tag_name":"v1.3.0","html_url":"https://github.com/vunguyenvu35/vutty/releases/tag/v1.3.0","body":"notes"}`))
 	}))
 	defer srv.Close()
 	info, err := checkUpdate(context.Background(), srv.Client(), srv.URL+"/latest", "1.1.0")

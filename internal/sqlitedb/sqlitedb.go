@@ -1,4 +1,4 @@
-// Package sqlitedb is the SQLite adapter: one database file (vuterm.db) holds hosts, groups,
+// Package sqlitedb is the SQLite adapter: one database file (vutty.db) holds hosts, groups,
 // identities, port forwards and the encrypted vault. It implements store.Persister and
 // vault.Persister, so the rest of the app is unaware of the storage engine.
 package sqlitedb
@@ -14,8 +14,8 @@ import (
 
 	_ "modernc.org/sqlite" // pure-Go driver, no CGO
 
-	"vuterm/internal/domain"
-	"vuterm/internal/vault"
+	"vutty/internal/domain"
+	"vutty/internal/vault"
 )
 
 // DB wraps the connection and exposes the persisters.

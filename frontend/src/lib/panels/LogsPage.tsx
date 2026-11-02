@@ -30,7 +30,7 @@ type Sort = 'newest' | 'oldest' | 'host' | 'problems'
 const SORTS: SortOption<Sort>[] = [{value: 'newest', label: 'Newest first'}, {value: 'oldest', label: 'Oldest first'}, {value: 'host', label: 'Host'}, {value: 'problems', label: 'Problems first'}]
 
 /**
- * Logs: what happened in VuTerm: connections and how they ended, trusted host keys, forwards, SFTP
+ * Logs: what happened in Vutty: connections and how they ended, trusted host keys, forwards, SFTP
  * transfers, unlocks. Newest first, live. Secrets are never written to it.
  */
 export function LogsPage() {
@@ -41,7 +41,7 @@ export function LogsPage() {
   const [group, setGroup] = useState('all')
   const [q, setQ] = useState('')
   const [error, setError] = useState('')
-  const [sort, setSort] = usePref<Sort>('vuterm.logs.sort', SORTS.map(o => o.value), 'newest')
+  const [sort, setSort] = usePref<Sort>('vutty.logs.sort', SORTS.map(o => o.value), 'newest')
 
   const reload = useCallback(async () => {
     try {

@@ -2,7 +2,7 @@ import {completion, createPrefixTracker, suggest, type Sources, type Suggestion}
 import {matches} from '../shortcuts/shortcuts'
 
 /** The menu item "Show Suggestions" asks the focused pane to open or close its list with this window event. */
-export const SUGGEST_POPUP = 'vuterm:suggest-popup'
+export const SUGGEST_POPUP = 'vutty:suggest-popup'
 
 /** The part of xterm's Terminal that the suggestions use (a test gives a small stand-in). */
 export interface SuggestTerm {

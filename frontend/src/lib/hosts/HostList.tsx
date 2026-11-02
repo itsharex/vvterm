@@ -38,7 +38,7 @@ interface Props {
 }
 
 const ENVS: Env[] = ['prod', 'staging', 'dev']
-export const HOST_DRAG = 'application/x-vuterm-host'
+export const HOST_DRAG = 'application/x-vutty-host'
 
 /** Parses "ssh user@host:2222", "user@host" or "host". */
 export function parseQuickConnect(text: string): QuickConnect | null {
@@ -70,7 +70,7 @@ export function HostList(p: Props) {
   const [view, setView] = useState<ViewMode>(loadView)
   const changeView = (v: ViewMode) => { setView(v); saveView(v) }
   const [groupId, setGroupId] = useState('')
-  const [sort, setSort] = usePref<Sort>('vuterm.hosts.sort', SORTS.map(o => o.value), 'name')
+  const [sort, setSort] = usePref<Sort>('vutty.hosts.sort', SORTS.map(o => o.value), 'name')
   useEffect(() => { if (p.resetKey) setGroupId('') }, [p.resetKey])
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const allTags = useMemo(() => Array.from(new Set(p.hosts.flatMap(h => h.tags ?? []))).sort((a, b) => a.localeCompare(b)), [p.hosts])

@@ -193,7 +193,7 @@ describe('HostList: Telnet action', () => {
 })
 
 describe('HostList: Grid / List view', () => {
-  beforeEach(() => { try { localStorage.removeItem('vuterm.hostsView') } catch { /* ignore */ } })
+  beforeEach(() => { try { localStorage.removeItem('vutty.hostsView') } catch { /* ignore */ } })
   const hostsEl = () => screen.getByRole('list', {name: 'Hosts'})
 
   it('starts as a grid; the View menu has a check on the current view', async () => {
@@ -216,11 +216,11 @@ describe('HostList: Grid / List view', () => {
     expect(hostsEl()).toHaveClass('as-list')
     expect(labels().sort()).toEqual(['box', 'cdn-1', 'db-1', 'web-1'])
     expect(screen.getByRole('button', {name: 'View'})).toHaveAttribute('title', 'List view')
-    expect(localStorage.getItem('vuterm.hostsView')).toBe('list')
+    expect(localStorage.getItem('vutty.hostsView')).toBe('list')
   })
 
   it('opens in the remembered view', () => {
-    localStorage.setItem('vuterm.hostsView', 'list')
+    localStorage.setItem('vutty.hostsView', 'list')
     setup()
     expect(hostsEl()).toHaveAttribute('data-view', 'list')
   })
@@ -360,7 +360,7 @@ describe('HostList: sort', () => {
     setup()
     await sortBy(/Environment/)
     expect(labels()).toEqual(['cdn-1', 'web-1', 'db-1', 'box']) // prod (by name), staging, dev
-    localStorage.setItem('vuterm.recent', JSON.stringify(['b', 'c']))
+    localStorage.setItem('vutty.recent', JSON.stringify(['b', 'c']))
     await sortBy(/Recently connected/)
     expect(labels()).toEqual(['db-1', 'box', 'cdn-1', 'web-1']) // the two opened last, then the rest by name
   })

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sync"
 
-	"vuterm/internal/domain"
-	"vuterm/internal/forward"
-	"vuterm/internal/sshx"
+	"vutty/internal/domain"
+	"vutty/internal/forward"
+	"vutty/internal/sshx"
 )
 
 // ForwardStatus is what the frontend sees for each configured forward.

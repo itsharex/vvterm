@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"vuterm/internal/domain/assistant"
+	"vutty/internal/domain/assistant"
 )
 
 func (x *ah) mcpServer(t *testing.T, in McpServerInput) McpServerView {

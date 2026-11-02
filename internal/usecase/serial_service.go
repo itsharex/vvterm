@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"vuterm/internal/domain"
+	"vutty/internal/domain"
 )
 
 // Special host ids understood by SessionService.Open: a shell on this computer, or a serial port.

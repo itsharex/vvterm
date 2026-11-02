@@ -11,10 +11,10 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"vuterm/internal/domain"
-	"vuterm/internal/fsutil"
+	"vutty/internal/domain"
+	"vutty/internal/fsutil"
 
-	"vuterm/internal/sshx"
+	"vutty/internal/sshx"
 )
 
 // Settings is persisted in settings.json and never synced.
@@ -228,8 +228,8 @@ func (c *Core) learnOS(host domain.Host, cl *sshx.Client) {
 	}
 	go func() {
 		version := string(cl.Client.ServerVersion())
-		out, _ := cl.Exec("uname -s; echo ---VUTERM---; cat /etc/os-release 2>/dev/null", 5*time.Second) // a non-zero exit still carries the output
-		uname, release, _ := strings.Cut(out, "---VUTERM---")
+		out, _ := cl.Exec("uname -s; echo ---VUTTY---; cat /etc/os-release 2>/dev/null", 5*time.Second) // a non-zero exit still carries the output
+		uname, release, _ := strings.Cut(out, "---VUTTY---")
 		name := domain.ParseOS(version, uname, release)
 		if name == "" {
 			return

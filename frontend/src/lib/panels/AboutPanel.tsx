@@ -4,9 +4,9 @@ import {Brand} from '../ui/Brand'
 import {useBackend, type UpdateInfo} from '../backend'
 import {errMsg} from '../util'
 
-const REPO = 'https://github.com/vunguyenvu35/vuterm'
+const REPO = 'https://github.com/vunguyenvu35/vutty'
 
-/** About VuTerm: version, what it is, the project's links, and a check for a newer release on GitHub. */
+/** About Vutty: version, what it is, the project's links, and a check for a newer release on GitHub. */
 export function AboutPanel({onClose, checkNow = false}: {onClose(): void; checkNow?: boolean}) {
   const be = useBackend()
   const [version, setVersion] = useState('')
@@ -24,7 +24,7 @@ export function AboutPanel({onClose, checkNow = false}: {onClose(): void; checkN
   useEffect(() => { if (checkNow) void check() }, [checkNow, check])
 
   return (
-    <Modal title="About VuTerm" onClose={onClose} footer={<button onClick={onClose}>Close</button>}>
+    <Modal title="About Vutty" onClose={onClose} footer={<button onClick={onClose}>Close</button>}>
       <div style={{textAlign: 'center', display: 'grid', gap: 10, justifyItems: 'center'}}>
         <Brand size="lg" />
         <div>Version <b data-testid="about-version">{version || '…'}</b></div>
