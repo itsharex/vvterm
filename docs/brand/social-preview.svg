@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="VuTerm">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="Vutty">
   <defs>
     <radialGradient id="sbg" cx="30%" cy="30%" r="90%"><stop offset="0" stop-color="#16204A"/><stop offset="1" stop-color="#070A18"/></radialGradient>
     <linearGradient id="mbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#131B3A"/><stop offset="1" stop-color="#0B1020"/></linearGradient>
@@ -6,7 +6,7 @@
   <rect width="1280" height="640" fill="url(#sbg)"/>
   <svg x="140" y="170" width="260" height="260" viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="228" fill="url(#mbg)"/><g fill="none" stroke-width="92" stroke-linecap="round" stroke-linejoin="round"><polyline points="262,332 442,512 262,692" stroke="#5B8CFF"/><polyline points="452,332 632,512 452,692" stroke="#22D3EE"/></g><rect x="666" y="646" width="150" height="92" rx="20" fill="#F2F5FF"/></svg>
   <text x="450" y="320" font-family="'JetBrains Mono','SF Mono',Menlo,Consolas,'DejaVu Sans Mono',monospace" font-size="140" font-weight="800" letter-spacing="-4">
-    <tspan fill="#5B8CFF">Vu</tspan><tspan fill="#F2F5FF">Term</tspan>
+    <tspan fill="#5B8CFF">Vu</tspan><tspan fill="#F2F5FF">tty</tspan>
   </text>
   <text x="454" y="392" font-family="Inter,'SF Pro Text',Helvetica,Arial,sans-serif" font-size="32" letter-spacing="9" fill="#8B93A5">SECURE · SYNCED · YOURS</text>
   <text x="640" y="560" text-anchor="middle" font-family="Inter,'SF Pro Text',Helvetica,Arial,sans-serif" font-size="30" fill="#8B93A5">An SSH client with an encrypted vault · Git sync · No lock-in</text>

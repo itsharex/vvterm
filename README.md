@@ -1,20 +1,20 @@
-<p align="center"><img src="docs/brand/logo-horizontal-light.png" alt="VuTerm" width="520"></p>
+<p align="center"><img src="docs/brand/logo-horizontal-light.png" alt="Vutty" width="520"></p>
 
 <p align="center">
-  <b>VuTerm is a free, open-source SSH client for macOS, Windows and Linux that keeps your hosts, keys and passwords in an encrypted vault that you own.</b>
+  <b>Vutty is a free, open-source SSH client for macOS, Windows and Linux that keeps your hosts, keys and passwords in an encrypted vault that you own.</b>
 </p>
 
 <p align="center">
-  <a href="https://github.com/vunguyenvu35/vuterm/releases/latest"><img src="https://img.shields.io/github/v/release/vunguyenvu35/vuterm?label=Download%20latest&style=for-the-badge&color=2ea44f" alt="Download the latest VuTerm release"></a>
+  <a href="https://github.com/vunguyenvu35/vutty/releases/latest"><img src="https://img.shields.io/github/v/release/vunguyenvu35/vutty?label=Download%20latest&style=for-the-badge&color=2ea44f" alt="Download the latest Vutty release"></a>
 </p>
 
-<p align="center"><sub>macOS says the app "can't be opened"? Beta builds are not notarized yet: <a href="docs/InstallMac.md"><b>how to open it in three clicks</b></a>. · <a href="docs/Comparison.md">VuTerm vs Termius, Tabby and WindTerm</a></sub></p>
+<p align="center"><sub>macOS says the app "can't be opened"? Beta builds are not notarized yet: <a href="docs/InstallMac.md"><b>how to open it in three clicks</b></a>. · <a href="docs/Comparison.md">Vutty vs Termius, Tabby and WindTerm</a></sub></p>
 
-<p align="center"><img src="docs/screenshots/20-split-panes.png" alt="VuTerm with two terminals side by side" width="900"></p>
+<p align="center"><img src="docs/screenshots/20-split-panes.png" alt="Vutty with two terminals side by side" width="900"></p>
 
-## Why VuTerm
+## Why Vutty
 
-> VuTerm was called VVTerm until November 2026. It was renamed because another project already used that name; your data and settings carry over.
+> Vutty was called VVTerm and, for a few days, VuTerm until November 2026. It was renamed because another project already used the first name; your data and settings carry over.
 
 - **Your data stays yours.** Hosts, keys and passwords live in one encrypted vault on your computer (AES-256-GCM, a key from your master password). Export to standard formats at any time, and sync between your computers through a private Git repository or a cloud folder you control. Nothing goes to a server of ours, and there is no account.
 - **Everything an SSH client needs, in one app.** Tabs and split panes, jump hosts, port forwards, serial and Telnet, and SFTP with a transfer queue that resumes, syncs folders and saves your edits back.
@@ -49,7 +49,7 @@
 
 ## Try it
 
-**Requirements:** macOS, Windows (64-bit) or Linux (64-bit). VuTerm is currently a beta; macOS is the most tested, Windows and Linux builds are new.
+**Requirements:** macOS, Windows (64-bit) or Linux (64-bit). Vutty is currently a beta; macOS is the most tested, Windows and Linux builds are new.
 
 ### 1. Install
 
@@ -57,14 +57,14 @@
 
   | System | File | How to install |
   | --- | --- | --- |
-  | macOS | `vuterm-<version>-macos.dmg` (or `.zip`) | open the DMG and drag **vuterm.app** to *Applications* |
-  | Windows | `vuterm-<version>-windows-amd64.exe` | run it, no installer needed |
-  | Linux | `vuterm-<version>-linux-amd64.tar.gz` | `tar xzf` it and run `./vuterm` (needs GTK 3 and WebKitGTK 4.0, for example `libgtk-3-0` and `libwebkit2gtk-4.0-37` on Ubuntu 22.04) |
+  | macOS | `vutty-<version>-macos.dmg` (or `.zip`) | open the DMG and drag **vutty.app** to *Applications* |
+  | Windows | `vutty-<version>-windows-amd64.exe` | run it, no installer needed |
+  | Linux | `vutty-<version>-linux-amd64.tar.gz` | `tar xzf` it and run `./vutty` (needs GTK 3 and WebKitGTK 4.0, for example `libgtk-3-0` and `libwebkit2gtk-4.0-37` on Ubuntu 22.04) |
 
   Each release also lists `SHA256SUMS` so you can check your download.
 - **From source:** see the [Development guide](docs/Development.md) (three commands).
 
-> **First launch.** Beta builds are not signed with a developer certificate yet. On macOS, open the app, then **System Settings → Privacy & Security → Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/vuterm.app`); step by step in [Installing on macOS](docs/InstallMac.md). On Windows, SmartScreen may warn: choose **More info → Run anyway**.
+> **First launch.** Beta builds are not signed with a developer certificate yet. On macOS, open the app, then **System Settings → Privacy & Security → Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/vutty.app`); step by step in [Installing on macOS](docs/InstallMac.md). On Windows, SmartScreen may warn: choose **More info → Run anyway**.
 
 **Updates:** **Settings → Check for updates** tells you when a newer release is out and opens its page; replace the old app with the new one and your data is kept.
 
@@ -92,7 +92,7 @@ Add hosts `127.0.0.1` port `2201` (bastion) and `2202`, username `demo`, passwor
 
 | | |
 | --- | --- |
-| **Where it lives** | `~/Library/Application Support/vuterm/` (one SQLite database plus a `known_hosts` file) |
+| **Where it lives** | `~/Library/Application Support/vutty/` (one SQLite database plus a `known_hosts` file) |
 | **What is encrypted** | Keys and passwords: AES-256-GCM, with a key derived from your master password (Argon2id) |
 | **What leaves your Mac** | Nothing, unless you turn on Git sync, which only uploads encrypted data to *your* repository |
 | **Unknown servers** | You confirm the fingerprint once. If a known server's key ever changes, the connection is **blocked with no override** |
@@ -109,7 +109,7 @@ Back up regularly with **Import / Export → Encrypted backup**.
 - "Keychain unlock" stores the vault key in the macOS Keychain; it does **not** require Touch ID yet.
 - The vault does not lock when the Mac sleeps (only on idle).
 - Settings opens as a second window of the app (a second process): it shows a second Dock icon while open and needs the main app running.
-- SFTP does not keep the modification time of copied files, and a transfer you abandon leaves a hidden `.vuterm-part-…` file next to its target.
+- SFTP does not keep the modification time of copied files, and a transfer you abandon leaves a hidden `.vutty-part-…` file next to its target.
 - Git sync was tested with local repositories, not yet with every hosting provider.
 - `ProxyCommand` and `Match` blocks in `~/.ssh/config` are reported as warnings on import and skipped.
 
@@ -120,13 +120,13 @@ The full list is in the [release notes](RELEASE_NOTES.md).
 Your feedback is the point of this beta. Please [open an issue](../../issues/new) and include:
 
 - what you did, what you expected and what happened (a screenshot helps);
-- your VuTerm version and macOS version;
+- your Vutty version and macOS version;
 - **never** paste passwords, private keys or your vault file.
 
-## Support VuTerm
+## Support Vutty
 
 <p align="center">
-  VuTerm is free and open source, built and maintained in spare time.<br>
+  Vutty is free and open source, built and maintained in spare time.<br>
   If it saves you time, you can help keep it going.
 </p>
 
@@ -139,7 +139,7 @@ Your feedback is the point of this beta. Please [open an issue](../../issues/new
 </table>
 
 <p align="center">
-  <a href="https://ko-fi.com/vunguyenvu"><img src="https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white&style=for-the-badge" alt="Support VuTerm on Ko-fi"></a>
+  <a href="https://ko-fi.com/vunguyenvu"><img src="https://img.shields.io/badge/Support%20on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white&style=for-the-badge" alt="Support Vutty on Ko-fi"></a>
 </p>
 
 <p align="center"><b>Prefer crypto?</b> Scan a code or copy an address, and check the network before you send.</p>

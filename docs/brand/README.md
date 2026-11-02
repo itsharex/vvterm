@@ -1,8 +1,8 @@
-<p align="center"><img src="logo-mark-256.png" alt="VuTerm" width="88"></p>
+<p align="center"><img src="logo-mark-256.png" alt="Vutty" width="88"></p>
 
-# VuTerm brand
+# Vutty brand
 
-Concept: two chevrons make a shell prompt `»`, followed by a block cursor `_`. The mark did not change when the app was renamed from VVTerm to VuTerm; only the wordmark did. Flat, two colours plus white, no glow or decoration: it reads the same at 1024 px and at 16 px.
+Concept: two chevrons make a shell prompt `»`, followed by a block cursor `_`. The mark did not change when the app was renamed from VVTerm to VuTerm and then Vutty; only the wordmark did. Flat, two colours plus white, no glow or decoration: it reads the same at 1024 px and at 16 px.
 
 | File | Use |
 | --- | --- |

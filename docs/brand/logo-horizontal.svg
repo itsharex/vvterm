@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 420" width="1400" height="420" role="img" aria-label="VuTerm">
-  <title>VuTerm</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 420" width="1400" height="420" role="img" aria-label="Vutty">
+  <title>Vutty</title>
   <defs><linearGradient id="mbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#131B3A"/><stop offset="1" stop-color="#0B1020"/></linearGradient></defs>
   
   <svg x="30" y="30" width="360" height="360" viewBox="0 0 1024 1024"><rect width="1024" height="1024" rx="228" fill="url(#mbg)"/><g fill="none" stroke-width="92" stroke-linecap="round" stroke-linejoin="round"><polyline points="262,332 442,512 262,692" stroke="#5B8CFF"/><polyline points="452,332 632,512 452,692" stroke="#22D3EE"/></g><rect x="666" y="646" width="150" height="92" rx="20" fill="#F2F5FF"/></svg>
   <text x="440" y="250" font-family="'JetBrains Mono','SF Mono',Menlo,Consolas,'DejaVu Sans Mono',monospace" font-size="150" font-weight="800" letter-spacing="-4">
-    <tspan fill="#5B8CFF">Vu</tspan><tspan fill="#F2F5FF">Term</tspan>
+    <tspan fill="#5B8CFF">Vu</tspan><tspan fill="#F2F5FF">tty</tspan>
   </text>
   <text x="444" y="320" font-family="Inter,'SF Pro Text',Helvetica,Arial,sans-serif" font-size="34" letter-spacing="9" fill="#8B93A5">SECURE · SYNCED · YOURS</text>
 </svg>
