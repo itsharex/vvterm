@@ -66,20 +66,20 @@ import {readFileSync} from 'node:fs'
 import {join} from 'node:path'
 
 describe('Brand wordmark', () => {
-  it('keeps the two V letters apart (regression: tight letter-spacing made "VV" read as "W")', () => {
+  it('keeps the Vu part of the wordmark from being squeezed', () => {
     const css = readFileSync(join(__dirname, '../../styles.css'), 'utf8')
-    const rule = css.match(/\.wordmark \.vv \{([^}]*)\}/)![1]
+    const rule = css.match(/\.wordmark \.vu \{([^}]*)\}/)![1]
     const spacing = rule.match(/letter-spacing:\s*(-?[\d.]+)em/)
-    expect(spacing, 'the .vv rule sets a letter-spacing').not.toBeNull()
+    expect(spacing, 'the .vu rule sets a letter-spacing').not.toBeNull()
     expect(Number(spacing![1])).toBeGreaterThanOrEqual(0)
   })
 
-  it('renders logo and wordmark in one flex row with the accessible name VVTerm', () => {
+  it('renders logo and wordmark in one flex row with the accessible name VuTerm', () => {
     render(<Brand size="lg" heading />)
-    const el = screen.getByRole('heading', {name: 'VVTerm'})
+    const el = screen.getByRole('heading', {name: 'VuTerm'})
     expect(el).toHaveClass('brand-lockup', 'lg')
     expect(el.querySelector('img')).not.toBeNull()
-    expect(el.querySelector('.wordmark')).toHaveTextContent('VVTerm_')
+    expect(el.querySelector('.wordmark')).toHaveTextContent('VuTerm_')
   })
 })
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"vvterm/internal/domain/assistant"
+	"vuterm/internal/domain/assistant"
 )
 
 // ErrToolDenied: see assistant.ErrToolDenied.

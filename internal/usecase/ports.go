@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/domain/assistant"
-	"vvterm/internal/sshx"
+	"vuterm/internal/domain"
+	"vuterm/internal/domain/assistant"
+	"vuterm/internal/sshx"
 )
 
 // Emitter delivers an event to the frontend. The delivery layer (Wails) supplies it.
@@ -136,7 +136,7 @@ type ActivityLog interface {
 type Agent interface {
 	ID() string
 	Name() string
-	// SupportsMCP is true when the adapter can be limited to the VVTerm gateway as its only tool channel.
+	// SupportsMCP is true when the adapter can be limited to the VuTerm gateway as its only tool channel.
 	SupportsMCP() bool
 	Detect(ctx context.Context) assistant.Status
 	// Models loads the models from the provider itself; nil means the provider cannot list them.

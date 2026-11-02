@@ -156,7 +156,7 @@ func TestHelpMenuOpensOnlyTheProjectPages(t *testing.T) {
 func TestHelpMenuHasAboutAndCheckForUpdates(t *testing.T) {
 	p := &menuProbe{}
 	help := submenu(BuildMenu(p.hooks()), "Help")
-	for label, want := range map[string]string{"About VVTerm": ActAbout, "Check for Updates…": ActCheckUpdate, "Support VVTerm…": ActSupport} {
+	for label, want := range map[string]string{"About VuTerm": ActAbout, "Check for Updates…": ActCheckUpdate, "Support VuTerm…": ActSupport} {
 		it := find(help, label)
 		if it == nil {
 			t.Fatalf("Help has no %q: %v", label, labels(help))

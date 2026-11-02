@@ -19,7 +19,7 @@ import (
 
 	"golang.org/x/crypto/argon2"
 
-	"vvterm/internal/domain"
+	"vuterm/internal/domain"
 )
 
 const (
@@ -190,6 +190,8 @@ func open(key, ct, nonce, aad []byte) ([]byte, error) {
 	return g.Open(nil, nonce, ct, aad)
 }
 
+// The "vvterm/..." strings below (headerAAD, the backup AAD and the keychain service name) are part of the data
+// format: the app was renamed from VVTerm, but changing them would make existing vaults and backups unreadable.
 var headerAAD = []byte("vvterm/dek/v1")
 
 func newHeader(pw string, p KDFParams, dek []byte) (Header, error) {
@@ -285,7 +287,7 @@ func (v *Vault) EnableKeychain() error {
 		return errors.New("keychain not available")
 	}
 	if v.auth != nil {
-		if err := v.auth("turn on quick unlock for VVTerm"); err != nil {
+		if err := v.auth("turn on quick unlock for VuTerm"); err != nil {
 			return err
 		}
 	}
@@ -635,7 +637,7 @@ func OpenWithPassword(pw string, blob []byte) ([]byte, error) {
 		Ciphertext []byte    `json:"ciphertext"`
 	}
 	if err := json.Unmarshal(blob, &e); err != nil || e.Version != 1 {
-		return nil, errors.New("not a VVTerm backup file")
+		return nil, errors.New("not a VuTerm backup file")
 	}
 	if err := validKDF(e.KDF); err != nil {
 		return nil, err

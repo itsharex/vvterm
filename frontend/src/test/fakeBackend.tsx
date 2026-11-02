@@ -226,7 +226,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       addKeyPEM: async (name, pem, pass) => { rec('vault.addKeyPEM', name, pem, pass); return upsert(state.identities, {name, auth_type: 'key', public_key: 'ssh-ed25519 AAAApasted'}, 'i') },
       addPassword: async (name, user, pw) => { rec('vault.addPassword', name, user, pw); return upsert(state.identities, {name, username: user, auth_type: 'password'}, 'i') },
       addAgent: async (name, user) => { rec('vault.addAgent', name, user); return upsert(state.identities, {name, username: user, auth_type: 'agent'}, 'i') },
-      generateKey: async name => upsert(state.identities, {name, auth_type: 'key', public_key: 'ssh-ed25519 AAAAgenerated vvterm'}, 'i'),
+      generateKey: async name => upsert(state.identities, {name, auth_type: 'key', public_key: 'ssh-ed25519 AAAAgenerated vuterm'}, 'i'),
       deleteIdentity: async i => {
         if (state.hosts.some(h => h.identity_id === i)) throw 'identity is used by a host'
         state.identities = state.identities.filter(x => x.id !== i)
@@ -463,7 +463,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
         return out.sort((a, b) => Number(b.is_dir) - Number(a.is_dir) || a.name.localeCompare(b.name))
       },
       chmod: async (p, m) => { rec('local.chmod', p, m) },
-      tempDir: async () => '/tmp/vvterm-open-1',
+      tempDir: async () => '/tmp/vuterm-open-1',
       mkdir: async p => { rec('local.mkdir', p); if (state.local[p]) throw 'file exists'; state.local[p] = {dir: true, size: 0} },
       rename: async (a, b) => {
         rec('local.rename', a, b)
@@ -495,7 +495,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       saveFile: async (_t, name) => '/tmp/' + name,
       openUrl: async u => { rec('system.openUrl', u) },
       info: async () => ({version: '1.1.0-test'}),
-      checkUpdate: async () => { rec('system.checkUpdate'); const latest = state.latest ?? '1.1.0-test'; return {current: '1.1.0-test', latest, available: latest !== '1.1.0-test', url: 'https://github.com/vunguyenvu35/vvterm/releases/tag/v' + latest, notes: ''} },
+      checkUpdate: async () => { rec('system.checkUpdate'); const latest = state.latest ?? '1.1.0-test'; return {current: '1.1.0-test', latest, available: latest !== '1.1.0-test', url: 'https://github.com/vunguyenvu35/vuterm/releases/tag/v' + latest, notes: ''} },
       toggleMaximise: async () => { rec('system.toggleMaximise') },
       readClipboard: async () => { rec('system.readClipboard'); return state.clipboard },
       writeClipboard: async t => { rec('system.writeClipboard', t); state.clipboard = t },

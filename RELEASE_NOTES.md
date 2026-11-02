@@ -1,10 +1,12 @@
-<p align="center"><img src="docs/brand/logo-mark-256.png" alt="VVTerm" width="88"></p>
+<p align="center"><img src="docs/brand/logo-mark-256.png" alt="VuTerm" width="88"></p>
 
-# VVTerm 1.1.2
+# VuTerm 1.1.2
 
 Release date: 2026-10-30 · Platform: macOS (arm64 build verified) · Status: beta. Read [Known issues](#known-issues) first.
 
 ## Unreleased
+
+- **VVTerm is now VuTerm.** Another project already used the name VVTerm, so this one is renamed. The logo mark is unchanged. Your data comes with you: on first start the data folder `vvterm` is renamed to `vuterm`, the database file is renamed too, saved view settings are copied to the new names, Quick unlock keeps working, and backups, sync bundles and `~/.ssh/config` files exported by VVTerm are still read. The old `VVTERM_DATA_DIR` setting still works (the new one is `VUTERM_DATA_DIR`). The app is now `vuterm.app` / `vuterm-<version>-…`, and the GitHub repository is `vunguyenvu35/vuterm` (the old address redirects). Backups you save get the extension `.vubak`; `.vvbak` files still open. Some screenshots in the docs still show the old name.
 
 - **Command suggestions and History are kept for each host.** The list of commands you typed was shared by every terminal, so a `cd Data/projects/...` typed on your Mac was offered at a server where that folder does not exist. Each host (a saved host, or *local*, a serial port, a Telnet host) now has its own list, used by the suggestions and shown in the sidebar's History tab, and *Clear history* clears only that host's. Commands typed before this update are not carried over (they cannot be told apart by host); snippets are still offered everywhere, as they are yours on purpose.
 ### SFTP is complete

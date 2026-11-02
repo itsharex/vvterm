@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"vvterm/internal/domain"
+	"vuterm/internal/domain"
 )
 
 // Dialer is the part of *ssh.Client the forwarders need.

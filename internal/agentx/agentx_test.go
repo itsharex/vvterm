@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"vvterm/internal/domain/assistant"
-	"vvterm/internal/domain/secretpolicy"
+	"vuterm/internal/domain/assistant"
+	"vuterm/internal/domain/secretpolicy"
 )
 
 // fakeCLI writes an executable shell script. The script appends what it saw to rec.
@@ -36,7 +36,7 @@ const claudeHelp = `--tools --strict-mcp-config --disable-slash-commands --no-se
 func TestClaudeAskIsRunIsolatedAndStreams(t *testing.T) {
 	rec := filepath.Join(t.TempDir(), "rec")
 	t.Setenv("SSH_AUTH_SOCK", "/tmp/agent.sock")
-	t.Setenv("VVTERM_TOKEN", "abc")
+	t.Setenv("VUTERM_TOKEN", "abc")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "zzz")
 	t.Setenv("ANTHROPIC_API_KEY", "sk-should-not-pass")
 	bin := fakeCLI(t, "claude", `
@@ -54,13 +54,13 @@ echo '{"type":"result","subtype":"success","is_error":false,"result":"hello"}'
 	b, _ := os.ReadFile(rec)
 	r := string(b)
 	cwd := strings.SplitN(r, "\n", 2)[0]
-	if !strings.Contains(filepath.Base(cwd), "vvterm-agent-") || !strings.Contains(r, "files:0") {
+	if !strings.Contains(filepath.Base(cwd), "vuterm-agent-") || !strings.Contains(r, "files:0") {
 		t.Fatalf("agent must run in a fresh empty directory, got %q", cwd)
 	}
 	if _, err := os.Stat(cwd); err == nil {
 		t.Fatal("the temporary directory must be removed afterwards")
 	}
-	for _, leak := range []string{"SSH_AUTH_SOCK", "VVTERM_TOKEN", "AWS_SECRET_ACCESS_KEY", "ANTHROPIC_API_KEY", "sk-should-not-pass"} {
+	for _, leak := range []string{"SSH_AUTH_SOCK", "VUTERM_TOKEN", "AWS_SECRET_ACCESS_KEY", "ANTHROPIC_API_KEY", "sk-should-not-pass"} {
 		if strings.Contains(r, leak) {
 			t.Errorf("environment leaked %s", leak)
 		}
@@ -93,7 +93,7 @@ func TestClaudeGatewayIsTheOnlyToolChannel(t *testing.T) {
 case "$1" in --help) echo "`+claudeHelp+`"; exit 0;; esac
 printf 'ARG:%s\n' "$@" > `+rec+`; cat >/dev/null
 prev=""; for a in "$@"; do if [ "$prev" = "--mcp-config" ]; then echo "CONFIG-FILE:$a" >> `+rec+`; cat "$a" >> `+rec+`; ls -l "$a" | cut -c1-10 >> `+rec+`; fi; prev="$a"; done
-echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__vvterm__terminal_read"}]}}'
+echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__vuterm__terminal_read"}]}}'
 echo '{"type":"result","result":"ok"}'
 `)
 	r := req(t, "x")
@@ -102,7 +102,7 @@ echo '{"type":"result","result":"ok"}'
 		t.Fatalf("%q %v", out, err)
 	}
 	b, _ := os.ReadFile(rec)
-	if !strings.Contains(string(b), "--strict-mcp-config") || !strings.Contains(string(b), `"url":"http://127.0.0.1:1/mcp"`) || !strings.Contains(string(b), "ARG:mcp__vvterm") {
+	if !strings.Contains(string(b), "--strict-mcp-config") || !strings.Contains(string(b), `"url":"http://127.0.0.1:1/mcp"`) || !strings.Contains(string(b), "ARG:mcp__vuterm") {
 		t.Fatalf("%s", b)
 	}
 	// the token is in a private file, never in an argument another process could read
@@ -116,7 +116,7 @@ func TestClaudeModelsComeFromTheProvider(t *testing.T) {
 	bin := fakeCLI(t, "claude", `
 case "$1" in --help) echo "`+claudeHelp+`"; exit 0;; esac
 cat >/dev/null
-echo '{"type":"control_response","response":{"subtype":"success","request_id":"vvterm-models","response":{"models":[{"value":"default","displayName":"Default","description":"d"},{"value":"opus","displayName":"Opus"}]}}}'
+echo '{"type":"control_response","response":{"subtype":"success","request_id":"vuterm-models","response":{"models":[{"value":"default","displayName":"Default","description":"d"},{"value":"opus","displayName":"Opus"}]}}}'
 `)
 	ms, err := (&Claude{Bin: bin, ConfigDir: t.TempDir(), Getenv: func(string) string { return "" }}).Models(context.Background())
 	if err != nil || len(ms) != 2 || ms[1].ID != "opus" || ms[1].Name != "Opus" {
@@ -360,7 +360,7 @@ func TestVerifyIsolationAlsoProbesTheWeb(t *testing.T) {
 	talks := func(c context.Context, r assistant.Request, e func(string)) (string, error) {
 		call++
 		if call == 2 {
-			return "vvterm.com - the official site", nil // an agent with no visible tool that answers the web probe
+			return "vuterm.com - the official site", nil // an agent with no visible tool that answers the web probe
 		}
 		return "NO TOOLS", nil
 	}

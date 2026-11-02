@@ -5,12 +5,12 @@ import (
 	"os"
 	"testing"
 
-	"vvterm/internal/domain/assistant"
+	"vuterm/internal/domain/assistant"
 )
 
 // Opt-in checks against the real CLIs installed and signed in on this computer:
 //
-//	VVTERM_LIVE=1 go test ./internal/agentx -run Live -v
+//	VUTERM_LIVE=1 go test ./internal/agentx -run Live -v
 //
 // They send a few tiny requests, so they use the subscription a little.
 func liveAgents(t *testing.T) []interface {
@@ -20,8 +20,8 @@ func liveAgents(t *testing.T) []interface {
 	Verify(context.Context) error
 	Ask(context.Context, assistant.Request, func(string)) (string, error)
 } {
-	if os.Getenv("VVTERM_LIVE") != "1" {
-		t.Skip("set VVTERM_LIVE=1 to run against the real CLIs")
+	if os.Getenv("VUTERM_LIVE") != "1" {
+		t.Skip("set VUTERM_LIVE=1 to run against the real CLIs")
 	}
 	return []interface {
 		ID() string
@@ -68,12 +68,12 @@ func TestLiveProviders(t *testing.T) {
 	}
 }
 
-// VVTERM_LIVE=1 go test ./internal/agentx -run LiveAntigravity -v
+// VUTERM_LIVE=1 go test ./internal/agentx -run LiveAntigravity -v
 // Antigravity's search_web tool cannot be turned off (every deny rule tried was ignored), so the isolation self-test must
 // fail and the provider cannot be enabled. If a future version honours a rule, this test starts to fail: update the adapter.
 func TestLiveAntigravity(t *testing.T) {
-	if os.Getenv("VVTERM_LIVE") != "1" {
-		t.Skip("set VVTERM_LIVE=1")
+	if os.Getenv("VUTERM_LIVE") != "1" {
+		t.Skip("set VUTERM_LIVE=1")
 	}
 	a := &Antigravity{}
 	st := a.Detect(context.Background())

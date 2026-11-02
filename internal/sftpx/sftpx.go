@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 
-	"vvterm/internal/domain"
+	"vuterm/internal/domain"
 )
 
 var (
@@ -33,7 +33,7 @@ var (
 )
 
 const (
-	partSuffix = ".vvterm-part"
+	partSuffix = ".vuterm-part"
 	// rewind is how much of an interrupted file is written again when a transfer continues: the last
 	// chunk may have been cut short.
 	rewind = 64 << 10

@@ -1,4 +1,4 @@
-// Package importer parses OpenSSH client config files into VVTerm records.
+// Package importer parses OpenSSH client config files into VuTerm records.
 package importer
 
 import (
@@ -94,7 +94,11 @@ func (p *Parsed) parse(path string, depth int, seen map[string]bool) error {
 			continue
 		}
 		if strings.HasPrefix(raw, "#") {
-			if m, ok := strings.CutPrefix(raw, "# vvterm:"); ok {
+			m, ok := strings.CutPrefix(raw, "# vuterm:")
+			if !ok {
+				m, ok = strings.CutPrefix(raw, "# vvterm:") // files exported before the rename
+			}
+			if ok {
 				pendingEnv, pendingTags = parseMeta(m)
 			}
 			continue

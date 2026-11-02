@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// protocolVersion is what VVTerm speaks to servers and offers to agents.
+// protocolVersion is what VuTerm speaks to servers and offers to agents.
 const protocolVersion = "2025-03-26"
 
 type rpcMsg struct {

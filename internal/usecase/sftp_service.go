@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/sshx"
+	"vuterm/internal/domain"
+	"vuterm/internal/sshx"
 )
 
 // SftpInfo describes a new SFTP session.

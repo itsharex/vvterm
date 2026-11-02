@@ -11,21 +11,21 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/menu"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"vvterm/internal/agentx"
-	"vvterm/internal/domain/assistant"
-	"vvterm/internal/localtty"
-	"vvterm/internal/mcpgw"
-	"vvterm/internal/serialx"
-	"vvterm/internal/sftpx"
-	"vvterm/internal/sqlitedb"
-	"vvterm/internal/sshx"
-	"vvterm/internal/store"
-	"vvterm/internal/telnetx"
-	"vvterm/internal/usecase"
-	"vvterm/internal/vault"
+	"vuterm/internal/agentx"
+	"vuterm/internal/domain/assistant"
+	"vuterm/internal/localtty"
+	"vuterm/internal/mcpgw"
+	"vuterm/internal/serialx"
+	"vuterm/internal/sftpx"
+	"vuterm/internal/sqlitedb"
+	"vuterm/internal/sshx"
+	"vuterm/internal/store"
+	"vuterm/internal/telnetx"
+	"vuterm/internal/usecase"
+	"vuterm/internal/vault"
 )
 
-// Version is injected at build time with -ldflags "-X vvterm/app.Version=...".
+// Version is injected at build time with -ldflags "-X vuterm/app.Version=...".
 var Version = "dev"
 
 // App bundles the use cases (bound to the frontend) and the Wails-only system service.
@@ -41,9 +41,13 @@ type App struct {
 	ctx      context.Context
 }
 
-// DataDir resolves where user data lives: $VVTERM_DATA_DIR, else the OS config dir
-// (macOS: ~/Library/Application Support/vvterm).
+// DataDir resolves where user data lives: $VUTERM_DATA_DIR, else the OS config dir
+// (macOS: ~/Library/Application Support/vuterm). The app was called VVTerm before: $VVTERM_DATA_DIR and the old
+// folder are still honoured, and the old folder is renamed on first start.
 func DataDir() (string, error) {
+	if d := os.Getenv("VUTERM_DATA_DIR"); d != "" {
+		return d, nil
+	}
 	if d := os.Getenv("VVTERM_DATA_DIR"); d != "" {
 		return d, nil
 	}
@@ -51,7 +55,45 @@ func DataDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(base, "vvterm"), nil
+	return adoptLegacyDir(filepath.Join(base, "vvterm"), filepath.Join(base, "vuterm")), nil
+}
+
+// adoptLegacyDir returns the folder to use: dir, after moving the pre-rename folder legacy to it when only
+// that one exists. If the move fails the old folder is used as it is, so nothing is ever left behind.
+func adoptLegacyDir(legacy, dir string) string {
+	if _, err := os.Stat(dir); err == nil {
+		return dir
+	}
+	if _, err := os.Stat(legacy); err != nil {
+		return dir
+	}
+	if err := os.Rename(legacy, dir); err != nil {
+		return legacy
+	}
+	return dir
+}
+
+// adoptLegacyDB renames the pre-rename database files (vvterm.db and its journal files) next to path.
+func adoptLegacyDB(path string) {
+	if _, err := os.Stat(path); err == nil {
+		return
+	}
+	legacy := filepath.Join(filepath.Dir(path), "vvterm.db")
+	if _, err := os.Stat(legacy); err != nil {
+		return
+	}
+	for _, suffix := range []string{"", "-wal", "-shm"} {
+		_ = os.Rename(legacy+suffix, path+suffix)
+	}
+}
+
+// keychainAccount is the key of this vault's entry in the OS keychain. It is the data folder's path as it was
+// before the rename (".../vvterm/data"), so Quick unlock keeps working for people who used VVTerm.
+func keychainAccount(dir, data string) string {
+	if filepath.Base(dir) == "vuterm" {
+		return filepath.Join(filepath.Dir(dir), "vvterm", "data")
+	}
+	return data
 }
 
 // Build is the composition root: it creates the concrete adapters and wires the use cases.
@@ -60,7 +102,9 @@ func Build(dir string, kc vault.Keychain, kdf *vault.KDFParams) (*App, error) {
 	if err := os.MkdirAll(data, 0o700); err != nil {
 		return nil, err
 	}
-	db, err := sqlitedb.Open(filepath.Join(data, "vvterm.db"))
+	dbPath := filepath.Join(data, "vuterm.db")
+	adoptLegacyDB(dbPath)
+	db, err := sqlitedb.Open(dbPath)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +117,7 @@ func Build(dir string, kc vault.Keychain, kdf *vault.KDFParams) (*App, error) {
 	if realKeychain {
 		kc = vault.OSKeychain{}
 	}
-	v, err := vault.NewWith(db.VaultPersister(), data, kc)
+	v, err := vault.NewWith(db.VaultPersister(), keychainAccount(dir, data), kc)
 	if err != nil {
 		db.Close()
 		return nil, err
@@ -201,5 +245,5 @@ func cacheDir() string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(base, "vvterm")
+	return filepath.Join(base, "vuterm")
 }

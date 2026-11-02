@@ -9,15 +9,15 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"vvterm/internal/fsutil"
+	"vuterm/internal/fsutil"
 
-	"vvterm/internal/vault"
+	"vuterm/internal/vault"
 )
 
 const (
 	BundleFile = "bundle.enc"
 	HeaderFile = "vault-header.json"
-	BundleAAD  = "vvterm/bundle/v1"
+	BundleAAD  = "vvterm/bundle/v1" // data format: keeps its pre-rename name so existing bundles stay readable
 	maxRetries = 5
 )
 
@@ -52,7 +52,7 @@ func (r *Repo) run(args ...string) (string, error) {
 	if g == "" {
 		g = "git"
 	}
-	full := append([]string{"-c", "user.name=VVTerm", "-c", "user.email=vvterm@localhost",
+	full := append([]string{"-c", "user.name=VuTerm", "-c", "user.email=vuterm@localhost",
 		"-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null"}, args...)
 	cmd := exec.Command(g, full...)
 	cmd.Dir = r.Dir
@@ -192,7 +192,7 @@ func (r *Repo) Sync(local Bundle, header vault.Header, s Sealer) (Result, error)
 		if err != nil {
 			return res, err
 		}
-		pushed, err := r.commitPush(header, blob, "VVTerm sync")
+		pushed, err := r.commitPush(header, blob, "VuTerm sync")
 		if err == nil {
 			res.Merged, res.Pushed = cur, pushed
 			return res, nil

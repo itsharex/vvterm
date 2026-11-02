@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/sshx"
+	"vuterm/internal/domain"
+	"vuterm/internal/sshx"
 )
 
 // record adds a line to the activity log and tells the UI. It never fails the action it describes: a log

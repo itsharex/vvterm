@@ -11,7 +11,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 
-	"vvterm/app"
+	"vuterm/app"
 )
 
 //go:embed all:frontend/dist
@@ -41,7 +41,7 @@ func main() {
 
 	slimFullScreenBar() // a low bar with the app's name when macOS slides it over the page in full screen
 	err = wails.Run(&options.App{
-		Title:     "VVTerm",
+		Title:     "VuTerm",
 		Width:     1280,
 		Height:    800,
 		MinWidth:  900,
@@ -55,7 +55,7 @@ func main() {
 		Menu:             a.Menu(),
 		Mac: &mac.Options{
 			TitleBar: mac.TitleBarHiddenInset(),
-			About:    &mac.AboutInfo{Title: "VVTerm", Message: "SSH client with an encrypted vault.\nVersion " + app.Version, Icon: appIcon},
+			About:    &mac.AboutInfo{Title: "VuTerm", Message: "SSH client with an encrypted vault.\nVersion " + app.Version, Icon: appIcon},
 		},
 		Bind: []interface{}{
 			a.Host, a.Vault, a.Session, a.Forward, a.Sync, a.ImportExp, a.Settings, a.Snippet, a.Sftp, a.Local, a.Serial, a.Log, a.KnownHost, a.Assistant, a.System,
@@ -102,7 +102,7 @@ func runTerminalWindow(dir, hostID, title string) {
 	}
 	slimFullScreenBar()
 	err = wails.Run(&options.App{
-		Title:            "VVTerm",
+		Title:            "VuTerm",
 		Width:            1280,
 		Height:           800,
 		MinWidth:         900,

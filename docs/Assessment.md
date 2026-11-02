@@ -1,4 +1,4 @@
-<p align="center"><img src="brand/logo-mark-256.png" alt="VVTerm" width="88"></p>
+<p align="center"><img src="brand/logo-mark-256.png" alt="VuTerm" width="88"></p>
 
 # Assessment of v1.0.0 against the design
 
@@ -44,7 +44,7 @@ An honest comparison of what was built with [Architecture.md](Architecture.md), 
 | --- | --- | --- | --- |
 | G1 | "Touch ID" is not enforced. `go-keyring` stores the key in the login keychain without an access-control flag that demands biometrics. | Anyone able to read the user's keychain can unlock the vault. The UI therefore says "keychain unlock". | Native `SecAccessControl` (`.biometryCurrentSet`) through a small cgo bridge. |
 | G2 | No lock on system sleep. | Vault stays unlocked during sleep until the idle timer fires. | Subscribe to `NSWorkspaceWillSleepNotification` and call `Vault.Lock()`. |
-| G3 | Not launched as a native window in this environment. | The Wails build succeeds (`vvterm.app`), but WKWebView rendering, native dialogs and keychain prompts were not exercised; E2E runs in Chromium against the real backend. | Run the manual checklist in [TestPlan.md](TestPlan.md). |
+| G3 | Not launched as a native window in this environment. | The Wails build succeeds (`vuterm.app`), but WKWebView rendering, native dialogs and keychain prompts were not exercised; E2E runs in Chromium against the real backend. | Run the manual checklist in [TestPlan.md](TestPlan.md). |
 | G4 | xterm.js heavy-output performance on WKWebView not measured (design risk §2). | Possible lag on `tail -f` of busy logs. | Measure; consider the WebGL addon. |
 | G5 | Sync merge window: edits made between the snapshot and the write-back of a sync run can be overwritten. | Rare data loss for concurrent edits during a sync (seconds). | Re-apply local changes after sync or lock writes during sync. |
 | G6 | Last-write-wins relies on machine clocks (accepted in §7). | Wrong winner when clocks differ by more than the edit gap. | Version vectors (design already notes this). |
@@ -57,7 +57,7 @@ An honest comparison of what was built with [Architecture.md](Architecture.md), 
 | G13 | Settings is a second native window implemented as a second process (Wails v2 has one window per process), connected by a local token-protected bridge. | A second Dock icon while open; a new local attack surface (loopback, token, allow-list). The native window was not exercised visually in this environment. | Wails v3 multi-window would remove the extra process. |
 | G14 | A saved host cannot pick its own terminal theme; the theme is global. | Less flexible than Termius. | Add `terminal_theme` to the host record. |
 | G15 | Replacing a host's saved password creates a new identity; the old one stays in Keychain. | Orphan identities until deleted by hand. | Offer to update the existing identity's secret. |
-| G17 | SFTP does not preserve the modification time of copied files, and does not clean up the hidden `.vvterm-part-…` files of transfers that were abandoned. Remote change detection while editing uses size and time to the second. | A sync can copy a file again that has the same content; a conflict made within one second of the same size goes unnoticed. | Set the time after a copy; sweep old part files; compare a checksum when the server offers one. |
+| G17 | SFTP does not preserve the modification time of copied files, and does not clean up the hidden `.vuterm-part-…` files of transfers that were abandoned. Remote change detection while editing uses size and time to the second. | A sync can copy a file again that has the same content; a conflict made within one second of the same size goes unnoticed. | Set the time after a copy; sweep old part files; compare a checksum when the server offers one. |
 | G18 | Account is a local profile; Sign in is a placeholder. | No cloud features yet (by design). | Define the account service before enabling it. |
 | G16 | Sync after a vault reset: the Git repository still holds the old vault. | `Sync now` fails with a different-key error. | Use a new repository (documented). |
 

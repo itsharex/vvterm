@@ -93,7 +93,7 @@ export function AssistantSettings() {
     <>
       <section className="card-section" aria-label="AI providers">
         <h4>Providers</h4>
-        <div className="muted">VVTerm runs the AI command-line tool you are already signed in to, so your own subscription is used and no key is stored here. A provider stays off until you switch it on.</div>
+        <div className="muted">VuTerm runs the AI command-line tool you are already signed in to, so your own subscription is used and no key is stored here. A provider stays off until you switch it on.</div>
         {!providers && <div className="muted" role="status">Looking for AI tools on this computer…</div>}
         {providers && providers.length === 0 && <div className="muted">No AI tools were found. Install Claude Code, Codex CLI or Gemini CLI, or add your own command below.</div>}
         {list.map(p => {
@@ -180,7 +180,7 @@ function CustomProviderForm({onSaved}: {onSaved(): void}) {
   }
   return (
     <div className="ai-custom" role="group" aria-label="Add a command">
-      <div className="muted">For an AI tool VVTerm has no adapter for. Its tools cannot be checked from here, so it must pass the isolation self-test before it can be switched on. Use {'{prompt}'} in the arguments to place the prompt when it is passed as an argument.</div>
+      <div className="muted">For an AI tool VuTerm has no adapter for. Its tools cannot be checked from here, so it must pass the isolation self-test before it can be switched on. Use {'{prompt}'} in the arguments to place the prompt when it is passed as an argument.</div>
       <label className="field"><span>Name</span><input aria-label="Provider name" value={name} onChange={e => setName(e.target.value)} placeholder="My AI" /></label>
       <label className="field"><span>Command</span><input aria-label="Provider command" value={command} onChange={e => setCommand(e.target.value)} placeholder="mytool" /></label>
       <label className="field"><span>Arguments</span><input aria-label="Provider arguments" value={args} onChange={e => setArgs(e.target.value)} placeholder='--ask "{prompt}"' /></label>

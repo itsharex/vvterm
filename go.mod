@@ -1,4 +1,4 @@
-module vvterm
+module vuterm
 
 go 1.26.0
 

@@ -23,8 +23,8 @@ export function KnownHostsPage() {
   const [q, setQ] = useState('')
   const [error, setError] = useState('')
   const [types, setTypes] = useState<string[]>([])
-  const [sort, setSort] = usePref<Sort>('vvterm.knownhosts.sort', SORTS.map(o => o.value), 'host')
-  const [view, setView] = usePref('vvterm.knownhosts.view', VIEWS, 'grid')
+  const [sort, setSort] = usePref<Sort>('vuterm.knownhosts.sort', SORTS.map(o => o.value), 'host')
+  const [view, setView] = usePref('vuterm.knownhosts.view', VIEWS, 'grid')
 
   const reload = useCallback(async () => {
     try {
@@ -50,7 +50,7 @@ export function KnownHostsPage() {
   }, [items, q, sort, activeTypes.join(',')])
 
   const forget = async (k: KnownHost) => {
-    if (!(await confirm(`Forget ${k.host}? VVTerm will ask whether to trust its key again the next time you connect.`, {confirmLabel: 'Forget', danger: true}))) return
+    if (!(await confirm(`Forget ${k.host}? VuTerm will ask whether to trust its key again the next time you connect.`, {confirmLabel: 'Forget', danger: true}))) return
     try {
       await be.knownHosts.forget(k.host, k.fingerprint)
       toast.info(`Forgot ${k.host}`)

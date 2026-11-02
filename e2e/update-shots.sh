@@ -12,7 +12,7 @@ free_port() { node -e "const s=require('net').createServer().listen(0,'127.0.0.1
 
 mkdir -p "$WORK/gh" "$WORK/data" "$WORK/shots"
 cat > "$WORK/gh/latest" <<'JSON'
-{"tag_name":"v9.9.9","html_url":"https://github.com/vunguyenvu35/vvterm/releases/tag/v9.9.9","body":"A newer release."}
+{"tag_name":"v9.9.9","html_url":"https://github.com/vunguyenvu35/vuterm/releases/tag/v9.9.9","body":"A newer release."}
 JSON
 GH_PORT="$(free_port)"
 (cd "$WORK/gh" && python3 -m http.server "$GH_PORT" --bind 127.0.0.1 >/dev/null 2>&1) &
@@ -27,8 +27,8 @@ cd "$ROOT"
 mkdir -p "$WORK/noopen"
 for c in open xdg-open; do printf '#!/bin/sh\nexit 0\n' > "$WORK/noopen/$c"; chmod +x "$WORK/noopen/$c"; done
 
-PATH="$WORK/noopen:$PATH" VVTERM_UPDATE_URL="http://127.0.0.1:$GH_PORT/latest" VVTERM_NO_NATIVE_DIALOGS=1 VVTERM_DATA_DIR="$WORK/data" \
-  wails dev -browser -devserver "127.0.0.1:$PORT" -skipbindings -loglevel error -ldflags "-X vvterm/app.Version=1.1.0" > "$WORK/wails.log" 2>&1 &
+PATH="$WORK/noopen:$PATH" VUTERM_UPDATE_URL="http://127.0.0.1:$GH_PORT/latest" VUTERM_NO_NATIVE_DIALOGS=1 VUTERM_DATA_DIR="$WORK/data" \
+  wails dev -browser -devserver "127.0.0.1:$PORT" -skipbindings -loglevel error -ldflags "-X vuterm/app.Version=1.1.0" > "$WORK/wails.log" 2>&1 &
 WAILS_PID=$!
 UP=0
 for _ in $(seq 1 90); do
@@ -40,7 +40,7 @@ done
 cd "$ROOT/e2e"
 [ -d node_modules ] || npm install --no-audit --no-fund
 npx playwright install chromium >/dev/null
-VVTERM_URL="$URL" SHOT_DIR="$WORK/shots" node update-shots.mjs
+VUTERM_URL="$URL" SHOT_DIR="$WORK/shots" node update-shots.mjs
 mkdir -p "$ROOT/docs/updates"
 cp "$WORK"/shots/*.png "$ROOT/docs/updates/"
 echo "screenshots copied to docs/updates"

@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/store"
-	"vvterm/internal/vault"
+	"vuterm/internal/domain"
+	"vuterm/internal/store"
+	"vuterm/internal/vault"
 )
 
 func open(t *testing.T) (*DB, string) {
 	t.Helper()
-	p := filepath.Join(t.TempDir(), "sub", "vvterm.db")
+	p := filepath.Join(t.TempDir(), "sub", "vuterm.db")
 	d, err := Open(p)
 	if err != nil {
 		t.Fatal(err)

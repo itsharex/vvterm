@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"vvterm/internal/domain"
+	"vuterm/internal/domain"
 )
 
 // LocalService browses and edits this computer's files for the SFTP screen (the "Local" pane). Paths
@@ -110,7 +110,7 @@ func (s *LocalService) Chmod(path string, mode int) error {
 }
 
 // TempDir makes a new private folder for files that are only looked at (a remote file opened in an app).
-func (s *LocalService) TempDir() (string, error) { return os.MkdirTemp("", "vvterm-open-") }
+func (s *LocalService) TempDir() (string, error) { return os.MkdirTemp("", "vuterm-open-") }
 
 // Delete removes a file, or a folder with everything in it when recursive is true.
 func (s *LocalService) Delete(path string, recursive bool) error {

@@ -1,8 +1,8 @@
-<p align="center"><img src="brand/logo-mark-256.png" alt="VVTerm" width="88"></p>
+<p align="center"><img src="brand/logo-mark-256.png" alt="VuTerm" width="88"></p>
 
 # Development guide
 
-For people who want to build, test or change VVTerm. End users should read the [README](../README.md) and the [User guide](UserGuide.md).
+For people who want to build, test or change VuTerm. End users should read the [README](../README.md) and the [User guide](UserGuide.md).
 
 ## Prerequisites
 
@@ -14,14 +14,14 @@ For people who want to build, test or change VVTerm. End users should read the [
 
 ```bash
 make dev          # hot-reload development mode (wails dev)
-make build        # build/bin/vvterm.app
+make build        # build/bin/vuterm.app
                   # (on macOS this also adds the Dock-less Settings helper, see scripts/macos-settings-helper.sh;
-                  # under make dev the app makes the same helper itself in ~/Library/Caches/vvterm)
+                  # under make dev the app makes the same helper itself in ~/Library/Caches/vuterm)
 make test         # go vet + go test -race + frontend typecheck + vitest
 ./e2e/run.sh      # the walkthrough: also regenerates docs/screenshots and then runs scripts/check-doc-links.sh
 make e2e          # end-to-end walkthrough on the real backend; refreshes docs/screenshots
 make inventory    # regenerate docs/TestInventory.md
-make deploy-dev   # install a "VVTerm Dev" build next to the production app
+make deploy-dev   # install a "VuTerm Dev" build next to the production app
 make deploy-prod  # release pipeline (see below)
 ```
 
@@ -36,7 +36,7 @@ The version comes from the `VERSION` file (single source of truth).
 | `internal/sqlitedb`, `store`, `vault`, `sshx`, `forward`, `importer`, `exporter`, `syncgit` | infrastructure adapters |
 | `app/` | Wails delivery layer and composition root (`app.Build`) |
 | `frontend/` | React + TypeScript + xterm.js UI |
-| `app/bridge.go`, `app/settings_window.go` | the Settings window process (`vvterm --settings`) and its bridge to the main process |
+| `app/bridge.go`, `app/settings_window.go` | the Settings window process (`vuterm --settings`) and its bridge to the main process |
 | `cmd/demoserver` | demo SSH server (used by Docker and the E2E walkthrough) |
 | `e2e/` | Playwright walkthrough |
 | `deploy/`, `scripts/` | deploy configuration and scripts |
@@ -59,7 +59,7 @@ The complete list of cases is generated into [TestInventory.md](TestInventory.md
 
 ## Docker
 
-VVTerm is a desktop app, so Docker is for CI and fixtures, not for running the GUI.
+VuTerm is a desktop app, so Docker is for CI and fixtures, not for running the GUI.
 
 ```bash
 docker compose --profile dev up -d      # demo SSH servers :2201/:2202 and a Git remote :9418 (localhost only)
@@ -68,7 +68,7 @@ docker compose --profile ci build web-test  # frontend typecheck + tests
 docker compose --profile dev down       # add -v to forget the demo host keys
 ```
 
-The demo servers keep a persistent host key in a volume, so restarts do not trigger "host key changed". The Git remote has no authentication: never expose it beyond localhost. Try sync with `git://localhost:9418/vvterm-sync.git`.
+The demo servers keep a persistent host key in a volume, so restarts do not trigger "host key changed". The Git remote has no authentication: never expose it beyond localhost. Try sync with `git://localhost:9418/vuterm-sync.git`.
 
 ## Deploy
 
@@ -77,22 +77,22 @@ scripts/deploy.sh dev  [--fast] [--fixtures] [--run] [--dry-run]
 scripts/deploy.sh prod [--version X.Y.Z] [--e2e] [--tag] [--publish] [--yes] [--dry-run]
 ```
 
-**dev** builds a debug app (devtools enabled) and installs it as **VVTerm Dev**, with its own bundle id and data directory, and a `vvterm-dev` launcher. It never touches production data. Paths are configured in `deploy/env.dev` and can be overridden from the shell.
+**dev** builds a debug app (devtools enabled) and installs it as **VuTerm Dev**, with its own bundle id and data directory, and a `vuterm-dev` launcher. It never touches production data. Paths are configured in `deploy/env.dev` and can be overridden from the shell.
 
 **prod** is the release pipeline:
 
-1. gates: `RELEASE_NOTES.md` has a `# VVTerm X.Y.Z` heading, `--version` matches the `VERSION` file, the git tree is clean, you are on `main`, the tag (if it exists) points at `HEAD`;
+1. gates: `RELEASE_NOTES.md` has a `# VuTerm X.Y.Z` heading, `--version` matches the `VERSION` file, the git tree is clean, you are on `main`, the tag (if it exists) points at `HEAD`;
 2. tests: Go (`-race`) and frontend (optionally the E2E walkthrough with `--e2e`);
 3. build with the version injected;
 4. sign (`CODESIGN_IDENTITY`, hardened runtime) or ad-hoc sign with a warning;
 5. notarize and staple when `NOTARY_PROFILE` is set;
-6. package `dist/VVTerm-<version>-macos-<arch>.zip` and `SHA256SUMS`.
+6. package `dist/VuTerm-<version>-macos-<arch>.zip` and `SHA256SUMS`.
 
 Nothing leaves your machine by default. `--tag` creates a local annotated tag; `--publish` (which requires `--tag`) pushes the tag and creates a GitHub release, and asks you to type the version to confirm unless `--yes` is given. Use `--dry-run` to see every command first. Secrets are read from the environment only (see `deploy/env.prod`).
 
 ## Releasing checklist
 
-1. Bump `VERSION`, write the `# VVTerm X.Y.Z` section in `RELEASE_NOTES.md`.
+1. Bump `VERSION`, write the `# VuTerm X.Y.Z` section in `RELEASE_NOTES.md`.
 2. `make test && make e2e && make inventory`; commit the refreshed screenshots and inventory.
 3. Run the manual checklist in [TestPlan.md](TestPlan.md) on a real Mac.
 4. `scripts/deploy.sh prod --e2e --tag --publish`.
@@ -101,13 +101,13 @@ Nothing leaves your machine by default. `--tag` creates a local annotated tag; `
 
 `.github/workflows/release.yml` builds the three platforms in parallel and attaches the files to a GitHub release. It is the normal way to publish; `scripts/deploy.sh prod` above stays for a signed and notarized macOS build.
 
-1. Bump `VERSION` and write the `# VVTerm X.Y.Z` section in `RELEASE_NOTES.md` (it becomes the release description). Commit and push to `main`.
+1. Bump `VERSION` and write the `# VuTerm X.Y.Z` section in `RELEASE_NOTES.md` (it becomes the release description). Commit and push to `main`.
 2. Tag the same version and push the tag:
    ```
    git tag vX.Y.Z
    git push origin vX.Y.Z
    ```
-3. About three minutes later the release has: `vvterm-X.Y.Z-macos.dmg` and `.zip`, `vvterm-X.Y.Z-windows-amd64.exe`, `vvterm-X.Y.Z-linux-amd64.tar.gz` and `SHA256SUMS`.
+3. About three minutes later the release has: `vuterm-X.Y.Z-macos.dmg` and `.zip`, `vuterm-X.Y.Z-windows-amd64.exe`, `vuterm-X.Y.Z-linux-amd64.tar.gz` and `SHA256SUMS`.
 
 Notes:
 
@@ -120,7 +120,7 @@ Notes:
 
 ## Windows, bridge and screenshots
 
-- **Second processes.** Wails v2 has one window per process, so the Settings window (`vvterm --settings`) and an app window (`vvterm --window <host id> <title>`, Duplicate in new window) are other processes of the same binary. They hold no data: `app/bridge.go` (loopback HTTP, random token in `settings-ipc.json`, mode 0600) serves `/call` (a short allow-list for Settings) and `/appcall` (every use case service, for an app window), `/events` (what the main process emits, kept only for terminal and SFTP sessions a window opened) and `/menu`. In an app window the frontend gets a `window.go.usecase` proxy (`installWindowBridge`), so the whole UI runs unchanged.
+- **Second processes.** Wails v2 has one window per process, so the Settings window (`vuterm --settings`) and an app window (`vuterm --window <host id> <title>`, Duplicate in new window) are other processes of the same binary. They hold no data: `app/bridge.go` (loopback HTTP, random token in `settings-ipc.json`, mode 0600) serves `/call` (a short allow-list for Settings) and `/appcall` (every use case service, for an app window), `/events` (what the main process emits, kept only for terminal and SFTP sessions a window opened) and `/menu`. In an app window the frontend gets a `window.go.usecase` proxy (`installWindowBridge`), so the whole UI runs unchanged.
 - **Stale Settings window.** The Settings window is a process of its own and runs the program (and the frontend embedded in it) it was started from. A build puts a hard link to its executable in `Contents/Helpers`; when the executable is built again (`make dev`) or the app is replaced by a newer one, that link is a different program. `settingsExecutable` therefore uses the bundled helper only when it is byte for byte the running program, and otherwise makes one in the cache (`sameProgram`). `make dev` also builds `frontend/dist` first, because these other processes do not use the Vite dev server. A window left open by another version is refused by `/ping` (the version is compared) and quits.
 - **Panes.** `Workspace` draws every pane of every tab in one flat, keyed list placed by `paneRects` (layout.ts); never nest panes again, or moving one would rebuild it and end its session.
 - **Screenshots.** The E2E run numbers them, so adding a step shifts the numbers; `scripts/check-doc-links.sh` lists links that no longer point to a file (README and docs).

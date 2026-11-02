@@ -9,8 +9,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/sshx"
+	"vuterm/internal/domain"
+	"vuterm/internal/sshx"
 )
 
 const (

@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/domain/assistant"
+	"vuterm/internal/domain"
+	"vuterm/internal/domain/assistant"
 )
 
 type fakeAgent struct {

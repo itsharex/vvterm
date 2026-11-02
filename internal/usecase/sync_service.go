@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/syncfolder"
-	"vvterm/internal/syncgit"
-	"vvterm/internal/vault"
+	"vuterm/internal/domain"
+	"vuterm/internal/syncfolder"
+	"vuterm/internal/syncgit"
+	"vuterm/internal/vault"
 )
 
 // SyncStatus is the frontend view of the sync state.
@@ -196,7 +196,7 @@ func (s *SyncService) JoinExisting(masterPassword string) (err error) {
 		return err
 	}
 	if !exists {
-		return errors.New("nothing to restore: no VVTerm bundle was found there yet")
+		return errors.New("nothing to restore: no VuTerm bundle was found there yet")
 	}
 	if err = s.c.Vault.Adopt(masterPassword, hdr, nil); err != nil {
 		return err

@@ -73,15 +73,15 @@ export default function App({initial}: {/** an app window opened for this place 
   const [hostsReset, setHostsReset] = useState(0) // bumped when Hosts is pressed while already on it
   const [settingsOpen, setSettingsOpen] = useState(false)
   // the panel on the right of a terminal (hosts, snippets, history, themes): open or closed is remembered
-  const [sidebarOpen, setSidebarOpen] = useState(() => { try { return localStorage.getItem('vvterm.sidebar') !== 'closed' } catch { return true } })
+  const [sidebarOpen, setSidebarOpen] = useState(() => { try { return localStorage.getItem('vuterm.sidebar') !== 'closed' } catch { return true } })
   const [sidebarTab, setSidebarTabState] = useState<SidebarTab>(() => {
-    try { const t = localStorage.getItem('vvterm.sidebar.tab'); if (t === 'hosts' || t === 'snippets' || t === 'history' || t === 'files' || t === 'themes' || t === 'assistant') return t } catch { /* default */ }
+    try { const t = localStorage.getItem('vuterm.sidebar.tab'); if (t === 'hosts' || t === 'snippets' || t === 'history' || t === 'files' || t === 'themes' || t === 'assistant') return t } catch { /* default */ }
     return 'hosts'
   })
-  const [sideWidth, setSideWidthState] = useState<number>(() => { try { const n = Number(localStorage.getItem('vvterm.sidebar.width')); return n >= SIDE_MIN && n <= SIDE_MAX ? n : SIDE_DEFAULT } catch { return SIDE_DEFAULT } })
-  const setSideWidth = (w: number) => { setSideWidthState(w); try { localStorage.setItem('vvterm.sidebar.width', String(w)) } catch { /* not remembered */ } }
-  const setSidebarTab = (t: SidebarTab) => { setSidebarTabState(t); try { localStorage.setItem('vvterm.sidebar.tab', t) } catch { /* not remembered */ } }
-  const toggleSidebar = () => setSidebarOpen(o => { try { localStorage.setItem('vvterm.sidebar', o ? 'closed' : 'open') } catch { /* not remembered */ } return !o })
+  const [sideWidth, setSideWidthState] = useState<number>(() => { try { const n = Number(localStorage.getItem('vuterm.sidebar.width')); return n >= SIDE_MIN && n <= SIDE_MAX ? n : SIDE_DEFAULT } catch { return SIDE_DEFAULT } })
+  const setSideWidth = (w: number) => { setSideWidthState(w); try { localStorage.setItem('vuterm.sidebar.width', String(w)) } catch { /* not remembered */ } }
+  const setSidebarTab = (t: SidebarTab) => { setSidebarTabState(t); try { localStorage.setItem('vuterm.sidebar.tab', t) } catch { /* not remembered */ } }
+  const toggleSidebar = () => setSidebarOpen(o => { try { localStorage.setItem('vuterm.sidebar', o ? 'closed' : 'open') } catch { /* not remembered */ } return !o })
   const [dialog, setDialog] = useState<Dialog>(null)
   const [draft, setDraft] = useState('')
   const [fwDraft, setFwDraft] = useState<{label: string; type: ForwardType}>({label: '', type: 'local'})
@@ -129,7 +129,7 @@ export default function App({initial}: {/** an app window opened for this place 
 
   useEffect(() => {
     document.documentElement.dataset.theme = appearance
-    try { localStorage.setItem('vvterm.appearance', appearance) } catch { /* not remembered */ }
+    try { localStorage.setItem('vuterm.appearance', appearance) } catch { /* not remembered */ }
   }, [appearance])
 
   // Configurable shortcuts (Settings → Shortcuts). The handlers are re-assigned on every render once the
@@ -212,7 +212,7 @@ export default function App({initial}: {/** an app window opened for this place 
   const [newVersion, setNewVersion] = useState('')
   useEffect(() => {
     if (!vault?.unlocked) return
-    const KEY = 'vvterm.update.checked'
+    const KEY = 'vuterm.update.checked'
     try { if (Date.now() - Number(localStorage.getItem(KEY) || 0) < 24 * 3600 * 1000) return } catch { /* check anyway */ }
     // the saved setting is read here, not taken from state: the state holds the defaults until the real ones arrive
     void be.settings.get().then(s => (s.auto_update_check ? be.system.checkUpdate() : null)).then(u => {

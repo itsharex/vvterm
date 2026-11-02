@@ -27,7 +27,7 @@ export interface PaneFs {
 }
 
 export type Side = 'local' | 'remote'
-export const DRAG_TYPE = 'application/x-vvterm-entry'
+export const DRAG_TYPE = 'application/x-vuterm-entry'
 /** One thing being moved: a file or a folder. */
 export interface Item {path: string; name: string; is_dir: boolean}
 /** Carried by a drag from one pane to the other: everything that was selected. */
@@ -83,7 +83,7 @@ export function FilePane({side, title, icon, fs, startDir, reloadKey, showHidden
   const [menu, setMenu] = useState<{x: number; y: number; right?: boolean} | null>(null)
   const [filtering, setFiltering] = useState(false)
   const [filter, setFilter] = useState('')
-  const [sort, setSort] = usePref<Sort>('vvterm.sftp.sort', SORTS.map(o => o.value), 'name')
+  const [sort, setSort] = usePref<Sort>('vuterm.sftp.sort', SORTS.map(o => o.value), 'name')
   const [perms, setPerms] = useState<RemoteEntry | null>(null)
   const [naming, setNaming] = useState<{mode: 'mkdir' | 'rename'; value: string; err: string} | null>(null)
 

@@ -1,4 +1,4 @@
-# VVTerm — Architecture design document
+# VuTerm — Architecture design document
 
 > Updated: 2026-10-28 · Author: Vũ Nguyễn Vũ
 
@@ -20,7 +20,7 @@
 
 ## 1. Overview
 
-VVTerm is a desktop SSH client whose data the user controls and can always export. Hosts and keys are never locked inside the app: everything can be exported in a standard format, and synced through the user's own Git repository.
+VuTerm is a desktop SSH client whose data the user controls and can always export. Hosts and keys are never locked inside the app: everything can be exported in a standard format, and synced through the user's own Git repository.
 
 **Goals**
 
@@ -136,7 +136,7 @@ Data is split in two: non-secret configuration (hosts, groups) is stored as plai
 | Secret | id, kind (private_key/password/passphrase), ciphertext, nonce | `vault.json` |
 | KnownHost | hostname:port, key_type, fingerprint | `known_hosts` (OpenSSH format) |
 
-**Data directory layout** (macOS: `~/Library/Application Support/vvterm/`)
+**Data directory layout** (macOS: `~/Library/Application Support/vuterm/`)
 
 ```
 data/
@@ -311,7 +311,7 @@ Ciphertext cannot be merged by Git, so the app merges at record level:
 The Go code is split by service; each service is a struct that Wails binds to the frontend. The logic lives in `internal/` and does not depend on Wails, so it can be tested with `go test`.
 
 ```
-vvterm/
+vuterm/
   main.go                 # start Wails, register services
   app/                    # thin adapter: services bound to the frontend
     host_service.go
@@ -378,7 +378,7 @@ flowchart LR
     classDef final stroke:#2f6fdb,stroke-width:2px;
 ```
 
-After Gate 2 it is usable every day for basic SSH; Gate 4 is when VVTerm has enough features to be the main SSH tool.
+After Gate 2 it is usable every day for basic SSH; Gate 4 is when VuTerm has enough features to be the main SSH tool.
 
 **Risks**
 
@@ -391,7 +391,7 @@ After Gate 2 it is usable every day for basic SSH; Gate 4 is when VVTerm has eno
 
 **Open questions**
 
-- [x] App name: **VVTerm** (repo `vvterm`, CLI `vvt`)
+- [x] App name: **VuTerm** (repo `vuterm`, CLI `vvt`)
 - [ ] Svelte or React for the frontend?
 - [ ] Should SFTP come earlier than phase 3?
 - [ ] Personal use only, or will hosts be shared with a team?

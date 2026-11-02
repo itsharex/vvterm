@@ -1,4 +1,4 @@
-<p align="center"><img src="brand/logo-mark-256.png" alt="VVTerm" width="88"></p>
+<p align="center"><img src="brand/logo-mark-256.png" alt="VuTerm" width="88"></p>
 
 # Test inventory
 
@@ -6,7 +6,7 @@
 
 ## Go (unit + integration)
 
-### `app` (46)
+### `app` (50)
 
 - TestDataDirEnvOverride
 - TestBuildWiresRealAdapters
@@ -17,6 +17,10 @@
 - TestSettingsExecutableUsesTheDocklessHelperWhenBuilt
 - TestSameProgram
 - TestPrepareSettingsHelperLinksThePlistAndRefreshesOnRebuild
+- TestAdoptLegacyDirMovesTheOldFolderOnce
+- TestAdoptLegacyDBRenamesTheOldDatabase
+- TestKeychainAccountStaysTheOneFromBeforeTheRename
+- TestOldDataDirEnvironmentVariableStillWorks
 - TestBridgeConnectionFileIsPrivateAndRemovedOnClose
 - TestBridgeRefusesAWindowOfAnotherVersion
 - TestBridgeCallsSettingsAndNotifiesTheMainWindow
@@ -156,12 +160,13 @@
 - TestSocks5FailureCodes
 - TestSocks5RejectsWrongVersionAndAuthOnly
 
-### `internal/importer` (9)
+### `internal/importer` (10)
 
 - TestParseBasicBlocksAndWildcards
 - TestIncludeGroupsByFileNameAndLoops
 - TestParseMissingFile
 - TestParseMetaComment
+- TestParseMetaCommentFromBeforeTheRename
 - TestParseJumpSpec
 - TestBuildPlanJumpsForwardsGroups
 - TestPublicForwardBindIsFlagged
@@ -510,7 +515,7 @@
 - TestHintTooLongIsRejected
 - TestKeychainNeedsTheAuthenticator
 
-**Go test functions: 441** (table-driven cases and sub-tests are extra).
+**Go test functions: 446** (table-driven cases and sub-tests are extra).
 
 ## Frontend (Vitest)
 

@@ -52,10 +52,10 @@ var MenuActions = []string{
 
 // HelpLinks are the Help menu entries: the project's own pages only (see urlAllowed).
 var HelpLinks = []struct{ Label, URL string }{
-	{"Documentation", "https://github.com/vunguyenvu35/vvterm#readme"},
-	{"Request a Feature", "https://github.com/vunguyenvu35/vvterm/issues/new"},
-	{"Report a Bug", "https://github.com/vunguyenvu35/vvterm/issues/new"},
-	{"Release Notes", "https://github.com/vunguyenvu35/vvterm/blob/main/RELEASE_NOTES.md"},
+	{"Documentation", "https://github.com/vunguyenvu35/vuterm#readme"},
+	{"Request a Feature", "https://github.com/vunguyenvu35/vuterm/issues/new"},
+	{"Report a Bug", "https://github.com/vunguyenvu35/vuterm/issues/new"},
+	{"Release Notes", "https://github.com/vunguyenvu35/vuterm/blob/main/RELEASE_NOTES.md"},
 }
 
 // menuShortcut is the shortcut (the id used in Settings → Shortcuts) that does the same as a menu action, so the
@@ -120,7 +120,7 @@ type MenuHooks struct {
 }
 
 // BuildMenu makes the application menu bar: the system's own App, Edit and Window menus, and File, View and
-// Help with VVTerm's actions. On macOS an item shows its shortcut (the keys are configurable in Settings, so
+// Help with VuTerm's actions. On macOS an item shows its shortcut (the keys are configurable in Settings, so
 // the page passes the current ones in h.Shortcuts); the Settings and Full Screen items always have theirs.
 func BuildMenu(h MenuHooks) *menu.Menu {
 	act := func(label, action string, acc *keys.Accelerator) *menu.MenuItem {
@@ -172,7 +172,7 @@ func BuildMenu(h MenuHooks) *menu.Menu {
 	view.Append(menu.Text("Enter Full Screen", keys.Combo("f", keys.ControlKey, keys.CmdOrCtrlKey), func(*menu.CallbackData) { h.ToggleFullScreen() }))
 
 	help := menu.NewMenu()
-	help.Append(act("About VVTerm", ActAbout, nil))
+	help.Append(act("About VuTerm", ActAbout, nil))
 	help.Append(act("Check for Updates…", ActCheckUpdate, nil))
 	help.Append(menu.Separator())
 	for _, l := range HelpLinks {
@@ -180,7 +180,7 @@ func BuildMenu(h MenuHooks) *menu.Menu {
 		help.Append(menu.Text(l.Label, nil, func(*menu.CallbackData) { h.OpenURL(url) }))
 	}
 	help.Append(menu.Separator())
-	help.Append(act("Support VVTerm…", ActSupport, nil))
+	help.Append(act("Support VuTerm…", ActSupport, nil))
 
 	return menu.NewMenuFromItems(
 		menu.AppMenu(),

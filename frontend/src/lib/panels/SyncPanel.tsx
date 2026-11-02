@@ -47,16 +47,16 @@ export function SyncPanel({vault, onClose, onChanged, page = false}: {vault: Vau
       </div>
       {mode === 'folder' ? (
         <>
-          <p className="muted">Pick a folder that Google Drive, iCloud Drive, Dropbox or OneDrive keeps in step. VVTerm writes only the two encrypted files there, with no sign-in and no token. If two Macs save at once, the extra copies the cloud client creates are merged automatically.</p>
+          <p className="muted">Pick a folder that Google Drive, iCloud Drive, Dropbox or OneDrive keeps in step. VuTerm writes only the two encrypted files there, with no sign-in and no token. If two Macs save at once, the extra copies the cloud client creates are merged automatically.</p>
           <div className="row">
-            <Field label="Folder"><input aria-label="Sync folder" value={dir} onChange={e => setDir(e.target.value)} placeholder="/Users/you/Google Drive/VVTerm" /></Field>
+            <Field label="Folder"><input aria-label="Sync folder" value={dir} onChange={e => setDir(e.target.value)} placeholder="/Users/you/Google Drive/VuTerm" /></Field>
             <div className="fixed"><button disabled={busy} onClick={() => run(async () => { const p = await be.system.pickDirectory('Choose the sync folder'); if (p) setDir(p) })}>Browse…</button></div>
           </div>
         </>
       ) : (
         <>
           <p className="muted">Sync your encrypted hosts and keys through a private Git repository you own. Authentication uses your ssh-agent or git credential helper.</p>
-          <Field label="Repository URL"><input aria-label="Repository URL" value={url} onChange={e => setUrl(e.target.value)} placeholder="git@github.com:you/vvterm-sync.git" /></Field>
+          <Field label="Repository URL"><input aria-label="Repository URL" value={url} onChange={e => setUrl(e.target.value)} placeholder="git@github.com:you/vuterm-sync.git" /></Field>
         </>
       )}
       <div className="row">

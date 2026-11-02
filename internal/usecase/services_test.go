@@ -13,9 +13,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/testssh"
-	"vvterm/internal/vault"
+	"vuterm/internal/domain"
+	"vuterm/internal/testssh"
+	"vuterm/internal/vault"
 )
 
 func echoLn(t *testing.T) int {
@@ -452,7 +452,7 @@ func TestBackupExportImportIntoFreshInstall(t *testing.T) {
 	a := newHarness(t).unlocked(t)
 	srv := startServer(t)
 	host := a.sshHost(t, "web", srv, "")
-	backup := filepath.Join(t.TempDir(), "backup.vvbak")
+	backup := filepath.Join(t.TempDir(), "backup.vubak")
 	if err := a.app.ImportExp.ExportBackup(backup, "short"); err == nil {
 		t.Fatal("short backup password accepted")
 	}
@@ -755,7 +755,7 @@ func TestSnippetsSurviveRestartBackupSyncAndPlainExport(t *testing.T) {
 	}
 
 	// encrypted backup restore into a fresh install
-	bk := filepath.Join(t.TempDir(), "b.vvbak")
+	bk := filepath.Join(t.TempDir(), "b.vubak")
 	if err := a.app.ImportExp.ExportBackup(bk, "backup-password"); err != nil {
 		t.Fatal(err)
 	}
@@ -966,7 +966,7 @@ func TestOldSettingsWithoutShortcutsGetsNonNilMap(t *testing.T) {
 // and not asked again.
 func TestFirstConnectionLearnsTheServerType(t *testing.T) {
 	h := newHarness(t).unlocked(t)
-	srv, err := testssh.Start(testssh.Config{User: "root", Password: "pw", ExecReply: "Linux\n---VVTERM---\nPRETTY_NAME=\"Ubuntu 24.04\"\nID=ubuntu\nID_LIKE=debian\n"})
+	srv, err := testssh.Start(testssh.Config{User: "root", Password: "pw", ExecReply: "Linux\n---VUTERM---\nPRETTY_NAME=\"Ubuntu 24.04\"\nID=ubuntu\nID_LIKE=debian\n"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1034,7 +1034,7 @@ func TestUnknownServerTypeStaysEmpty(t *testing.T) {
 
 func TestSFTPConnectionAlsoLearnsTheServerType(t *testing.T) {
 	h := newHarness(t).unlocked(t)
-	srv, err := testssh.Start(testssh.Config{User: "root", Password: "pw", SFTP: true, ExecReply: "FreeBSD\n---VVTERM---\n"})
+	srv, err := testssh.Start(testssh.Config{User: "root", Password: "pw", SFTP: true, ExecReply: "FreeBSD\n---VUTERM---\n"})
 	if err != nil {
 		t.Fatal(err)
 	}

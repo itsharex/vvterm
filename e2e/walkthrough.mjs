@@ -1,7 +1,7 @@
-// End-to-end walkthrough of VVTerm against the real Go backend (wails dev -browser) and two
+// End-to-end walkthrough of VuTerm against the real Go backend (wails dev -browser) and two
 // demo SSH servers. Every step asserts behaviour, and screenshots are written to docs/screenshots.
 //
-//   VVTERM_URL=http://localhost:34115 DEMOSERVER=/path/to/demoserver SSH_CONFIG_DIR=/path node walkthrough.mjs
+//   VUTERM_URL=http://localhost:34115 DEMOSERVER=/path/to/demoserver SSH_CONFIG_DIR=/path node walkthrough.mjs
 import {chromium} from 'playwright'
 import {spawn} from 'node:child_process'
 import net from 'node:net'
@@ -16,7 +16,7 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 // Screenshots go to SHOT_DIR, outside the repo while the app runs: `wails dev` watches the project
 // and would reload on every new file. run.sh copies them into docs/screenshots afterwards.
 const OUT = process.env.SHOT_DIR ?? path.resolve(here, '..', 'docs', 'screenshots')
-const URL = process.env.VVTERM_URL ?? 'http://localhost:34115'
+const URL = process.env.VUTERM_URL ?? 'http://localhost:34115'
 const DEMO = process.env.DEMOSERVER
 const SSH_CONFIG = path.join(process.env.SSH_CONFIG_DIR ?? '', 'config')
 const MASTER = 'correct horse battery staple'
@@ -232,9 +232,9 @@ try {
   // the connecting screen's line runs to its end first, then the terminal shows
   await page.getByRole('status', {name: 'Connecting'}).waitFor({state: 'detached'})
   await page.locator('.pane').click()
-  await page.keyboard.type('hello vvterm')
+  await page.keyboard.type('hello vuterm')
   await page.keyboard.press('Enter')
-  await waitTerm('ECHO:hello vvterm')
+  await waitTerm('ECHO:hello vuterm')
   await shot(page, 'terminal-via-jump-host')
 
   await goHome()
@@ -344,9 +344,9 @@ try {
   await page.getByRole('button', {name: 'Open group legacy-staging'}).waitFor()
 
   step('SFTP: two panes, several files and folders, drag and drop, replace, rename and delete on the real SFTP subsystem')
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vvterm-e2e-'))
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vuterm-e2e-'))
   const write = (rel, body) => { const p = path.join(tmp, rel); fs.mkdirSync(path.dirname(p), {recursive: true}); fs.writeFileSync(p, body) }
-  write('upload-me.txt', 'hello from vvterm\n')
+  write('upload-me.txt', 'hello from vuterm\n')
   write('extra.txt', 'extra v1\n')
   write('bundle/one.txt', '1')
   write('bundle/two.txt', '22')
@@ -423,7 +423,7 @@ try {
   // drag a remote file onto the local pane
   await rrow('notes.txt').dragTo(localPane.getByRole('table', {name: 'Local files'}))
   for (let i = 0; i < 50 && !fs.existsSync(path.join(tmp, 'notes.txt')); i++) await sleep(100)
-  assert.equal(fs.readFileSync(path.join(tmp, 'notes.txt'), 'utf8'), 'VVTerm demo notes\n', 'a dragged file arrives with its content')
+  assert.equal(fs.readFileSync(path.join(tmp, 'notes.txt'), 'utf8'), 'VuTerm demo notes\n', 'a dragged file arrives with its content')
 
   // download a remote folder into the downloads folder, with its subfolders
   await lrow('downloads').dblclick()
@@ -471,11 +471,11 @@ try {
   // wait for the shell's prompt: what is typed before the shell is ready has nowhere to go
   await page.waitForFunction(() => (Array.from(document.querySelectorAll('.xterm-rows')).at(-1)?.textContent ?? '').trim().length > 0, null, {timeout: 30000})
   await page.locator('.pane').last().click()
-  await page.keyboard.type('echo vvterm-local-$((6*7))')
+  await page.keyboard.type('echo vuterm-local-$((6*7))')
   await page.keyboard.press('Enter')
-  await waitTerm('vvterm-local-42')
+  await waitTerm('vuterm-local-42')
   // finished lines get Termius-style colours: the word ERROR is red, an IP address yellow, a path blue
-  await page.keyboard.type('echo ERROR 10.0.0.1 /tmp/vvterm')
+  await page.keyboard.type('echo ERROR 10.0.0.1 /tmp/vuterm')
   await page.keyboard.press('Enter')
   await page.keyboard.type('echo done-line')
   await page.keyboard.press('Enter')
@@ -493,7 +493,7 @@ try {
   await page.getByRole('button', {name: 'History'}).click()
   const history = page.getByRole('list', {name: 'History'})
   await history.getByRole('button', {name: 'echo done-line'}).waitFor()
-  assert.equal(await history.getByText('vvterm-local-$((6*7))').count() > 0, true, 'a typed command is in the history')
+  assert.equal(await history.getByText('vuterm-local-$((6*7))').count() > 0, true, 'a typed command is in the history')
   await shot(page, 'sidebar-history')
   await page.getByRole('button', {name: 'Themes and font'}).click()
   await page.getByRole('listbox', {name: 'Themes'}).getByRole('option', {name: /Dracula/}).click()

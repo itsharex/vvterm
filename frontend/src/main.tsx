@@ -7,11 +7,13 @@ import {ConfirmProvider} from './lib/ui/Confirm'
 import {CapsLockWarning} from './lib/ui/CapsLockWarning'
 import {installNoNativeMenu} from './lib/ui/noNativeMenu'
 import {installSecureInputGuard} from './lib/ui/secureInput'
+import {migrateLegacyStorage} from './lib/legacyStorage'
 import './styles.css'
 
 // the app (terminals, panels, xterm) is not loaded by the Settings window, which only needs its own page
 const App = lazy(() => import('./App'))
 
+migrateLegacyStorage()
 installNoNativeMenu() // an app, not a web page: no Look Up / Translate / Inspect Element menu
 installSecureInputGuard() // a password field must not leave macOS's secure input on (it stops input tools such as OpenKey in every app)
 

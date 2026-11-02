@@ -13,8 +13,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/vault"
+	"vuterm/internal/domain"
+	"vuterm/internal/vault"
 )
 
 // VaultService exposes vault operations. No method returns a secret to the frontend.

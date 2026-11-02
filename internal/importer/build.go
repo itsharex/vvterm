@@ -3,7 +3,7 @@ package importer
 import (
 	"fmt"
 
-	"vvterm/internal/domain"
+	"vuterm/internal/domain"
 )
 
 // Policy decides what happens when an imported host label already exists.

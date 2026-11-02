@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"vvterm/internal/domain"
+	"vuterm/internal/domain"
 )
 
 // Limits that keep one drag from running away with a whole disk or a hostile server's endless listing.

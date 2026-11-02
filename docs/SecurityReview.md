@@ -1,4 +1,4 @@
-# VVTerm — security review
+# VuTerm — security review
 
 > Reviewed: 2026-10-29 · Scope: the whole repository at `main` after the AI assistant, with a closer look at the assistant, the local bridge, the MCP gateway and the supply chain. Method: automated scans (`govulncheck`, `npm audit`, secret patterns), reading the trust boundaries, and attacking the assistant's own rules against the real CLIs installed on the test machine.
 
@@ -36,7 +36,7 @@ No secret, key or credential was found in the repository. The vault, host-key ch
 3. **Prompt injection.** Terminal output is untrusted. The assistant has no tools of its own, cannot run anything that changes something without the user, and its read-only commands are on a strict allow-list, but a convincing suggestion can still be shown. The user reads every command.
 4. **Reading commands can still read.** An allowed command such as `head /var/log/auth.log` shows its output in the terminal and, redacted, to the assistant. Paths that look like secrets are refused; a secret in an unusual place is not recognised.
 5. **User-added MCP servers run with the user's rights.** The gateway checks arguments for secrets, redacts results and asks before anything that is not a plain read, but a server the user starts is code the user chose to run.
-6. **The CLIs are not ours.** A new version of Claude Code or Codex can add a tool. The self-test (command and web) runs when a provider is enabled and when its version changes; `VVTERM_LIVE=1 go test ./internal/agentx -run Live` repeats it on demand.
+6. **The CLIs are not ours.** A new version of Claude Code or Codex can add a tool. The self-test (command and web) runs when a provider is enabled and when its version changes; `VUTERM_LIVE=1 go test ./internal/agentx -run Live` repeats it on demand.
 7. **Development tools** (`vitest`, `vite`, `esbuild`: 6 advisories, 2 critical, dev-only) affect only a machine that runs `npm run dev` or the tests, through the development server. They do not ship.
 8. **Telnet and serial are unencrypted** by nature; the host form says so.
 9. **The CSP allows `connect-src` to local ports** (the development server needs it). A cross-site script is not possible today, so this is defence in depth only.

@@ -49,7 +49,7 @@ describe('command history', () => {
   })
   it('is stored in localStorage', () => {
     recordCommand('h1', 'uptime')
-    expect(JSON.parse(localStorage.getItem('vvterm.history.v2')!)).toEqual({h1: ['uptime']})
+    expect(JSON.parse(localStorage.getItem('vuterm.history.v2')!)).toEqual({h1: ['uptime']})
     clearHistory()
     expect(getHistory('h1')).toEqual([])
   })

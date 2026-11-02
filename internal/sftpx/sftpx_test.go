@@ -14,8 +14,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"vvterm/internal/sshx"
-	"vvterm/internal/testssh"
+	"vuterm/internal/sshx"
+	"vuterm/internal/testssh"
 )
 
 var bg = context.Background()

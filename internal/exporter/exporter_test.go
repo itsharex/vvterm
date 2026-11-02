@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/importer"
-	"vvterm/internal/vault"
+	"vuterm/internal/domain"
+	"vuterm/internal/importer"
+	"vuterm/internal/vault"
 )
 
 func sampleData() domain.Data {

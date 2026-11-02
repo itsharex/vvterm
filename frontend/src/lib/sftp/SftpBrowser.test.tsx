@@ -538,8 +538,8 @@ describe('SftpBrowser: right-click menu', () => {
     await waitFor(() => expect(names(R())).toContain('readme.txt'))
     fireEvent.contextMenu(row(R(), 'readme.txt'))
     await userEvent.click(within(menuOf()).getByRole('menuitem', {name: 'Open'}))
-    await waitFor(() => expect(calls(be, 'system.openPath')).toEqual([['system.openPath', '/tmp/vvterm-open-1/readme.txt']]))
-    expect(calls(be, 'sftp.downloadAll')[0].slice(2)).toEqual([['/readme.txt'], '/tmp/vvterm-open-1', true])
+    await waitFor(() => expect(calls(be, 'system.openPath')).toEqual([['system.openPath', '/tmp/vuterm-open-1/readme.txt']]))
+    expect(calls(be, 'sftp.downloadAll')[0].slice(2)).toEqual([['/readme.txt'], '/tmp/vuterm-open-1', true])
   })
 
   it('a local file is opened in place, and Open with asks which app', async () => {
@@ -785,9 +785,9 @@ describe('SftpBrowser: edit and save back', () => {
     await ready()
     await edit()
     await waitFor(() => expect(calls(be, 'sftp.editStart')).toHaveLength(1))
-    expect(calls(be, 'sftp.downloadAll')[0].slice(2)).toEqual([['/readme.txt'], '/tmp/vvterm-open-1', true])
-    expect(calls(be, 'system.openPath')).toEqual([['system.openPath', '/tmp/vvterm-open-1/readme.txt']])
-    expect(calls(be, 'sftp.editStart')[0].slice(1)).toEqual([sidOf(be), '/readme.txt', '/tmp/vvterm-open-1/readme.txt'])
+    expect(calls(be, 'sftp.downloadAll')[0].slice(2)).toEqual([['/readme.txt'], '/tmp/vuterm-open-1', true])
+    expect(calls(be, 'system.openPath')).toEqual([['system.openPath', '/tmp/vuterm-open-1/readme.txt']])
+    expect(calls(be, 'sftp.editStart')[0].slice(1)).toEqual([sidOf(be), '/readme.txt', '/tmp/vuterm-open-1/readme.txt'])
     act(() => be.emit('sftp:edit:' + sidOf(be), {remote: '/readme.txt', state: 'uploaded', message: ''}))
     expect(await screen.findByText('Saved readme.txt to the server')).toBeInTheDocument()
     act(() => be.emit('sftp:edit:' + sidOf(be), {remote: '/readme.txt', state: 'error', message: 'permission denied'}))

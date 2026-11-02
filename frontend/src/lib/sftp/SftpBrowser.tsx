@@ -26,7 +26,7 @@ const nextTabKey = () => 'rt' + tabSeq++
  * retried, and a broken one continues where it stopped.
  */
 /** sent by the app when the Close tab shortcut is used on an SFTP screen: close the host tab that is showing */
-export const CLOSE_HOST_TAB = 'vvterm:sftp-close-host'
+export const CLOSE_HOST_TAB = 'vuterm:sftp-close-host'
 
 export function SftpBrowser({hostId = '', hostLabel = '', nonce = 0, hosts: given, visible = true}: {hostId?: string; hostLabel?: string; nonce?: number; /** this screen is the one showing (only that one answers the Close tab shortcut) */ visible?: boolean; /** the app's current hosts (kept up to date by the app); without it they are loaded once */ hosts?: Host[]}) {
   const be = useBackend()

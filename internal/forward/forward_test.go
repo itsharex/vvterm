@@ -10,9 +10,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/sshx"
-	"vvterm/internal/testssh"
+	"vuterm/internal/domain"
+	"vuterm/internal/sshx"
+	"vuterm/internal/testssh"
 )
 
 type env struct {

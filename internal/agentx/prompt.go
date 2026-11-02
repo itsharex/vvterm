@@ -3,7 +3,7 @@ package agentx
 import (
 	"strings"
 
-	"vvterm/internal/domain/assistant"
+	"vuterm/internal/domain/assistant"
 )
 
 // userPrompt builds the message of one request. Every part is Sanitized text.

@@ -38,8 +38,8 @@ export function KeychainPage({identities, draft, onNew, onChanged}: Props) {
   const confirm = useConfirm()
   const [q, setQ] = useState('')
   const [kinds, setKinds] = useState<AuthType[]>([])
-  const [sort, setSort] = usePref<Sort>('vvterm.keychain.sort', SORTS.map(o => o.value), 'name')
-  const [view, setView] = usePref('vvterm.keychain.view', VIEWS, 'grid')
+  const [sort, setSort] = usePref<Sort>('vuterm.keychain.sort', SORTS.map(o => o.value), 'name')
+  const [view, setView] = usePref('vuterm.keychain.view', VIEWS, 'grid')
   const present = KINDS.filter(k => identities.some(i => i.auth_type === k.id))
   const activeKinds = kinds.filter(k => present.some(x => x.id === k))
   const shown = useMemo(() => {

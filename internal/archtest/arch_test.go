@@ -18,11 +18,11 @@ import (
 	"os"
 	"reflect"
 
-	"vvterm/internal/domain/assistant"
-	"vvterm/internal/domain/secretpolicy"
+	"vuterm/internal/domain/assistant"
+	"vuterm/internal/domain/secretpolicy"
 )
 
-const mod = "vvterm"
+const mod = "vuterm"
 
 // (imports for the assistant checks)
 

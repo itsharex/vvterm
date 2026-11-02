@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"vvterm/internal/agentx"
-	"vvterm/internal/domain/assistant"
+	"vuterm/internal/agentx"
+	"vuterm/internal/domain/assistant"
 )
 
 const callTimeout = 45 * time.Second
@@ -37,7 +37,7 @@ type client struct {
 func newClient(t transport, extra func()) (*client, error) {
 	c := &client{t: t, extra: extra}
 	if _, err := t.call("initialize", map[string]any{"protocolVersion": protocolVersion, "capabilities": map[string]any{},
-		"clientInfo": map[string]any{"name": "vvterm", "version": "1"}}); err != nil {
+		"clientInfo": map[string]any{"name": "vuterm", "version": "1"}}); err != nil {
 		t.close()
 		if extra != nil {
 			extra()
@@ -307,7 +307,7 @@ func (Connector) Connect(s assistant.MCPServer, env, headers map[string]string) 
 				bin = p
 			}
 		}
-		dir, err := os.MkdirTemp("", "vvterm-mcp-*")
+		dir, err := os.MkdirTemp("", "vuterm-mcp-*")
 		if err != nil {
 			return nil, err
 		}

@@ -1,8 +1,8 @@
 package usecase
 
 import (
-	"vvterm/internal/store"
-	"vvterm/internal/vault"
+	"vuterm/internal/store"
+	"vuterm/internal/vault"
 )
 
 // Compile-time proof that the real adapters satisfy the ports.

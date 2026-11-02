@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"vvterm/internal/domain/assistant"
+	"vuterm/internal/domain/assistant"
 )
 
-// CustomConfig describes an AI command-line tool VVTerm has no adapter for.
+// CustomConfig describes an AI command-line tool VuTerm has no adapter for.
 type CustomConfig struct {
 	ID      string   `json:"id"`
 	Name    string   `json:"name"`

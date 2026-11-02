@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/sshx"
+	"vuterm/internal/domain"
+	"vuterm/internal/sshx"
 )
 
 // ConnectionTest is the outcome of SessionService.TestConnection. Failures a user can fix (wrong

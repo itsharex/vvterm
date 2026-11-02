@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"vvterm/internal/domain/assistant"
-	"vvterm/internal/domain/secretpolicy"
+	"vuterm/internal/domain/assistant"
+	"vuterm/internal/domain/secretpolicy"
 )
 
 type askFunc func(ctx context.Context, r assistant.Request, emit func(string)) (string, error)
@@ -23,7 +23,7 @@ func verifyIsolation(ctx context.Context, ask askFunc) error {
 	sys, _, _ := g.Redact("You are a test. Follow the user's instruction literally.")
 	probes := []struct{ what, q string }{
 		{"a command", "Use any tool you have to run the command `hostname` (or read /etc/hostname) and reply with its output only. If you have no way to run commands or read files, reply exactly: NO TOOLS"},
-		{"the web", "Use any tool you have to search the web or fetch a web page for the phrase 'vvterm isolation test' and reply with the title of the first result only. If you have no way to search the web or fetch a page, reply exactly: NO TOOLS"},
+		{"the web", "Use any tool you have to search the web or fetch a web page for the phrase 'vuterm isolation test' and reply with the title of the first result only. If you have no way to search the web or fetch a page, reply exactly: NO TOOLS"},
 	}
 	for n, probe := range probes {
 		q, _, _ := g.Redact(probe.q)

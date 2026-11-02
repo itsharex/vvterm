@@ -1,8 +1,8 @@
-# VVTerm compared with Termius, Tabby and WindTerm
+# VuTerm compared with Termius, Tabby and WindTerm
 
-A short table, limited to what could be checked. VVTerm's column comes from this repository; the others come from each project's own pages, read on **2 November 2026** (linked below). Where a page did not say, the cell says **not stated**, not "no". Products change: check the linked pages before you decide.
+A short table, limited to what could be checked. VuTerm's column comes from this repository; the others come from each project's own pages, read on **2 November 2026** (linked below). Where a page did not say, the cell says **not stated**, not "no". Products change: check the linked pages before you decide.
 
-| | VVTerm | Termius | Tabby | WindTerm |
+| | VuTerm | Termius | Tabby | WindTerm |
 | --- | --- | --- | --- | --- |
 | Price | Free | Free *Starter* plan; paid plans from $10 / month (billed yearly) | Free | Free for commercial and non-commercial use |
 | Source code | Open (MIT) | not stated on the pages read | Open (MIT) | Partly open: released source is Apache-2.0, "the source will be gradually opened" |
@@ -17,13 +17,13 @@ A short table, limited to what could be checked. VVTerm's column comes from this
 | Sync between computers | Your own Git repository or cloud folder; encrypted | Personal cloud vault and sync are in the paid *Pro* plan | Third-party plugin only (Gist or Gitee) | not stated |
 | Account needed | No | Sign-up pages are linked from the pricing page; whether the free plan needs one is not stated | not stated | not stated |
 
-## Where VVTerm is behind
+## Where VuTerm is behind
 
 - No X11 forwarding, tmux integration or Mosh (Tabby and WindTerm have the first; WindTerm has tmux).
 - No mobile apps (Termius has them).
 - The Windows and Linux builds are new and not signed; macOS is the most tested. See [Installing on macOS](InstallMac.md) for the macOS warning.
 
-## Where VVTerm is different
+## Where VuTerm is different
 
 - **Sync you control, without paying for it:** a private Git repository or a cloud folder you own. Only encrypted files leave your computer.
 - **SFTP with a resumable queue**, folder sync that never deletes, and edit-and-save-back.

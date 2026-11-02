@@ -16,7 +16,7 @@ go build -o "$WORK/demoserver" ./cmd/demoserver
 mkdir -p "$WORK/ssh/config.d" "$WORK/data" "$WORK/shots"
 printf 'Include config.d/*\n' > "$WORK/ssh/config"
 cat > "$WORK/ssh/config.d/legacy-staging" <<'CFG'
-# vvterm: env=staging tags=mariadb,internal
+# vuterm: env=staging tags=mariadb,internal
 Host db-staging
     HostName 10.20.0.5
     Port 2222
@@ -45,7 +45,7 @@ done
 mkdir -p "$WORK/noopen"
 for c in open xdg-open; do printf '#!/bin/sh\nexit 0\n' > "$WORK/noopen/$c"; chmod +x "$WORK/noopen/$c"; done
 
-PATH="$WORK/noopen:$PATH" VVTERM_NO_NATIVE_DIALOGS=1 VVTERM_DATA_DIR="$WORK/data" wails dev -browser -devserver "127.0.0.1:$PORT" -skipbindings -loglevel error > "$WORK/wails.log" 2>&1 &
+PATH="$WORK/noopen:$PATH" VUTERM_NO_NATIVE_DIALOGS=1 VUTERM_DATA_DIR="$WORK/data" wails dev -browser -devserver "127.0.0.1:$PORT" -skipbindings -loglevel error > "$WORK/wails.log" 2>&1 &
 WAILS_PID=$!
 UP=0
 for _ in $(seq 1 90); do
@@ -57,7 +57,7 @@ done
 cd "$ROOT/e2e"
 [ -d node_modules ] || npm install --no-audit --no-fund
 npx playwright install chromium >/dev/null
-VVTERM_URL="$URL" DEMOSERVER="$WORK/demoserver" SSH_CONFIG_DIR="$WORK/ssh" SHOT_DIR="$WORK/shots" node walkthrough.mjs
+VUTERM_URL="$URL" DEMOSERVER="$WORK/demoserver" SSH_CONFIG_DIR="$WORK/ssh" SHOT_DIR="$WORK/shots" node walkthrough.mjs
 mkdir -p "$ROOT/docs/screenshots"
 rm -f "$ROOT"/docs/screenshots/*.png # numbering changes between runs: drop stale shots
 cp "$WORK"/shots/*.png "$ROOT/docs/screenshots/"

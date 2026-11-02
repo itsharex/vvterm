@@ -41,7 +41,7 @@ func TestResetSettingsKeepsAccountAndSyncTarget(t *testing.T) {
 
 func TestClearCacheRemovesCacheFilesAndForgetsTheAITools(t *testing.T) {
 	h := newHarness(t).unlocked(t)
-	cache := filepath.Join(t.TempDir(), "vvterm")
+	cache := filepath.Join(t.TempDir(), "vuterm")
 	if err := os.MkdirAll(filepath.Join(cache, "helper"), 0o700); err != nil {
 		t.Fatal(err)
 	}

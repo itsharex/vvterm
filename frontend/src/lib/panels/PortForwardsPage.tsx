@@ -41,8 +41,8 @@ export function PortForwardsPage({hosts, draft, reloadKey = 0, onNew, onEdit}: P
   const [q, setQ] = useState('')
   const [states, setStates] = useState<string[]>([])
   const [types, setTypes] = useState<ForwardType[]>([])
-  const [sort, setSort] = usePref<Sort>('vvterm.forwards.sort', SORTS.map(o => o.value), 'name')
-  const [view, setView] = usePref('vvterm.forwards.view', VIEWS, 'grid')
+  const [sort, setSort] = usePref<Sort>('vuterm.forwards.sort', SORTS.map(o => o.value), 'name')
+  const [view, setView] = usePref('vuterm.forwards.view', VIEWS, 'grid')
 
   const reload = useCallback(async () => setItems((await be.forwards.list()) ?? []), [be])
   useEffect(() => {

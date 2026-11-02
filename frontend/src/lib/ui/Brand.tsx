@@ -3,10 +3,10 @@ export function Brand({size = 'sm', heading = false}: {size?: 'sm' | 'lg'; headi
   const px = size === 'lg' ? 52 : 28
   const Tag = heading ? 'h1' : 'div'
   return (
-    <Tag className={`brand-lockup ${size}`} aria-label="VVTerm">
+    <Tag className={`brand-lockup ${size}`} aria-label="VuTerm">
       <img src="/logo-mark.svg" alt="" width={px} height={px} />
       <span className="wordmark" aria-hidden="true">
-        <span className="vv">VV</span>Term<span className="cursor">_</span>
+        <span className="vu">Vu</span>Term<span className="cursor">_</span>
       </span>
     </Tag>
   )

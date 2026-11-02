@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"vvterm/internal/domain"
+	"vuterm/internal/domain"
 )
 
 // How many queued transfers run at the same time on one SFTP session.

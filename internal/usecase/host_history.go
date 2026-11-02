@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"vvterm/internal/domain/secretpolicy"
+	"vuterm/internal/domain/secretpolicy"
 )
 
 // maxHostHistory bounds what one host can put in memory.

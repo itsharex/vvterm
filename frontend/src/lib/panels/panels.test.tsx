@@ -43,7 +43,7 @@ describe('DataPanel', () => {
     await userEvent.type(screen.getByLabelText('Backup password'), 'er-pass')
     expect(exp).toBeEnabled()
     await userEvent.click(exp)
-    await waitFor(() => expect(be.state.calls).toContainEqual(['data.exportBackup', '/tmp/vvterm.vvbak', 'shorter-pass']))
+    await waitFor(() => expect(be.state.calls).toContainEqual(['data.exportBackup', '/tmp/vuterm.vubak', 'shorter-pass']))
     await userEvent.click(screen.getByRole('button', {name: 'Restore backup…'}))
     await waitFor(() => expect(be.state.calls.some(c => c[0] === 'data.importBackup')).toBe(true))
   })
@@ -52,7 +52,7 @@ describe('DataPanel', () => {
     const be = makeFake()
     render(<Providers be={be}><DataPanel onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
     await userEvent.click(screen.getByRole('button', {name: /Export host list/}))
-    await waitFor(() => expect(be.state.calls).toContainEqual(['data.exportJSON', '/tmp/vvterm-hosts.json']))
+    await waitFor(() => expect(be.state.calls).toContainEqual(['data.exportJSON', '/tmp/vuterm-hosts.json']))
   })
 
   it('surfaces backend errors', async () => {

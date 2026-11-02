@@ -191,7 +191,7 @@ describe('App navigation and quick connect', () => {
   })
 
   it('the + opens a New Tab with a search box and the recent connections; picking a host turns it into that connection', async () => {
-    localStorage.removeItem('vvterm.recent')
+    localStorage.removeItem('vuterm.recent')
     const be = setup()
     await unlock(be)
     await userEvent.dblClick(hostCard('web-1'))
@@ -1040,7 +1040,7 @@ describe('App: the application menu bar', () => {
     const be = setup()
     await unlock(be)
     menu(be, 'about')
-    expect(await screen.findByRole('dialog', {name: 'About VVTerm'})).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', {name: 'About VuTerm'})).toBeInTheDocument()
     expect(await screen.findByTestId('about-version')).toHaveTextContent('1.1.0-test')
     await userEvent.click(screen.getAllByRole('button', {name: 'Close'})[0])
     menu(be, 'check_update')
@@ -1049,25 +1049,25 @@ describe('App: the application menu bar', () => {
   })
 
   it('shows an Update chip in the corner when a newer release exists, and opens the About dialog from it', async () => {
-    localStorage.removeItem('vvterm.update.checked')
+    localStorage.removeItem('vuterm.update.checked')
     const be = setup()
     be.state.latest = '9.9.9'
     await unlock(be)
     const chip = await screen.findByRole('button', {name: /Update available: version 9\.9\.9/})
     await userEvent.click(chip)
-    expect(await screen.findByRole('dialog', {name: 'About VVTerm'})).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', {name: 'About VuTerm'})).toBeInTheDocument()
     expect(await screen.findByText(/is available/)).toBeInTheDocument()
   })
 
   it('no Update chip when up to date, when switched off, or when checked within the day', async () => {
-    localStorage.removeItem('vvterm.update.checked')
+    localStorage.removeItem('vuterm.update.checked')
     let be = setup()
     await unlock(be)
     await waitFor(() => expect(be.state.calls.some(c => c[0] === 'system.checkUpdate')).toBe(true))
     expect(screen.queryByRole('button', {name: /Update available/})).toBeNull()
     cleanup()
 
-    localStorage.removeItem('vvterm.update.checked')
+    localStorage.removeItem('vuterm.update.checked')
     be = setup()
     be.state.latest = '9.9.9'
     be.state.settings = {...be.state.settings, auto_update_check: false}
@@ -1076,20 +1076,20 @@ describe('App: the application menu bar', () => {
     expect(be.state.calls.some(c => c[0] === 'system.checkUpdate')).toBe(false)
     cleanup()
 
-    localStorage.setItem('vvterm.update.checked', String(Date.now()))
+    localStorage.setItem('vuterm.update.checked', String(Date.now()))
     be = setup()
     be.state.latest = '9.9.9'
     await unlock(be)
     await screen.findByRole('button', {name: 'Open settings'})
     expect(be.state.calls.some(c => c[0] === 'system.checkUpdate')).toBe(false)
-    localStorage.removeItem('vvterm.update.checked')
+    localStorage.removeItem('vuterm.update.checked')
   })
 
-  it('Help → Support VVTerm opens the Support dialog with the USDT addresses, also while the vault is locked', async () => {
+  it('Help → Support VuTerm opens the Support dialog with the USDT addresses, also while the vault is locked', async () => {
     const be = setup()
     await screen.findByLabelText('Master password')
     menu(be, 'support')
-    const dlg = await screen.findByRole('dialog', {name: 'Support VVTerm'})
+    const dlg = await screen.findByRole('dialog', {name: 'Support VuTerm'})
     expect(within(dlg).getByText(/Prefer crypto/)).toBeInTheDocument()
     expect(within(dlg).getByText('TMXXHRNG7qauoFWJKYbqEbd4FGgt3DgjBK')).toBeInTheDocument()
   })
@@ -1098,9 +1098,9 @@ describe('App: the application menu bar', () => {
     const be = setup()
     await screen.findByLabelText('Master password') // the lock screen
     menu(be, 'about')
-    expect(await screen.findByRole('dialog', {name: 'About VVTerm'})).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', {name: 'About VuTerm'})).toBeInTheDocument()
     await userEvent.click(screen.getAllByRole('button', {name: 'Close'})[0])
-    expect(screen.queryByRole('dialog', {name: 'About VVTerm'})).toBeNull()
+    expect(screen.queryByRole('dialog', {name: 'About VuTerm'})).toBeNull()
     menu(be, 'check_update')
     expect(await screen.findByText('You are on the latest version.')).toBeInTheDocument()
     menu(be, 'new_host') // everything else stays shut
@@ -1174,10 +1174,10 @@ describe('App: terminal sidebar and new windows', () => {
     expect(await screen.findByRole('complementary', {name: 'Terminal sidebar'})).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', {name: 'Toggle sidebar'}))
     expect(screen.queryByRole('complementary', {name: 'Terminal sidebar'})).toBeNull()
-    expect(localStorage.getItem('vvterm.sidebar')).toBe('closed')
+    expect(localStorage.getItem('vuterm.sidebar')).toBe('closed')
     await userEvent.click(screen.getByRole('button', {name: 'Toggle sidebar'}))
     expect(screen.getByRole('complementary', {name: 'Terminal sidebar'})).toBeInTheDocument()
-    localStorage.removeItem('vvterm.sidebar')
+    localStorage.removeItem('vuterm.sidebar')
   })
 
   it('a theme picked in the sidebar is saved as the terminal theme', async () => {
@@ -1198,7 +1198,7 @@ describe('App: terminal sidebar and new windows', () => {
     await waitFor(() => expect(be.state.calls.filter(c => c[0] === 'sftp.open').map(c => c[1])).toEqual(['h1']))
     await userEvent.click(screen.getByRole('button', {name: 'Hosts'})) // another section: the connection is let go
     await waitFor(() => expect(be.state.calls.filter(c => c[0] === 'sftp.close')).toHaveLength(1))
-    localStorage.removeItem('vvterm.sidebar.tab')
+    localStorage.removeItem('vuterm.sidebar.tab')
   })
 
   it('Duplicate in new window opens a window for the host of the tab', async () => {

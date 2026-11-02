@@ -36,7 +36,7 @@ describe('SettingsWindow', () => {
     const nav = screen.getByRole('navigation', {name: 'Settings menu'})
     expect(within(nav).getAllByRole('tab').map(t => t.querySelector('span')?.textContent)).toEqual(['General', 'Account', 'Terminal', 'Security', 'AI assistant', 'Sync', 'Shortcuts', 'Storage'])
     expect(within(nav).getByRole('combobox', {name: /^Theme,/})).toBeInTheDocument()
-    for (const l of ['Documentation', 'Request a feature', 'Report a bug', 'Release notes', 'Support VVTerm']) {
+    for (const l of ['Documentation', 'Request a feature', 'Report a bug', 'Release notes', 'Support VuTerm']) {
       expect(within(nav).getByRole('button', {name: new RegExp(l)})).toBeInTheDocument()
     }
     expect(await screen.findByTestId('app-version')).toHaveTextContent('1.1.0-test')
@@ -109,7 +109,7 @@ describe('SettingsWindow', () => {
     setup({terminal_theme: 'nord'})
     await tab('Terminal')
     const match = screen.getByRole('radio', {name: /Match app theme/})
-    expect(match).toHaveTextContent('VVTerm Dark') // appearance=dark
+    expect(match).toHaveTextContent('VuTerm Dark') // appearance=dark
     expect(match).not.toHaveTextContent('Nord')
   })
 
@@ -232,13 +232,13 @@ describe('SettingsWindow', () => {
   it('help links open only the project pages', async () => {
     const {be} = setup()
     await userEvent.click(screen.getByRole('button', {name: /Report a bug/}))
-    expect(be.state.calls).toContainEqual(['system.openUrl', 'https://github.com/vunguyenvu35/vvterm/issues/new'])
+    expect(be.state.calls).toContainEqual(['system.openUrl', 'https://github.com/vunguyenvu35/vuterm/issues/new'])
   })
 
-  it('Support VVTerm opens Ko-fi and the USDT addresses (QR code, Copy)', async () => {
+  it('Support VuTerm opens Ko-fi and the USDT addresses (QR code, Copy)', async () => {
     const {be} = setup()
-    await userEvent.click(screen.getByRole('button', {name: 'Support VVTerm'}))
-    const dlg = await screen.findByRole('dialog', {name: 'Support VVTerm'})
+    await userEvent.click(screen.getByRole('button', {name: 'Support VuTerm'}))
+    const dlg = await screen.findByRole('dialog', {name: 'Support VuTerm'})
     expect(within(dlg).getByText('TMXXHRNG7qauoFWJKYbqEbd4FGgt3DgjBK')).toBeInTheDocument()
     expect(within(dlg).getByText('0x4bdfd1d6456c28d06e3f8456ddac59e6168e5153')).toBeInTheDocument()
     expect(within(dlg).getAllByRole('img')).toHaveLength(2)
@@ -247,7 +247,7 @@ describe('SettingsWindow', () => {
     await userEvent.click(within(dlg).getByRole('button', {name: 'Copy USDT · Tron address'}))
     await waitFor(() => expect(be.state.calls).toContainEqual(['system.writeClipboard', 'TMXXHRNG7qauoFWJKYbqEbd4FGgt3DgjBK']))
     await userEvent.keyboard('{Escape}') // closes the dialog, not the whole Settings window
-    expect(screen.queryByRole('dialog', {name: 'Support VVTerm'})).toBeNull()
+    expect(screen.queryByRole('dialog', {name: 'Support VuTerm'})).toBeNull()
     expect(screen.getByRole('navigation', {name: 'Settings menu'})).toBeInTheDocument()
   })
 })

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"vvterm/internal/domain"
+	"vuterm/internal/domain"
 )
 
 const dataVersion = 1

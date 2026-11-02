@@ -7,7 +7,7 @@
  *
  * A host is the saved host's id, or 'local' / 'serial:…' / 'telnet:…' for the other kinds of terminal.
  */
-const KEY = 'vvterm.history.v2'
+const KEY = 'vuterm.history.v2'
 export const MAX_HISTORY = 300
 /** hosts that keep a history: the least recently used one is dropped beyond this (hosts get deleted) */
 export const MAX_HOSTS = 200

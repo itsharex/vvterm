@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Package build/bin/vvterm.app into dist/vvterm-<version>-macos.{dmg,zip}.
+# Package build/bin/vuterm.app into dist/vuterm-<version>-macos.{dmg,zip}.
 # Usage: scripts/package-macos.sh [--build]   (--build runs `make build` first)
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 VERSION="$(cat VERSION)"
-APP="build/bin/vvterm.app"
+APP="build/bin/vuterm.app"
 OUT="dist"
-BASE="vvterm-${VERSION}-macos"
+BASE="vuterm-${VERSION}-macos"
 
 if [ "${1:-}" = "--build" ]; then
   make build
@@ -30,7 +30,7 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname "vvterm $VERSION" -srcfolder "$STAGE" \
+hdiutil create -volname "vuterm $VERSION" -srcfolder "$STAGE" \
   -fs HFS+ -format UDZO -ov "$OUT/$BASE.dmg" >/dev/null
 
 (cd "$OUT" && shasum -a 256 "$BASE.dmg" "$BASE.zip" | tee "$BASE.sha256")

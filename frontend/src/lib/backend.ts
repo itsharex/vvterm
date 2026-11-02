@@ -234,7 +234,7 @@ function svc(pkg: string, name: string): Bound {
   const s = window.go?.[pkg]?.[name]
   if (!s) {
     console.warn(`backend service ${pkg}.${name} is not available`)
-    throw new Error('VVTerm cannot reach its backend from this window. Close the window and open it again; if it keeps happening, restart VVTerm.')
+    throw new Error('VuTerm cannot reach its backend from this window. Close the window and open it again; if it keeps happening, restart VuTerm.')
   }
   return s
 }

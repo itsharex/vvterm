@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"vvterm/internal/domain"
+	"vuterm/internal/domain"
 )
 
 func open(t *testing.T) (*Store, string) {

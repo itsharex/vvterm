@@ -3,7 +3,7 @@ import {chromium} from 'playwright'
 import path from 'node:path'
 
 const OUT = process.env.SHOT_DIR
-const URL = process.env.VVTERM_URL
+const URL = process.env.VUTERM_URL
 const MASTER = 'correct horse battery staple'
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -26,7 +26,7 @@ try {
 
   // the chip opens About with the news
   await page.getByRole('button', {name: /Update available/}).click()
-  const about = page.getByRole('dialog', {name: 'About VVTerm'})
+  const about = page.getByRole('dialog', {name: 'About VuTerm'})
   await about.waitFor()
   await about.getByText(/is available/).waitFor()
   await shot('about-update-available')
@@ -41,9 +41,9 @@ try {
   await win.getByText('Donate').first().waitFor()
   await shot('settings-donate')
 
-  // Support VVTerm: Ko-fi, the amounts, and the USDT addresses as QR codes
-  await win.getByRole('button', {name: 'Support VVTerm'}).click()
-  const support = page.getByRole('dialog', {name: 'Support VVTerm'})
+  // Support VuTerm: Ko-fi, the amounts, and the USDT addresses as QR codes
+  await win.getByRole('button', {name: 'Support VuTerm'}).click()
+  const support = page.getByRole('dialog', {name: 'Support VuTerm'})
   await support.getByText(/Prefer crypto/).waitFor()
   await shot('support-dialog')
 } finally {

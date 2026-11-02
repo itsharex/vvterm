@@ -13,9 +13,9 @@ import (
 	"sort"
 	"strings"
 
-	"vvterm/internal/fsutil"
-	"vvterm/internal/syncgit"
-	"vvterm/internal/vault"
+	"vuterm/internal/fsutil"
+	"vuterm/internal/syncgit"
+	"vuterm/internal/vault"
 )
 
 // Folder is a synced directory holding bundle.enc and vault-header.json.
@@ -35,7 +35,7 @@ func (f *Folder) Check() error {
 	if !st.IsDir() {
 		return errors.New("that path is not a folder")
 	}
-	probe, err := os.CreateTemp(f.Dir, ".vvterm-probe-*")
+	probe, err := os.CreateTemp(f.Dir, ".vuterm-probe-*")
 	if err != nil {
 		return fmt.Errorf("folder is not writable: %w", err)
 	}

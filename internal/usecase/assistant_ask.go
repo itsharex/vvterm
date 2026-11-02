@@ -13,9 +13,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"vvterm/internal/domain"
-	"vvterm/internal/domain/assistant"
-	"vvterm/internal/domain/secretpolicy"
+	"vuterm/internal/domain"
+	"vuterm/internal/domain/assistant"
+	"vuterm/internal/domain/secretpolicy"
 )
 
 // AskOptions chooses how one question is asked.
@@ -37,7 +37,7 @@ var ErrConfirmImages = errors.New("confirm_images")
 
 var requestID = regexp.MustCompile(`^[A-Za-z0-9_-]{6,40}$`)
 
-// CommandView is a suggested command with everything the card needs. Risk and reasons come from VVTerm.
+// CommandView is a suggested command with everything the card needs. Risk and reasons come from VuTerm.
 type CommandView struct {
 	Cmd         string         `json:"cmd"`
 	Why         string         `json:"why"`
@@ -223,7 +223,7 @@ func (a *AssistantService) execute(ctx context.Context, run *assistRun, ag Agent
 		fail("needs_signin", err.Error())
 		return
 	case errors.Is(err, assistant.ErrToolDenied):
-		fail("tool_use", "The assistant only tried to use a tool, which VVTerm does not allow, so there is no answer. Ask again.")
+		fail("tool_use", "The assistant only tried to use a tool, which VuTerm does not allow, so there is no answer. Ask again.")
 		return
 	case errors.Is(err, assistant.ErrToolUse):
 		fail("tool_use", "The agent tried to use a tool, so the answer was discarded.")
