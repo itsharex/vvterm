@@ -387,7 +387,9 @@ The panel on the right of every terminal (the last button of the title bar shows
 
 ## 22. AI assistant
 
-Ask an AI about what is on a terminal. Vutty uses the AI command-line tool you already have and are signed in to (Claude Code, Codex CLI, Gemini CLI, or a command you add), so your own subscription is used and no key is stored.
+Ask an AI about what is on a terminal. Vutty runs the official AI command-line tool you installed and signed in to (Claude Code, Codex CLI, Gemini CLI, or a command you add); no key is stored in Vutty. The use of each tool is governed by its provider's terms, and Vutty is not affiliated with Anthropic, OpenAI or Google. **Antigravity CLI** is marked *Experimental*: Google does not document running it from another app, so check Google's terms for your account before you switch it on.
+
+**Claude Code through a gateway.** If your `~/.claude/settings.json` points Claude Code at a gateway (`ANTHROPIC_BASE_URL`, for example LiteLLM), Vutty reads the gateway address and the key you set there (or in your environment) (`ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_API_KEY`) only to ask that same gateway for its model list (`GET /v1/models`). The key is sent nowhere else, never stored by Vutty and never shown. Without a gateway, Vutty reads no Claude credential at all.
 
 ![Settings → AI assistant: providers, models and privacy](assistant/assistant-settings.png)
 

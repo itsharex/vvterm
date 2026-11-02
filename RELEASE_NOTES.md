@@ -64,7 +64,7 @@ A patch release: fixes for typing and for the macOS input tools, and two new thi
 
 ## Also in 1.1.1: AI terminal assistant
 
-Ask an AI about what is on your terminal, without leaving VVTerm and without handing it your secrets. VVTerm runs the AI command-line tool you already use and are signed in to, so your own subscription is used and **no API key is stored**.
+Ask an AI about what is on your terminal, without leaving VVTerm and without handing it your secrets. VVTerm runs the official AI command-line tool you installed and signed in to, and **no API key is stored**. The use of each tool is governed by its provider's terms; VVTerm is not affiliated with Anthropic, OpenAI or Google.
 
 ### Get started
 

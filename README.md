@@ -30,7 +30,7 @@
 - **A sidebar beside every terminal**: hosts, snippets (run or paste), command history, and terminal themes and font.
 - **More than SSH**: a shell on this computer, serial ports and Telnet (with its own login), a *Choose protocol* and connecting screen, Known Hosts and Logs pages.
 - **Browse and transfer files with SFTP** in a tab of its own (and in the terminal sidebar): two panes, several files and folders at once, drag and drop, and a **transfer queue** with pause, resume (a copy is continued from the bytes already sent, also after a lost connection), cancel and retry. Compare and **sync folders** (nothing is ever deleted), **edit a remote file** and have it saved back when you save, and a right-click menu with permissions. Nothing is replaced without asking.
-- **Ask an AI about your terminal** with the tool you already use (Claude Code, Codex CLI, Gemini CLI): the screen is sent with every secret replaced by `*******`, the assistant only suggests commands, and you decide what runs. Add MCP servers for extra tools. See the [user guide](docs/UserGuide.md#22-ai-assistant) and the [design](docs/AIAssistant.md).
+- **Ask an AI about your terminal** with the official CLI you already use (Claude Code, Codex CLI, Gemini CLI; Antigravity CLI is experimental): the screen is sent with every secret replaced by `*******`, the assistant only suggests commands, and you decide what runs. Add MCP servers for extra tools. See the [user guide](docs/UserGuide.md#22-ai-assistant) and the [design](docs/AIAssistant.md).
 - **Save snippets** of commands you run often and type them into any terminal with a click.
 - **Make it yours**: 26 terminal colour themes, light / dark / auto appearance, font, cursor and scrollback, interface zoom, your own keyboard shortcuts, all in a Settings window of its own.
 - **Forward ports**: local, remote and SOCKS5 proxy.
@@ -192,3 +192,5 @@ CRYPTO-DONATE end -->
 ## License
 
 See [LICENSE](LICENSE). The open-source libraries Vutty is built on, with their licences, are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); every download carries a copy.
+
+Vutty is not affiliated with or endorsed by Anthropic, OpenAI or Google. Claude Code, Codex, Gemini and Antigravity are trademarks of their owners; Vutty only runs the CLI you installed, and its use is governed by that provider's terms. The open-source libraries Vutty is built on, with their licences, are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); every download carries a copy.

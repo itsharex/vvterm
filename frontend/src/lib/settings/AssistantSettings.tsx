@@ -93,7 +93,7 @@ export function AssistantSettings() {
     <>
       <section className="card-section" aria-label="AI providers">
         <h4>Providers</h4>
-        <div className="muted">Vutty runs the AI command-line tool you are already signed in to, so your own subscription is used and no key is stored here. A provider stays off until you switch it on.</div>
+        <div className="muted">Vutty runs the official AI command-line tool you installed and signed in to; no key is stored here, and the use of each tool is governed by its provider's terms. Vutty is not affiliated with Anthropic, OpenAI or Google. A provider stays off until you switch it on.</div>
         {!providers && <div className="muted" role="status">Looking for AI tools on this computer…</div>}
         {providers && providers.length === 0 && <div className="muted">No AI tools were found. Install Claude Code, Codex CLI or Gemini CLI, or add your own command below.</div>}
         {list.map(p => {
@@ -103,11 +103,12 @@ export function AssistantSettings() {
             <div key={p.id} className="ai-provider" data-testid={'provider-' + p.id}>
               <div className="setting-row">
                 <div>
-                  <b>{p.name}</b> {p.status.version && <span className="muted">{p.status.version}</span>}
+                  <b>{p.name}</b> {p.id === 'antigravity' && <span className="badge" title="Antigravity has no documented non-interactive mode">Experimental</span>} {p.status.version && <span className="muted">{p.status.version}</span>}
                   <div className="muted">
                     <span className={'badge ai-state ' + p.status.state}>{STATE_LABEL[p.status.state] ?? p.status.state}</span>{' '}
                     {p.status.detail && (/[.!?]$/.test(p.status.detail) ? p.status.detail : p.status.detail + '.')}{p.status.hint && <> Run <code>{p.status.hint}</code>.</>}
                   </div>
+                  {p.id === 'antigravity' && <div className="muted">Experimental: Google does not document running agy from another app. Check Google's terms for your account before you switch it on; you use it at your own risk.</div>}
                 </div>
                 <Switch label={'Enable ' + p.name} checked={p.enabled} disabled={busy === p.id || (!p.enabled && !ready)} onChange={v => void toggle(p, v)} />
               </div>

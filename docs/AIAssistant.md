@@ -22,7 +22,7 @@
 
 ## 1. Overview
 
-While a host is open, the user can ask an assistant for help with what is on the terminal screen: explain an error, suggest the next command, diagnose a failing service. The assistant is **not** an API client with its own key. Vutty starts the AI command-line tool the user already has and is signed in to (Claude Code, Codex CLI, Gemini CLI, and others) as a local subprocess, so the user's existing subscription is used and Vutty never sees a token.
+While a host is open, the user can ask an assistant for help with what is on the terminal screen: explain an error, suggest the next command, diagnose a failing service. The assistant is **not** an API client with its own key. Vutty starts the AI command-line tool the user already has and is signed in to (Claude Code, Codex CLI, Gemini CLI, and others) as a local subprocess. Each CLI signs itself in, and Vutty never reads or copies an OAuth or sign-in token. The one credential Vutty reads is a gateway key the user put in Claude Code's own settings, and only to list models from that gateway (see [5.4.1](#541-claude-code-behind-a-gateway)). The use of each CLI is governed by its provider's terms; Vutty is not affiliated with Anthropic, OpenAI or Google.
 
 **Goals**
 
@@ -43,10 +43,10 @@ While a host is open, the user can ask an assistant for help with what is on the
 | Question | Answer |
 |---|---|
 | Can a CLI agent be driven from Go? | Yes. `claude -p --output-format stream-json`, `codex exec`, and `gemini -p` are non-interactive and stream output. `internal/localtty` already spawns local processes. |
-| Does it use the subscription? | Yes. Each CLI authenticates itself; Vutty only spawns it. Vutty must never read or copy the CLI's OAuth token. |
+| How does it authenticate? | Each CLI authenticates itself; Vutty only spawns the official binary. Vutty must never read or copy the CLI's OAuth token. Whether a provider allows its CLI to be run this way under the user's plan is set by that provider's terms, which the user accepts. |
 | Can the screen be read? | Yes. xterm.js keeps a text buffer; `SessionService` already sees all output. |
 | Can commands be sent? | Yes. `SessionService.Write(sid, data)` is the same path keystrokes use. |
-| Is Antigravity supported? | Unverified: no stable headless CLI was found. It is supported only through the generic "custom command" adapter ([5.3](#53-custom-command-adapter)). |
+| Is Antigravity supported? | Experimental. `agy --print` works, but Google does not document running it from another app. It is labelled *Experimental*, off until the user switches it on, and the UI asks the user to check Google's terms first. |
 
 ## 3. Architecture
 
@@ -179,6 +179,10 @@ Each provider has one status: `ready`, `needs sign-in`, `unsupported version`, `
 
 The model list is **loaded from the provider itself**, never from a list hard-coded in Vutty. `Models()` asks the provider's own tooling which models the signed-in account can use, so the list follows the user's subscription and new models appear without a Vutty release. Vutty adds no model names of its own.
 
+#### 5.4.1 Claude Code behind a gateway
+
+When Claude Code is pointed at a gateway in `~/.claude/settings.json` (`env.ANTHROPIC_BASE_URL`, for example LiteLLM), Claude Code cannot list the gateway's models itself, so Vutty asks the gateway directly with `GET <base>/v1/models`. To do so it reads the key the user configured for the gateway (`ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_API_KEY`, from the environment or from that same file, as Claude Code does) and sends it only to that gateway. The key is held in memory for that one request: it is not stored, logged, shown or sent anywhere else. No gateway configured means no credential is read. This is the only place Vutty reads a credential that belongs to an AI tool.
+
 How each provider is asked (verified against the installed CLIs on 2026-10-29: Claude Code 2.1.312, Codex 0.153.4, Gemini 0.44.1):
 
 | Provider | Source | Status |
@@ -195,7 +199,7 @@ If the CLI rejects a chosen model, the error is shown in the panel ("Model not a
 
 ### 5.5 Custom command adapter
 
-For tools without a stable adapter (for example Antigravity), the user may configure a command template and whether the prompt is passed as an argument or on stdin. The same isolation rules in [4.5](#45-subprocess-isolation) apply and cannot be disabled. A custom provider is detected like the built-in ones (steps 1 and 2 only) and appears in the same list.
+For tools without a built-in adapter, the user may configure a command template and whether the prompt is passed as an argument or on stdin. The same isolation rules in [4.5](#45-subprocess-isolation) apply and cannot be disabled. A custom provider is detected like the built-in ones (steps 1 and 2 only) and appears in the same list.
 
 ### 5.6 Structured reply
 
