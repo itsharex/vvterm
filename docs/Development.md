@@ -93,9 +93,10 @@ Nothing leaves your machine by default. `--tag` creates a local annotated tag; `
 ## Releasing checklist
 
 1. Bump `VERSION`, write the `# Vutty X.Y.Z` section in `RELEASE_NOTES.md`.
-2. `make test && make e2e && make inventory`; commit the refreshed screenshots and inventory.
-3. Run the manual checklist in [TestPlan.md](TestPlan.md) on a real Mac.
-4. `scripts/deploy.sh prod --e2e --tag --publish`.
+2. `make notices` if a dependency changed (it rewrites `THIRD_PARTY_NOTICES.md`, which every download carries: inside the macOS app and next to it in the DMG, in the Windows installer and as a file of its own, in the Linux tar); commit the result.
+3. `make test && make e2e && make inventory`; commit the refreshed screenshots and inventory.
+4. Run the manual checklist in [TestPlan.md](TestPlan.md) on a real Mac.
+5. `scripts/deploy.sh prod --e2e --tag --publish`.
 
 ## Releasing with GitHub Actions (macOS, Windows, Linux)
 

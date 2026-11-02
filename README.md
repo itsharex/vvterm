@@ -189,4 +189,4 @@ TMXXHRNG7qauoFWJKYbqEbd4FGgt3DgjBK
 
 ## License
 
-See [LICENSE](LICENSE).
+See [LICENSE](LICENSE). The open-source libraries Vutty is built on, with their licences, are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); every download carries a copy.

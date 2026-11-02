@@ -1,4 +1,4 @@
-.PHONY: package help dev build test test-go test-web e2e inventory lint release clean-cache deploy-dev deploy-prod
+.PHONY: notices package help dev build test test-go test-web e2e inventory lint release clean-cache deploy-dev deploy-prod
 
 VERSION ?= $(shell cat VERSION)
 WAILS   ?= $(shell go env GOPATH)/bin/wails
@@ -9,6 +9,7 @@ help:
 	@echo "make test       run Go + frontend tests"
 	@echo "make e2e        run the Playwright walkthrough (real backend) and refresh docs/screenshots"
 	@echo "make inventory  regenerate docs/TestInventory.md"
+	@echo "make notices    regenerate THIRD_PARTY_NOTICES.md (run after changing dependencies)"
 	@echo "make package    build and create dist/*.dmg and *.zip (macOS)"
 	@echo "make release    test, build and print checksums"
 
@@ -22,7 +23,11 @@ dev:
 build:
 	$(WAILS) build -ldflags "-X vutty/app.Version=$(VERSION)"
 	@if [ "$$(uname)" = Darwin ]; then ./scripts/macos-settings-helper.sh build/bin/vutty.app; fi
+	@if [ "$$(uname)" = Darwin ]; then cp THIRD_PARTY_NOTICES.md LICENSE build/bin/vutty.app/Contents/Resources/; fi
 	@if [ "$$(uname)" = Darwin ]; then codesign --force --deep --sign - build/bin/vutty.app; fi
+
+notices:
+	node scripts/notices.mjs
 
 test: test-go test-web
 

@@ -29,6 +29,7 @@ ditto -c -k --sequesterRsrc --keepParent "$APP" "$OUT/$BASE.zip"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 cp -R "$APP" "$STAGE/"
+cp THIRD_PARTY_NOTICES.md LICENSE "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 hdiutil create -volname "vutty $VERSION" -srcfolder "$STAGE" \
   -fs HFS+ -format UDZO -ov "$OUT/$BASE.dmg" >/dev/null
