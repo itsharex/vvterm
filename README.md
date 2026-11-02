@@ -62,6 +62,7 @@
   | Linux | `vutty-<version>-linux-amd64.tar.gz` | `tar xzf` it and run `./vutty` (needs GTK 3 and WebKitGTK 4.0, for example `libgtk-3-0` and `libwebkit2gtk-4.0-37` on Ubuntu 22.04) |
 
   Each release also lists `SHA256SUMS` so you can check your download.
+- **macOS with Homebrew:** `brew install --cask vunguyenvu35/vutty/vutty` (the first run adds the tap `vunguyenvu35/vutty`; update later with `brew upgrade --cask vutty`). The cask clears the quarantine flag for you, so the first-launch warning below does not apply.
 - **From source:** see the [Development guide](docs/Development.md) (three commands).
 
 > **First launch.** Beta builds are not signed with a developer certificate yet. On macOS, open the app, then **System Settings → Privacy & Security → Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/vutty.app`); step by step in [Installing on macOS](docs/InstallMac.md). On Windows, SmartScreen may warn: choose **More info → Run anyway**.
