@@ -102,6 +102,7 @@ func (s *SettingsService) Save(in Settings) (Settings, error) {
 	s.c.settings.Zoom = in.Zoom
 	s.c.settings.ConfirmTabClose = in.ConfirmTabClose
 	s.c.settings.ConfirmProd = in.ConfirmProd
+	s.c.settings.LockOnSleep = in.LockOnSleep
 	s.c.settings.SessionLog = in.SessionLog
 	if s.c.settings.SessionLog == "" {
 		s.c.settings.SessionLog = SessionLogOff

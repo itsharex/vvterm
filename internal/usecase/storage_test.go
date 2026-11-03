@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"vutty/internal/domain"
 )
 
 func TestResetSettingsKeepsAccountAndSyncTarget(t *testing.T) {
@@ -123,5 +125,62 @@ func TestSettingsWrittenByAnOlderVersionGetTheProductionCheckOn(t *testing.T) {
 	got := New(c).Settings.Get()
 	if got.Theme != "light" || got.Zoom != 110 || !got.ConfirmProd {
 		t.Fatalf("%+v", got)
+	}
+}
+
+func TestLockOnSleepIsOnByDefaultAndTheChoiceSurvivesARestartAndAReset(t *testing.T) {
+	h := newHarness(t).unlocked(t)
+	if !h.app.Settings.Get().LockOnSleep {
+		t.Fatal("locking when the computer sleeps must be on to begin with")
+	}
+	in := h.app.Settings.Get()
+	in.LockOnSleep = false
+	if _, err := h.app.Settings.Save(in); err != nil {
+		t.Fatal(err)
+	}
+	c2, err := testCore(t, h.core.Dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if New(c2).Settings.Get().LockOnSleep {
+		t.Fatal("an off switch came back on after a restart")
+	}
+	if got, err := h.app.Settings.ResetSettings(); err != nil || !got.LockOnSleep {
+		t.Fatalf("a reset goes back to the default (on): %+v %v", got, err)
+	}
+}
+
+func TestSettingsOfAnOlderVersionLockOnSleep(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "data"), 0o700)
+	os.WriteFile(filepath.Join(dir, "data", "settings.json"), []byte(`{"theme":"light"}`), 0o600)
+	c, err := testCore(t, dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !New(c).Settings.Get().LockOnSleep {
+		t.Fatal("a file from before this setting must get the default: on")
+	}
+}
+
+func TestLockBecauseLocksAnOpenVaultOnceAndSaysWhy(t *testing.T) {
+	h := newHarness(t).unlocked(t)
+	h.app.Vault.LockBecause("the computer went to sleep")
+	if h.app.Vault.Status().Unlocked {
+		t.Fatal("still open")
+	}
+	h.app.Vault.LockBecause("again") // already locked: no second line
+	n := 0
+	logs, _ := h.app.Log.List(domain.ActivityFilter{})
+	for _, l := range logs {
+		if l.Message == "Vault locked: the computer went to sleep" {
+			n++
+		}
+		if l.Message == "Vault locked: again" {
+			t.Fatal("a locked vault was locked again in the Logs")
+		}
+	}
+	if n != 1 {
+		t.Fatalf("%d lines", n)
 	}
 }

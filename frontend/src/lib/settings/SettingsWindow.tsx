@@ -459,6 +459,10 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                       </div>
                     </div>
                     <div className="setting-row">
+                      <div><b>Lock when the computer sleeps</b><div className="muted">The vault locks as the computer goes to sleep, and on a Mac when the screen is locked, so nobody who opens the lid finds your keys unlocked. Open terminals stay connected. Where the system does not announce a sleep, the vault locks when the computer wakes up.</div></div>
+                      <Switch label="Lock when the computer sleeps" checked={s.lock_on_sleep} onChange={v => update({lock_on_sleep: v})} />
+                    </div>
+                    <div className="setting-row">
                       <div>
                         <b>{vault.biometric_available ? `Unlock with ${biometricName()}` : `Unlock with ${keychainName()}`}</b>
                         <div className="muted">{vault.biometric_available

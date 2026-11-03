@@ -288,7 +288,7 @@ When Vutty opens it also looks by itself, at most once a day (switch it off with
 
 ![Light theme](screenshots/53-light-theme.png)
 
-- **Security:** auto-lock after N idle minutes (default 15; the key is wiped from memory), a password hint (a reminder shown on the lock screen, never the password itself), unlock with **Touch ID** on a Mac that has it (the vault key stays in your Keychain and each unlock asks for your fingerprint, Apple Watch or Mac password) or with **Windows Hello** on Windows (fingerprint, face or PIN; the key stays in Windows Credential Manager), or with the plain system keychain where neither exists, change the master password.
+- **Security:** auto-lock after N idle minutes (default 15; the key is wiped from memory), **Lock when the computer sleeps** (on by default: the vault locks as a Mac goes to sleep and when its screen is locked, so whoever opens the lid finds it locked; open terminals stay connected; where the system does not announce a sleep, as on Windows and Linux, it locks when the computer wakes up, and only after a sleep of more than about 40 seconds; the Logs say *Vault locked: the computer went to sleep*), a password hint (a reminder shown on the lock screen, never the password itself), unlock with **Touch ID** on a Mac that has it (the vault key stays in your Keychain and each unlock asks for your fingerprint, Apple Watch or Mac password) or with **Windows Hello** on Windows (fingerprint, face or PIN; the key stays in Windows Credential Manager), or with the plain system keychain where neither exists, change the master password.
 
 ![Security](screenshots/49-settings-security.png)
 

@@ -45,8 +45,10 @@ type Settings struct {
 	// SessionLogDir is the folder for them; empty means <data>/session-logs.
 	SessionLog    string `json:"session_log"`
 	SessionLogDir string `json:"session_log_dir"`
-	Highlight     bool   `json:"highlight"`     // colour URLs, IPs, paths and error/warning/success words in terminal output
-	ReduceMotion  bool   `json:"reduce_motion"` // turn animations off
+	// LockOnSleep locks the vault when the computer goes to sleep, and on a Mac when the screen is locked (on by default).
+	LockOnSleep  bool `json:"lock_on_sleep"`
+	Highlight    bool `json:"highlight"`     // colour URLs, IPs, paths and error/warning/success words in terminal output
+	ReduceMotion bool `json:"reduce_motion"` // turn animations off
 	// AutoUpdateCheck: look for a newer release on GitHub when the app opens, at most once a day (on by default)
 	AutoUpdateCheck bool `json:"auto_update_check"`
 	// BiometricOnOpen: the lock screen asks for Touch ID / Windows Hello by itself (on by default)
@@ -68,7 +70,7 @@ type Settings struct {
 func defaultSettings() Settings {
 	return Settings{Theme: "dark", TerminalTheme: "auto", FontSize: 13, FontFamily: "Menlo, Monaco, 'Courier New', monospace",
 		CursorStyle: "block", CursorBlink: true, CopyOnSelect: true, RightClick: "paste", Scrollback: 10000, AutoLockMinutes: 15,
-		Zoom: 100, ConfirmProd: true, SessionLog: SessionLogOff, Highlight: true, AskProtocol: true, BiometricOnOpen: true, AutoUpdateCheck: true, Suggest: true, Shortcuts: map[string]string{}}
+		Zoom: 100, ConfirmProd: true, LockOnSleep: true, SessionLog: SessionLogOff, Highlight: true, AskProtocol: true, BiometricOnOpen: true, AutoUpdateCheck: true, Suggest: true, Shortcuts: map[string]string{}}
 }
 
 // Core wires the packages together; the services below share one instance.

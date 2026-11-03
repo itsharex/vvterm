@@ -244,6 +244,18 @@ describe('SettingsWindow', () => {
     expect(onVault).toHaveBeenCalled()
   })
 
+  it('security: locking when the computer sleeps is on to begin with, explains itself and saves the choice', async () => {
+    const {be} = setup()
+    await tab('Security')
+    const sw = screen.getByRole('switch', {name: 'Lock when the computer sleeps'})
+    expect(sw).toBeChecked()
+    expect(screen.getByText(/Open terminals stay connected/)).toBeInTheDocument()
+    await userEvent.click(sw)
+    await waitFor(() => expect(be.state.settings.lock_on_sleep).toBe(false))
+    await userEvent.click(screen.getByRole('switch', {name: 'Lock when the computer sleeps'}))
+    await waitFor(() => expect(be.state.settings.lock_on_sleep).toBe(true))
+  })
+
   it('security: auto-lock, keychain switch and password change', async () => {
     const {be, onVault} = setup()
     await tab('Security')

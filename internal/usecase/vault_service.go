@@ -77,6 +77,16 @@ func (s *VaultService) Lock() {
 	s.c.record(domain.ActVault, "", "", "Vault locked", true)
 }
 
+// LockBecause locks an open vault and says why in the Logs (the computer went to sleep, the screen was locked). A vault that is
+// already locked is left alone, with no line in the Logs.
+func (s *VaultService) LockBecause(reason string) {
+	if !s.c.Vault.Status().Unlocked {
+		return
+	}
+	s.c.Vault.Lock()
+	s.c.record(domain.ActVault, "", "", "Vault locked: "+reason, true)
+}
+
 // ResetConfirmation is the text the user must type to reset the vault.
 const ResetConfirmation = "RESET"
 
