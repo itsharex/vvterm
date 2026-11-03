@@ -139,18 +139,35 @@ func TestGroupCycleAndDeleteReparent(t *testing.T) {
 	if _, err := s.SaveGroup(a); err == nil {
 		t.Fatal("self-parent accepted")
 	}
-	h := mustHost(t, s, domain.Host{Hostname: "x", GroupID: b.ID})
+	// deleting a group deletes what is in it: its hosts, its child groups and their hosts, and what hangs on those hosts
+	inB := mustHost(t, s, domain.Host{Hostname: "x", GroupID: b.ID})
+	inC := mustHost(t, s, domain.Host{Hostname: "y", GroupID: c.ID})
+	inA := mustHost(t, s, domain.Host{Hostname: "z", GroupID: a.ID, JumpHostID: inB.ID})
+	f, _ := s.SaveForward(domain.PortForward{HostID: inC.ID, Type: domain.ForwardLocal, BindAddr: "127.0.0.1", BindPort: 8080, DestHost: "localhost", DestPort: 80})
 	if err := s.DeleteGroup(b.ID); err != nil {
 		t.Fatal(err)
 	}
-	gotH, _ := s.GetHost(h.ID)
-	if gotH.GroupID != a.ID {
-		t.Fatalf("host not moved to parent: %q", gotH.GroupID)
+	for _, id := range []string{inB.ID, inC.ID} {
+		if _, err := s.GetHost(id); err == nil {
+			t.Fatalf("host %s survived the deletion of its group", id)
+		}
+	}
+	gotA, err := s.GetHost(inA.ID)
+	if err != nil || gotA.JumpHostID != "" {
+		t.Fatalf("host outside the group lost or still jumps through a deleted host: %+v, %v", gotA, err)
 	}
 	for _, g := range s.ListGroups() {
-		if g.ID == c.ID && g.ParentID != a.ID {
-			t.Fatalf("child group not reparented: %q", g.ParentID)
+		if g.ID == b.ID || g.ID == c.ID {
+			t.Fatalf("group %q survived", g.Name)
 		}
+	}
+	for _, fw := range s.ListForwards(inC.ID) {
+		if fw.ID == f.ID {
+			t.Fatal("port forward of a deleted host survived")
+		}
+	}
+	if _, err := s.GetHost(inA.ID); err != nil {
+		t.Fatal("the parent group's own host must stay")
 	}
 	if _, err := s.SaveGroup(domain.Group{Name: " "}); err == nil {
 		t.Fatal("blank name accepted")

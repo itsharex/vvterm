@@ -369,3 +369,44 @@ func TestAttachReplaysClosedState(t *testing.T) {
 		t.Fatal("closed state not replayed")
 	}
 }
+
+func TestOutputWaitsForTheTerminalToCatchUp(t *testing.T) {
+	h := newHarness(t).unlocked(t)
+	srv := startServer(t)
+	host := h.sshHost(t, "web", srv, "")
+	sid, _ := h.open(host.ID, 80, 24)
+	h.trust(t, sid)
+	h.app.Session.Attach(sid)
+	h.rec.waitOutput(t, sid, "READY")
+	parsed := int64(len(h.rec.output(sid))) // the terminal reports what it has parsed: so far all of it
+	h.app.Session.Ack(sid, parsed)
+
+	line := strings.Repeat("x", 1000)
+	const lines = 1500 // about 1.5 MB of echo, three times the window
+	for i := 0; i < lines; i++ {
+		if err := h.app.Session.Write(sid, line+"\r"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// the terminal does not report anything: the output stops at about the window
+	time.Sleep(1500 * time.Millisecond)
+	held := int64(len(h.rec.output(sid))) - parsed
+	if held > flowWindow+(256<<10) {
+		t.Fatalf("%d bytes were sent without the terminal reporting; the window is %d", held, flowWindow)
+	}
+	if strings.Count(h.rec.output(sid), "ECHO:") >= lines {
+		t.Fatal("everything arrived although the terminal never reported: no flow control")
+	}
+	// the terminal catches up in steps: everything arrives, and in order
+	deadline := time.Now().Add(20 * time.Second)
+	for time.Now().Before(deadline) && strings.Count(h.rec.output(sid), "ECHO:") < lines {
+		h.app.Session.Ack(sid, int64(len(h.rec.output(sid))))
+		time.Sleep(10 * time.Millisecond)
+	}
+	if n := strings.Count(h.rec.output(sid), "ECHO:"); n != lines {
+		t.Fatalf("%d of %d lines arrived", n, lines)
+	}
+	if err := h.app.Session.Ack("no-such-session", 1); err == nil {
+		t.Fatal("Ack of an unknown session was accepted")
+	}
+}

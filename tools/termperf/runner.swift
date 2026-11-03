@@ -1,7 +1,8 @@
 import Cocoa
 import WebKit
 
-// Usage: runner <dir> <renderer dom|webgl> <highlight 0|1> <MB> <mode paced|flood> <scenario,...>
+// Usage: runner <dir> <renderer dom|webgl> <highlight 0|1> <MB> <mode paced|flood|flow> <scenario,...>
+// flow = flood with the backend's flow control: no more is sent while more than 512 KB is sent but not parsed.
 let args = CommandLine.arguments
 let dir = args[1], renderer = args[2], highlight = args[3] == "1"
 let totalBytes = Int(Double(args[4])! * 1048576), mode = args[5]
@@ -42,11 +43,15 @@ func gen(_ sc: String, _ n: inout Int, _ size: Int) -> [UInt8] {
 }
 
 class App: NSObject, NSApplicationDelegate, WKNavigationDelegate {
-  var win: NSWindow!, web: WKWebView!
+  var win: NSWindow!, web: WKWebView!, activity: NSObjectProtocol?
   var results: [(String, String)] = []
   func applicationDidFinishLaunching(_ n: Notification) {
     web = WKWebView(frame: NSRect(x: 0, y: 0, width: 1000, height: 640))
     win = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 1000, height: 640), styleMask: [.titled], backing: .buffered, defer: false)
+    // A page that is hidden or behind other windows is throttled by WebKit (timers once a second, no animation frames): the
+    // numbers would then measure that, not the terminal. Keep the window on top and the process awake.
+    win.level = .floating
+    activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .latencyCritical], reason: "benchmark")
     win.contentView = web; win.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
     web.navigationDelegate = self
     web.loadFileURL(URL(fileURLWithPath: dir + "/index.html"), allowingReadAccessTo: URL(fileURLWithPath: dir))
@@ -76,6 +81,20 @@ class App: NSObject, NSApplicationDelegate, WKNavigationDelegate {
           }
           if mode == "flood" {
             func loop() { if sent >= totalBytes { finish() } else { send(loop) } }
+            loop()
+          } else if mode == "flow" {
+            var parsed = 0
+            func loop() {
+              if sent >= totalBytes { finish(); return }
+              if sent - parsed > 512 * 1024 { // wait for the terminal, as Gate.Wait does
+                self.js("window.parsedTotal()") { r in parsed = (r as? Int) ?? parsed
+                  DispatchQueue.main.asyncAfter(deadline: .now() + 0.005) { loop() } }
+                return
+              }
+              let b = gen(sc, &n, chunkSize); sent += b.count
+              let b64 = Data(b).base64EncodedString()
+              self.js("window.feed('\(b64)')") { r in parsed = (r as? Int) ?? parsed; loop() }
+            }
             loop()
           } else { // the backend's batcher: one chunk every 16 ms
             func loop() { if sent >= totalBytes { finish(); return }

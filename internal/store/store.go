@@ -147,7 +147,7 @@ func (s *Store) groupIdx(id string) int {
 	return -1
 }
 
-// DeleteGroup tombstones the group; child groups and hosts move to the parent.
+// DeleteGroup tombstones the group together with everything in it: its hosts and its child groups with theirs.
 func (s *Store) DeleteGroup(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -155,22 +155,28 @@ func (s *Store) DeleteGroup(id string) error {
 	if i < 0 {
 		return ErrNotFound
 	}
-	parent := s.data.Groups[i].ParentID
 	now := s.now()
+	gone := map[string]bool{id: true} // the group and all groups below it
+	for grew := true; grew; {
+		grew = false
+		for _, g := range s.data.Groups {
+			if !g.Deleted() && !gone[g.ID] && gone[g.ParentID] {
+				gone[g.ID] = true
+				grew = true
+			}
+		}
+	}
 	for j := range s.data.Groups {
-		if s.data.Groups[j].ParentID == id && !s.data.Groups[j].Deleted() {
-			s.data.Groups[j].ParentID = parent
+		if gone[s.data.Groups[j].ID] && !s.data.Groups[j].Deleted() {
+			s.data.Groups[j].DeletedAt = &now
 			s.data.Groups[j].UpdatedAt = now
 		}
 	}
 	for j := range s.data.Hosts {
-		if s.data.Hosts[j].GroupID == id && !s.data.Hosts[j].Deleted() {
-			s.data.Hosts[j].GroupID = parent
-			s.data.Hosts[j].UpdatedAt = now
+		if gone[s.data.Hosts[j].GroupID] && !s.data.Hosts[j].Deleted() {
+			s.deleteHostLocked(j, now)
 		}
 	}
-	s.data.Groups[i].DeletedAt = &now
-	s.data.Groups[i].UpdatedAt = now
 	return s.flush()
 }
 
@@ -307,7 +313,14 @@ func (s *Store) DeleteHost(id string) error {
 	if i < 0 {
 		return ErrNotFound
 	}
-	now := s.now()
+	s.deleteHostLocked(i, s.now())
+	return s.flush()
+}
+
+// deleteHostLocked tombstones the host at index i, lets the hosts that jumped through it connect directly and
+// removes its port forwards. The caller holds the lock and flushes.
+func (s *Store) deleteHostLocked(i int, now time.Time) {
+	id := s.data.Hosts[i].ID
 	s.data.Hosts[i].DeletedAt = &now
 	s.data.Hosts[i].UpdatedAt = now
 	for j := range s.data.Hosts {
@@ -322,7 +335,6 @@ func (s *Store) DeleteHost(id string) error {
 			s.data.Forwards[j].UpdatedAt = now
 		}
 	}
-	return s.flush()
 }
 
 // JumpChain returns the hosts to traverse, outermost jump first, ending with the target.

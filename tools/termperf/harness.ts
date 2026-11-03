@@ -8,7 +8,9 @@ const w = window as any
 let t: Terminal
 let hl: ReturnType<typeof createHighlighter> | undefined
 let lags: number[] = [], gaps: number[] = []
-let timer = 0, raf = 0, running = false, t0 = 0, fed = 0, chunks = 0
+let hiddenSeen = false
+document.addEventListener('visibilitychange', () => { if (document.hidden) hiddenSeen = true })
+let timer = 0, raf = 0, running = false, t0 = 0, fed = 0, chunks = 0, parsed = 0
 
 w.setup = (o: {renderer: string; highlight: boolean}) => {
   document.getElementById('term')!.innerHTML = ''
@@ -26,7 +28,8 @@ w.setup = (o: {renderer: string; highlight: boolean}) => {
   return t.cols + 'x' + t.rows
 }
 w.start = () => {
-  lags = []; gaps = []; fed = 0; chunks = 0; running = true; t0 = performance.now()
+  hiddenSeen = document.hidden
+  lags = []; gaps = []; fed = 0; chunks = 0; parsed = 0; running = true; t0 = performance.now()
   let last = performance.now()
   const tick = () => { if (!running) return; const n = performance.now(); lags.push(n - last - 4); last = n; timer = window.setTimeout(tick, 4) }
   timer = window.setTimeout(tick, 4)
@@ -35,7 +38,9 @@ w.start = () => {
   raf = requestAnimationFrame(fr)
 }
 // exactly what TerminalPane does with a term:data event
-w.feed = (b64: string) => { fed += b64.length * 3 / 4; chunks++; t.write(b64ToBytes(b64)) }
+// (the bytes xterm has parsed so far is what TerminalPane reports to the backend as the flow-control ack)
+w.feed = (b64: string) => { const bytes = b64ToBytes(b64); fed += bytes.length; chunks++; t.write(bytes, () => { parsed += bytes.length }); return parsed }
+w.parsedTotal = () => parsed
 const pct = (a: number[], p: number) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(s.length * p))] }
 w.finish = () => new Promise(res => t.write('', () => {
   const tFeedDone = performance.now() - t0
@@ -50,6 +55,8 @@ w.finish = () => new Promise(res => t.write('', () => {
       lagP50: +pct(lags, .5).toFixed(0), lagP99: +pct(lags, .99).toFixed(0), lagMax: +Math.max(0, ...lags).toFixed(0),
       frames: gaps.length, fps: +(gaps.length / (sum(gaps) / 1000)).toFixed(1), gapP99: +pct(gaps, .99).toFixed(0), gapMax: +Math.max(0, ...gaps).toFixed(0),
       lines: t.buffer.active.length,
+      // a run in which the page was hidden, or its timers ran once a second, measured WebKit's throttling: do not use it
+      invalid: hiddenSeen || pct(lags, .5) > 500,
     }))
   }))
 }))

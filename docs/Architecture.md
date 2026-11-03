@@ -342,7 +342,7 @@ vutty/
 | --- | --- | --- |
 | VaultService | `Status()`, `Create(pw)`, `Unlock(pw)`, `UnlockBiometric()`, `Lock()`, `ChangePassword(old, new)` | No method returns a secret to the frontend |
 | VaultService | `ListIdentities()`, `AddKey(name, path, passphrase)`, `AddPassword(name, user, pw)`, `GenerateKey(name, type)`, `PublicKey(id)` | `GenerateKey` generates an ed25519 key and only returns the public key to copy |
-| HostService | `ListGroups()`, `SaveGroup(g)`, `DeleteGroup(id)`, `ListHosts(filter)`, `SaveHost(h)`, `DeleteHost(id)` | Delete = tombstone |
+| HostService | `ListGroups()`, `SaveGroup(g)`, `DeleteGroup(id)`, `ListHosts(filter)`, `SaveHost(h)`, `DeleteHost(id)` | Delete = tombstone; `DeleteGroup` also deletes the hosts and child groups inside it |
 | SessionService | `Open(hostID, cols, rows) → sid`, `Write(sid, data)`, `Resize(sid, cols, rows)`, `Close(sid)` | Output through the `term:data:<sid>` event |
 | SessionService | `TrustHostKey(sid, fingerprint)` | The answer to a `term:hostkey:<sid>` event |
 | ForwardService | `Start(forwardID)`, `Stop(forwardID)`, `List()` | State through the `forward:state` event |
@@ -384,7 +384,7 @@ After Gate 2 it is usable every day for basic SSH; Gate 4 is when Vutty has enou
 
 | Risk | Impact | Response |
 | --- | --- | --- |
-| xterm.js on WKWebView is slow with large output | Lag during `tail -f` on a log | Batch events in chunks; measured in the real WKWebView (see [Assessment.md](Assessment.md), G4): fine for text at the backend's rate, slow for full-screen redraws, no flow control yet |
+| xterm.js on WKWebView is slow with large output | Lag during `tail -f` on a log | Batch events in chunks; measured in the real WKWebView (see [Assessment.md](Assessment.md), G4): fine for text at the backend's rate, slow for full-screen redraws; output waits while 512 KB is unparsed (`sshx.Gate`, `SessionService.Ack`) |
 | Old keys (RSA SHA-1, DSA) are not compatible with `x/crypto/ssh` | Cannot log in to old servers | Support `rsa-sha2-256/512`; say clearly when a key is not supported |
 | Forgotten master password | The whole vault is lost | Warn when the vault is created; remind the user to export a backup regularly |
 | Clock skew between machines when syncing | An edit may be overwritten by mistake | Accepted in the MVP; a version vector can be used later |

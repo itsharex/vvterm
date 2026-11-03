@@ -13,7 +13,35 @@ func (s *HostService) ListGroups() []domain.Group { return s.c.Store.ListGroups(
 
 func (s *HostService) SaveGroup(g domain.Group) (domain.Group, error) { return s.c.Store.SaveGroup(g) }
 
-func (s *HostService) DeleteGroup(id string) error { return s.c.Store.DeleteGroup(id) }
+// DeleteGroup removes the group with its hosts and its child groups (with theirs), and forgets the Telnet passwords of those hosts.
+func (s *HostService) DeleteGroup(id string) error {
+	gone := map[string]bool{id: true}
+	groups := s.c.Store.ListGroups()
+	for grew := true; grew; {
+		grew = false
+		for _, g := range groups {
+			if !gone[g.ID] && gone[g.ParentID] {
+				gone[g.ID] = true
+				grew = true
+			}
+		}
+	}
+	var hostIDs []string
+	for _, h := range s.c.Store.ListHosts(domain.HostFilter{}) {
+		if gone[h.GroupID] {
+			hostIDs = append(hostIDs, h.ID)
+		}
+	}
+	if err := s.c.Store.DeleteGroup(id); err != nil {
+		return err
+	}
+	if s.c.Vault != nil {
+		for _, hid := range hostIDs {
+			_ = s.c.Vault.DeleteSecret(domain.TelnetSecretRef(hid)) // nothing to delete is fine
+		}
+	}
+	return nil
+}
 
 func (s *HostService) ListHosts(f domain.HostFilter) []domain.Host { return s.c.Store.ListHosts(f) }
 

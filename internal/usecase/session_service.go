@@ -43,9 +43,15 @@ type session struct {
 	closedEv  any
 	ready     any
 	log       *sessionLog // the file this connection's output goes to (nil when logging is off)
+	gate      *sshx.Gate  // flow control: output waits while the terminal is behind
 }
 
 const maxPending = 1 << 20
+
+// flowWindow is how much output may be on its way to the terminal, sent but not yet parsed, before reading the connection
+// pauses (the terminal reports through Ack). Large enough to keep a fast link busy, small enough that a terminal that is
+// slow to draw never holds more than a second or so of output.
+const flowWindow = 512 << 10
 
 // maxScreen bounds the output kept for the assistant.
 const maxScreen = 256 << 10
@@ -102,7 +108,7 @@ func (s *SessionService) Open(hostID string, cols, rows int) (string, error) {
 	if cols < 1 || rows < 1 {
 		cols, rows = 80, 24
 	}
-	sess := &session{sid: domain.NewID(), hostID: hostID, cols: cols, rows: rows, abort: make(chan struct{})}
+	sess := &session{sid: domain.NewID(), hostID: hostID, cols: cols, rows: rows, abort: make(chan struct{}), gate: sshx.NewGate(flowWindow)}
 	s.mu.Lock()
 	s.sessions[sess.sid] = sess
 	s.mu.Unlock()
@@ -225,7 +231,9 @@ func (s *SessionService) Attach(sid string) error {
 	case "closed":
 		s.c.emit("term:closed:"+sid, sess.closedEv)
 	}
+	sess.gate.Reset() // this terminal counts what it receives from here on
 	if len(sess.pend) > 0 {
+		sess.gate.Sent(len(sess.pend))
 		s.c.emit("term:data:"+sid, base64.StdEncoding.EncodeToString(sess.pend))
 		sess.pend = nil
 	}
@@ -396,8 +404,21 @@ func (s *SessionService) batcher(sess *session) *sshx.Batcher {
 			}
 			return
 		}
+		sess.gate.Sent(len(p))
 		s.c.emit("term:data:"+sess.sid, base64.StdEncoding.EncodeToString(p))
-	})
+	}).WithGate(sess.gate)
+}
+
+// Ack tells the backend that the terminal has parsed total bytes of this session's output since it attached. Output
+// is only read from the connection while less than flowWindow is unparsed, so a program that writes faster than the
+// terminal can draw (yes, cat of a huge file) slows down instead of freezing the window.
+func (s *SessionService) Ack(sid string, total int64) error {
+	sess, err := s.get(sid)
+	if err != nil {
+		return err
+	}
+	sess.gate.Ack(total)
+	return nil
 }
 
 func (s *SessionService) markClosed(sess *session, reason string, clean bool) {
