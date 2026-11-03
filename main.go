@@ -75,13 +75,15 @@ func runSettings(dir string) {
 	}
 	hideFromDockOnLaunch() // no Dock icon flashing up while the window opens
 	err = wails.Run(&options.App{
-		Title:            "Settings",
-		Width:            1040,
-		Height:           720,
-		MinWidth:         720,
-		MinHeight:        480,
-		AssetServer:      &assetserver.Options{Assets: assets},
-		BackgroundColour: &options.RGBA{R: 17, G: 19, B: 24, A: 1},
+		Title:       "Settings",
+		Width:       1040,
+		Height:      720,
+		MinWidth:    720,
+		MinHeight:   480,
+		AssetServer: &assetserver.Options{Assets: assets},
+		// Opaque (A is 0 to 255, not a fraction): the webview below is transparent so it does not flash white, which
+		// makes this colour the whole window until the page has painted. With A: 1 the window was see-through then.
+		BackgroundColour: &options.RGBA{R: 17, G: 19, B: 24, A: 255},
 		OnStartup:        func(ctx context.Context) { w.Startup(ctx); hideFromDock() },
 		Menu:             w.Menu(),
 		Mac:              &mac.Options{TitleBar: mac.TitleBarHiddenInset(), WebviewIsTransparent: true},
