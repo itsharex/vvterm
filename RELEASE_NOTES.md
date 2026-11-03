@@ -1,8 +1,15 @@
 <p align="center"><img src="docs/brand/logo-mark-256.png" alt="Vutty" width="88"></p>
 
-# Vutty 1.3.0
+# Vutty 1.4.0
 
 Release date: 2026-11-03 · Platform: macOS (arm64 build verified) · Status: beta. Read [Known issues](#known-issues) first.
+
+## What's new in 1.4.0
+
+- **Deleting a group deletes what is in it.** Its hosts, its child groups and their hosts go with it (and the port forwards and Telnet passwords of those hosts). The confirmation says how many. Before, the hosts moved to the parent group.
+- **The interface speaks four languages: English, Vietnamese (Tiếng Việt), Japanese (日本語) and Chinese (中文, simplified).** *Settings → General → Language*, or Automatic to follow the system; it applies at once, also to the menu bar of the window. About 1300 texts are translated. Not translated: what servers and the backend say (error messages from a connection, for example), names of products and protocols, dates and times (they follow the system), and the documentation. The translations were written by an AI model and have not been read by native speakers yet: please tell us what sounds wrong.
+- **The first update made from inside the app.** A copy of 1.3.0 can now go to this version with *Help → About → Check for updates → Install and restart* (macOS, Apple silicon); the release's checksum list is signed with the project's key. This is the first real update made this way: if it does not work for you, install from the release page and tell us what the app said.
+- **Output waits for the terminal** (flow control): the backend stops reading a session while more than 512 KB of its output is sent but not yet drawn, so that `yes` or `cat` of a huge file slows down instead of piling up in the window.
 
 ## What's new in 1.3.0
 
@@ -270,7 +277,7 @@ The complete list of test cases is [docs/TestInventory.md](docs/TestInventory.md
 3. **Settings runs as a second process**: it shows a second Dock icon while open. It reads and writes through a local, token-protected bridge to the main app, so it needs the main app running. The native window itself could not be screenshotted here, so its look is covered by tests and the in-app variant's screenshots; please check it on your Mac.
 4. The packaged app was built and its icon, About box and bundle were checked, but it is **not notarized**: on first launch right-click → Open. The *release* pipeline can sign and notarize when you provide a Developer ID.
 5. The native macOS window, file dialogs and Keychain prompts were not exercised in this environment (the UI is verified in a browser against the real backend). Run the manual checklist in [docs/TestPlan.md](docs/TestPlan.md).
-6. **Terminal performance on heavy output** was measured in the real macOS WKWebView ([docs/Assessment.md](docs/Assessment.md) G4, `tools/termperf/run.sh`). Text output (plain, log lines, colours, Vietnamese/CJK) at the most the backend sends (about 3.7 MB/s) keeps 55–60 frames per second. A screen that is redrawn in place with every cell coloured (a heavier htop) drops to about 20 frames per second with the default renderer, and nothing slows the data down when a program writes faster than the terminal can draw: the page can then stop answering for seconds until it has caught up.
+6. **Terminal performance on heavy output** was measured in the real macOS WKWebView ([docs/Assessment.md](docs/Assessment.md) G4, `tools/termperf/run.sh`). Text output (plain, log lines, colours, Vietnamese/CJK) at the most the backend sends (about 3.7 MB/s) keeps 55–60 frames per second. A screen that is redrawn in place with every cell coloured (a heavier htop) drops to about 20 frames per second with the default renderer; the WebGL renderer keeps 60 but is not used yet.
 7. Sync was tested against local Git remotes only. Edits made during the few seconds of a sync can be overwritten. After a vault reset the sync repository still holds the old vault: use a new repository.
 8. Last-write-wins depends on reasonably correct clocks.
 9. `ssh_config`: `ProxyCommand`, `Match`, token expansion are reported as warnings and skipped.
@@ -278,7 +285,7 @@ The complete list of test cases is [docs/TestInventory.md](docs/TestInventory.md
 11. Windows and Linux builds are made by the release workflow but are much less tested than macOS. Updates install by themselves on macOS with Apple silicon only.
 12. Use cases still depend directly on some infrastructure packages (documented debt, capped by a test).
 13. Replacing a saved host password creates a new identity; the old one stays in Keychain until you delete it.
-14. **New in 1.3.0 and not yet exercised on real hardware or against a real release:** installing an update by itself (every step is covered by tests, including the real swap script, but not a whole update of the packaged app), the `ssh://` registration in the macOS bundle, a verification-code prompt against a real bastion, and a hardware (FIDO2) key through ssh-agent. Run the checklist in [docs/TestPlan.md](docs/TestPlan.md) and tell us what you find.
+14. **New in 1.3.0 and not yet exercised on real hardware:** installing an update by itself (every step is covered by tests, including the real swap script; the first whole update of the packaged app is the one from 1.3.0 to 1.4.0), the `ssh://` registration in the macOS bundle, a verification-code prompt against a real bastion, and a hardware (FIDO2) key through ssh-agent. Run the checklist in [docs/TestPlan.md](docs/TestPlan.md) and tell us what you find.
 15. A port forward that starts with the app cannot answer a verification code: it waits three minutes and fails. Start it from the Port Forwarding page. *Run on hosts* never asks anything, so a host with an untrusted key or that wants a code fails there: open it once in a terminal tab first.
 16. Session logs are not rotated or deleted, and hold everything that was shown on screen. No tmux integration, no X11 forwarding, no Mosh.
 
