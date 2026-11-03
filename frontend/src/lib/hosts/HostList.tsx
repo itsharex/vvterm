@@ -51,6 +51,29 @@ export function parseQuickConnect(text: string): QuickConnect | null {
   return {username: m[1] ?? '', hostname: m[2], port}
 }
 
+/** A bare name or a half-typed address is still a search; these look like somewhere to connect to. */
+function looksComplete(text: string, q: QuickConnect): boolean {
+  if (/^ssh\s/i.test(text.trim()) || q.username !== '' || /:\d+$/.test(text.trim())) return true // ssh …, user@host, host:port
+  const h = q.hostname
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return h.split('.').every(o => Number(o) <= 255) // 10.0.0.1, not 10.0
+  return /\.[A-Za-z]{2,}$/.test(h) || h.includes(':') || h.toLowerCase() === 'localhost'
+}
+
+/**
+ * What Connect would do with the typed text, or null while it is still only a search: the text must name one saved host
+ * exactly (its label, address or user@address), or, when it matches no saved host at all, be a complete address to start a
+ * new host from. A partial name ("54", "web") that matches some hosts just filters them.
+ */
+export function connectTarget(text: string, matches: Host[], allowNew: boolean): {host: Host} | {quick: QuickConnect} | null {
+  const needle = text.trim().replace(/^ssh\s+/i, '').toLowerCase()
+  if (!needle) return null
+  const same = matches.filter(h => [h.label, h.hostname, `${h.hostname}:${h.port}`, `${h.username}@${h.hostname}`, `${h.username}@${h.hostname}:${h.port}`].some(a => a.toLowerCase() === needle))
+  if (same.length === 1) return {host: same[0]}
+  if (matches.length > 0 || !allowNew) return null
+  const quick = parseQuickConnect(text)
+  return quick && looksComplete(text, quick) ? {quick} : null
+}
+
 function descendants(groups: Group[], id: string): Set<string> {
   const out = new Set([id])
   let grew = true
@@ -145,10 +168,11 @@ export function HostList(p: Props) {
     return out
   }, [p.groups, groupIds, current])
 
+  const goTo = connectTarget(q, matches, !!p.onQuickConnect)
   const connectFromBar = () => {
-    if (matches.length === 1 && q.trim()) return p.onConnect(matches[0])
-    const parsed = parseQuickConnect(q)
-    if (parsed && p.onQuickConnect) p.onQuickConnect(parsed)
+    if (!goTo) return
+    if ('host' in goTo) p.onConnect(goTo.host)
+    else p.onQuickConnect?.(goTo.quick)
   }
 
   const hostCard = (h: Host) => (
@@ -181,7 +205,8 @@ export function HostList(p: Props) {
         <IconSearch size={16} />
         <input aria-label="Search hosts" placeholder="Find a host or ssh user@hostname…" value={q}
           onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && connectFromBar()} />
-        <button className="connect-btn" disabled={!q.trim()} onClick={connectFromBar}>Connect</button>
+        <button className="connect-btn" disabled={!goTo} onClick={connectFromBar}
+          title={goTo ? ('host' in goTo ? `Connect to ${goTo.host.label}` : 'Connect to a new host') : q.trim() ? 'Keep typing the name of a host, or an address such as user@host' : undefined}>Connect</button>
       </div>
 
       <div className="toolbar">

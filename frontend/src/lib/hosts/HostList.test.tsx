@@ -1,6 +1,6 @@
 import {render, screen, within} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import {HostList, parseQuickConnect} from './HostList'
+import {connectTarget, HostList, parseQuickConnect} from './HostList'
 import {host} from '../../test/fakeBackend'
 import type {Group} from '../types'
 
@@ -126,6 +126,52 @@ describe('quick connect', () => {
     await userEvent.type(screen.getByLabelText('Search hosts'), 'ssh deploy@new.example.org:2200{Enter}')
     expect(cb.onQuickConnect).toHaveBeenCalledWith({username: 'deploy', hostname: 'new.example.org', port: 2200})
     expect(cb.onConnect).not.toHaveBeenCalled()
+  })
+
+  it('a half-typed search only filters: Connect stays off and Enter does nothing, even with a single match', async () => {
+    const cb = setup()
+    const box = screen.getByLabelText('Search hosts')
+    await userEvent.type(box, '10.1{Enter}') // one host matches, but this is not its address yet
+    expect(labels()).toEqual(['box'])
+    expect(screen.getByRole('button', {name: 'Connect'})).toBeDisabled()
+    expect(cb.onConnect).not.toHaveBeenCalled()
+    expect(cb.onQuickConnect).not.toHaveBeenCalled()
+    await userEvent.clear(box)
+    await userEvent.type(box, 'web')
+    expect(screen.getByRole('button', {name: 'Connect'})).toBeDisabled()
+  })
+
+  it('Connect turns on when the text is exactly one saved host: its name, its address or user@address', async () => {
+    const cb = setup()
+    const box = screen.getByLabelText('Search hosts')
+    await userEvent.type(box, 'web-1')
+    expect(screen.getByRole('button', {name: 'Connect'})).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', {name: 'Connect'}))
+    expect(cb.onConnect).toHaveBeenLastCalledWith(hosts[0])
+    await userEvent.clear(box)
+    await userEvent.type(box, 'db.internal{Enter}')
+    expect(cb.onConnect).toHaveBeenLastCalledWith(hosts[2])
+  })
+
+  it('an address that is not finished yet does not start a new host; a finished one does', async () => {
+    const cb = setup()
+    const box = screen.getByLabelText('Search hosts')
+    await userEvent.type(box, '192.168.1{Enter}')
+    expect(screen.getByRole('button', {name: 'Connect'})).toBeDisabled()
+    await userEvent.type(box, '.20{Enter}')
+    expect(cb.onQuickConnect).toHaveBeenCalledWith({username: '', hostname: '192.168.1.20', port: 22})
+  })
+
+  it.each([
+    ['54', false], ['web', false], ['10.0', false], ['10.0.0.256', false], ['new.e', false],
+    ['10.0.0.1', true], ['new.example.org', true], ['u@h', true], ['ssh nas', true], ['h:22', true], ['localhost', true],
+  ])('connectTarget on %j with no saved host matching: new host is %s', (text, yes) => {
+    expect(connectTarget(text, [], true) !== null).toBe(yes)
+  })
+
+  it('connectTarget never starts a new host while saved hosts still match, or when new hosts are not offered', () => {
+    expect(connectTarget('ssh root@10.0.0.1', [hosts[3]], true)).toBeNull()
+    expect(connectTarget('10.0.0.1', [], false)).toBeNull()
   })
 
   it('Connect is disabled until something is typed', () => {
