@@ -585,6 +585,57 @@ func (v *Vault) DeleteSecret(id string) error {
 
 // ---- sync support ----
 
+// ErrKeyMismatch: the key this vault is unlocked with is not the one its header wraps (a leftover key from another vault).
+var ErrKeyMismatch = errors.New("the key this vault is unlocked with does not belong to it")
+
+// CheckKey reports whether the key in use is the key of this vault's header. What the vault seals with a wrong key cannot
+// be opened with the master password, so a sync must not send it. A header from before key checks has nothing to compare
+// with: that passes, since the key was just unwrapped from it.
+func (v *Vault) CheckKey() error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.f == nil {
+		return ErrNoVault
+	}
+	if v.dek == nil {
+		return ErrLocked
+	}
+	ok, err := keyMatchesHeader(v.dek, v.f.Header)
+	if err != nil {
+		return nil
+	}
+	if !ok {
+		return ErrKeyMismatch
+	}
+	return nil
+}
+
+// Unreadable returns the ids of the saved secrets that the key in use cannot open (they were sealed with another key).
+// Nothing is decrypted for the caller: each one is opened and dropped.
+func (v *Vault) Unreadable() ([]string, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.f == nil {
+		return nil, ErrNoVault
+	}
+	if v.dek == nil {
+		return nil, ErrLocked
+	}
+	var bad []string
+	for _, s := range v.f.Secrets {
+		if s.Deleted() {
+			continue
+		}
+		plain, err := open(v.dek, s.Ciphertext, s.Nonce, []byte(s.ID))
+		if err != nil {
+			bad = append(bad, s.ID)
+			continue
+		}
+		zero(plain)
+	}
+	return bad, nil
+}
+
 // Header returns the KDF/wrapped-DEK header (safe to publish).
 func (v *Vault) Header() (Header, error) {
 	v.mu.Lock()

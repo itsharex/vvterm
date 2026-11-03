@@ -1,11 +1,11 @@
-import {useMemo, useState} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 import {useToast} from '../ui/Toast'
 import {useConfirm} from '../ui/Confirm'
 import {useBackend} from '../backend'
 import {errMsg} from '../util'
-import {IconCopy, IconEdit, IconKey, IconLock, IconPlus, IconTrash, IconUser} from '../ui/Icons'
+import {IconCopy, IconEdit, IconKey, IconLock, IconPlus, IconTrash, IconUser, IconWarn} from '../ui/Icons'
 import {byName, FilterChip, ListToolbar, usePref, VIEWS, type SortOption} from '../ui/ListTools'
-import type {AuthType, Identity} from '../types'
+import type {AuthType, Identity, VaultHealth} from '../types'
 
 type Sort = 'name' | 'name-desc' | 'type'
 const SORTS: SortOption<Sort>[] = [{value: 'name', label: 'Name A–Z'}, {value: 'name-desc', label: 'Name Z–A'}, {value: 'type', label: 'Type'}]
@@ -39,6 +39,15 @@ export function KeychainPage({identities, draft, onNew, onEdit, onChanged}: Prop
   const toast = useToast()
   const confirm = useConfirm()
   const [q, setQ] = useState('')
+  // the secrets this vault's key cannot open: checked whenever the list changes, so entering one again clears its mark
+  const [health, setHealth] = useState<VaultHealth | null>(null)
+  useEffect(() => {
+    let alive = true
+    be.vault.health().then(h => { if (alive) setHealth(h) }).catch(() => { if (alive) setHealth(null) })
+    return () => { alive = false }
+  }, [be, identities])
+  const unreadable = health?.unreadable ?? []
+  const brokenIds = new Set(unreadable.map(u => u.identity_id).filter(Boolean))
   const [kinds, setKinds] = useState<AuthType[]>([])
   const [sort, setSort] = usePref<Sort>('vutty.keychain.sort', SORTS.map(o => o.value), 'name')
   const [view, setView] = usePref('vutty.keychain.view', VIEWS, 'grid')
@@ -85,6 +94,17 @@ export function KeychainPage({identities, draft, onNew, onEdit, onChanged}: Prop
           {present.length > 1 && <div className="chips">{present.map(k => <FilterChip key={k.id} label={k.label} on={activeKinds.includes(k.id)} onToggle={() => setKinds(activeKinds.includes(k.id) ? activeKinds.filter(x => x !== k.id) : [...activeKinds, k.id])} />)}</div>}
         </ListToolbar>
       )}
+      {unreadable.length > 0 && (
+        <div className="dx-warn" role="alert">
+          <IconWarn size={15} />
+          <div>
+            <b>{unreadable.length} saved {unreadable.length === 1 ? 'item' : 'items'} can't be read with this vault's key.</b> They were sealed with another key
+            (a leftover of an older version). Hosts that use them fail with "message authentication failed", and a sync would pass them on to your other machines.
+            Edit each one marked <i>Can't be read</i> and enter it again.
+            {unreadable.filter(u => !u.identity_id).map(u => <div key={u.secret_id}>Also: {u.name}. Edit the host and enter it again.</div>)}
+          </div>
+        </div>
+      )}
       <h3 className="sec-title">Keys</h3>
       <div className={'cards' + (view === 'list' ? ' as-list' : '')} role="list" aria-label="Identities" data-view={view}>
         {draft !== undefined && (
@@ -97,7 +117,7 @@ export function KeychainPage({identities, draft, onNew, onEdit, onChanged}: Prop
           <div key={i.id} className="card" role="listitem" onDoubleClick={onEdit ? () => onEdit(i) : undefined} title={onEdit ? `Double-click to edit ${i.name}` : undefined}>
             <span className="tile key-tile">{icon(i)}</span>
             <div className="meta">
-              <div className="label">{i.name}</div>
+              <div className="label">{i.name}{brokenIds.has(i.id) && <span className="badge warn" title="Sealed with another key: edit it and enter it again">Can't be read</span>}</div>
               <div className="addr">Type {keyType(i)}{i.certificate ? ' · certificate' : ''}{i.username ? ` · ${i.username}` : ''}</div>
             </div>
             <div className="actions">

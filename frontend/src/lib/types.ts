@@ -133,6 +133,8 @@ export interface SyncStatus {
   last_sync: string
   last_error?: string
   syncing: boolean
+  /** this machine holds nothing of its own: the vault of a repository can simply be taken over */
+  local_empty?: boolean
 }
 
 export interface HostFilter {
@@ -163,6 +165,18 @@ export interface AuthChallenge {
   name: string
   instruction: string
   prompts: {text: string; echo: boolean}[]
+}
+
+/** A saved secret that the vault's key cannot open (it was sealed with another key): its owner has to be entered again. */
+export interface UnreadableItem {
+  secret_id: string
+  name: string
+  identity_id?: string
+  kind: 'key' | 'password' | 'agent' | 'telnet' | 'other'
+}
+export interface VaultHealth {
+  checked: number
+  unreadable: UnreadableItem[]
 }
 
 export interface HostKeyPrompt {

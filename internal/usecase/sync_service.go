@@ -24,6 +24,9 @@ type SyncStatus struct {
 	LastSync   time.Time `json:"last_sync"`
 	LastError  string    `json:"last_error,omitempty"`
 	Syncing    bool      `json:"syncing"`
+	// LocalEmpty is true while this machine holds nothing of its own (no host, group, key, snippet or forward): the
+	// vault of a sync repository can then simply be taken over.
+	LocalEmpty bool `json:"local_empty"`
 }
 
 // SyncService syncs the encrypted bundle through a Git repo the user owns, or through a folder
@@ -99,9 +102,53 @@ func (s *SyncService) folder() (*syncfolder.Folder, bool) {
 
 func (s *SyncService) Status() SyncStatus {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.status
+	st := s.status
+	s.mu.Unlock()
+	st.LocalEmpty = s.localEmpty()
+	return st
 }
+
+// localEmpty reports whether this machine has no data of its own, so that nothing is lost by taking over another vault.
+func (s *SyncService) localEmpty() bool {
+	if !s.c.Vault.Status().Exists {
+		return false
+	}
+	d := s.c.Store.Snapshot()
+	for _, h := range d.Hosts {
+		if !h.Deleted() {
+			return false
+		}
+	}
+	for _, g := range d.Groups {
+		if !g.Deleted() {
+			return false
+		}
+	}
+	for _, i := range d.Identities {
+		if !i.Deleted() {
+			return false
+		}
+	}
+	for _, x := range d.Snippets {
+		if !x.Deleted() {
+			return false
+		}
+	}
+	for _, f := range d.Forwards {
+		if !f.Deleted() {
+			return false
+		}
+	}
+	for _, x := range s.c.Vault.Secrets() {
+		if !x.Deleted() {
+			return false
+		}
+	}
+	return true
+}
+
+// errWrongKey stops a sync from sending a bundle that nobody could open with the master password.
+var errWrongKey = errors.New("this vault is open with a key that does not belong to it (one left over from another vault), so nothing was sent: lock the vault, unlock it with the master password and try again")
 
 func (s *SyncService) begin() error {
 	s.mu.Lock()
@@ -143,6 +190,9 @@ func (s *SyncService) SyncNow() (err error) {
 func (s *SyncService) doSync() error {
 	if !s.c.Vault.Status().Unlocked {
 		return errNotUnlocked
+	}
+	if err := s.c.Vault.CheckKey(); err != nil {
+		return errWrongKey
 	}
 	hdr, err := s.c.Vault.Header()
 	if err != nil {
@@ -233,6 +283,9 @@ func (s *SyncService) ReplaceRemote() (err error) {
 	defer func() { s.end(err) }()
 	if !s.c.Vault.Status().Unlocked {
 		return errNotUnlocked
+	}
+	if err := s.c.Vault.CheckKey(); err != nil {
+		return errWrongKey
 	}
 	hdr, err := s.c.Vault.Header()
 	if err != nil {

@@ -179,6 +179,42 @@ describe('New key panel', () => {
   })
 })
 
+describe('Vault health on the Keychain page', () => {
+  it('says nothing when every secret can be read', async () => {
+    const be = setup()
+    await waitFor(() => expect(calls(be, 'vault.health').length).toBeGreaterThan(0))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByText("Can't be read")).toBeNull()
+  })
+
+  it('names the identities whose secret cannot be read, and the ones that belong to no identity', async () => {
+    const be = makeFake({identities: ids.map(i => ({...i})), health: {checked: 4, unreadable: [
+      {secret_id: 's3', name: 'db', identity_id: 'i3', kind: 'password'},
+      {secret_id: 'telnet:h9', name: 'Telnet password of router', kind: 'telnet'},
+    ]}})
+    render(<Providers be={be}><Harness be={be} /></Providers>)
+    const warn = await screen.findByRole('alert')
+    expect(warn).toHaveTextContent("2 saved items can't be read with this vault's key")
+    expect(warn).toHaveTextContent('Also: Telnet password of router')
+    const cards = within(screen.getByRole('list', {name: 'Identities'})).getAllByRole('listitem')
+    const marked = cards.filter(c => within(c).queryByText("Can't be read"))
+    expect(marked.map(c => c.querySelector('.label')?.textContent)).toEqual(["dbCan't be read"]) // only that card
+  })
+
+  it('checks again when the list changes, so entering a secret again clears the mark', async () => {
+    const be = makeFake({identities: ids.map(i => ({...i})), health: {checked: 4, unreadable: [{secret_id: 's3', name: 'db', identity_id: 'i3', kind: 'password'}]}})
+    render(<Providers be={be}><Harness be={be} /></Providers>)
+    await screen.findByRole('alert')
+    be.state.health = {checked: 4, unreadable: []} // what the vault finds once it was entered again
+    await userEvent.click(screen.getByRole('button', {name: 'Edit db'}))
+    const dlg = await screen.findByRole('dialog', {name: 'Edit Password'})
+    await userEvent.type(within(dlg).getByLabelText('New password'), 'typed again')
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Save changes'}))
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+    expect(screen.queryByText("Can't be read")).toBeNull()
+  })
+})
+
 describe('Editing an identity', () => {
   const edit = (name: string) => userEvent.click(screen.getByRole('button', {name: `Edit ${name}`}))
 

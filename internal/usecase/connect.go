@@ -3,6 +3,7 @@ package usecase
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -40,13 +41,13 @@ func (c *Core) hopFor(h domain.Host) (sshx.Hop, error) {
 	case domain.AuthPassword:
 		pw, err := c.Vault.GetSecret(id.SecretRef)
 		if err != nil {
-			return hop, vaultErr(err)
+			return hop, secretErr(id.Name, err)
 		}
 		hop.Auth, hop.Password = sshx.SavedPassword(string(pw)), string(pw)
 	case domain.AuthKey:
 		pem, err := c.Vault.GetSecret(id.SecretRef)
 		if err != nil {
-			return hop, vaultErr(err)
+			return hop, secretErr(id.Name, err)
 		}
 		signer, err := vault.ParsePrivateKey(pem, nil)
 		if err != nil {
@@ -67,6 +68,15 @@ func (c *Core) hopFor(h domain.Host) (sshx.Hop, error) {
 		return hop, fmt.Errorf("no username for host %q", h.Label)
 	}
 	return hop, nil
+}
+
+// secretErr explains why a saved secret could not be used. A secret that the key cannot open was sealed with another key
+// (the raw reason, "message authentication failed", says nothing about what to do).
+func secretErr(name string, err error) error {
+	if strings.Contains(err.Error(), "message authentication failed") {
+		return fmt.Errorf("the saved secret of %q cannot be read with this vault's key (it was sealed with another key): open Keychain, edit %q and enter it again", name, name)
+	}
+	return vaultErr(err)
 }
 
 func vaultErr(err error) error {

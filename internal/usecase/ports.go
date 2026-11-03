@@ -74,6 +74,10 @@ type SecretVault interface {
 	Header() (domain.VaultHeader, error)
 	Secrets() []domain.Secret
 	ReplaceSecrets([]domain.Secret) error
+	// CheckKey fails when the key in use is not the one of the header: such a vault must not send anything to a repository.
+	CheckKey() error
+	// Unreadable lists the ids of the saved secrets that the key in use cannot open.
+	Unreadable() ([]string, error)
 	Adopt(masterPassword string, h domain.VaultHeader, secrets []domain.Secret) error
 	// AdoptKey switches an unlocked vault to the key (and master password) of the vault a sync repository belongs to.
 	AdoptKey(masterPassword string, h domain.VaultHeader) error

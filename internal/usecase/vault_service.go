@@ -131,6 +131,59 @@ func (s *VaultService) SetAutoLock(minutes int) error {
 
 func (s *VaultService) ListIdentities() []domain.Identity { return s.c.Store.ListIdentities() }
 
+// UnreadableItem is a saved secret that the vault's key cannot open: it was sealed with another key. Its owner has to
+// enter it again.
+type UnreadableItem struct {
+	SecretID   string `json:"secret_id"`
+	Name       string `json:"name"`
+	IdentityID string `json:"identity_id,omitempty"`
+	Kind       string `json:"kind"` // key, password, telnet or other
+}
+
+// VaultHealth is what a check of the saved secrets found.
+type VaultHealth struct {
+	Checked    int              `json:"checked"`
+	Unreadable []UnreadableItem `json:"unreadable"`
+}
+
+// Health opens every saved secret (and forgets what it opened) to find the ones this vault's key cannot read: a key or a
+// password that was sealed with a key that is not the vault's own. They show up as "message authentication failed" when a
+// host is opened, and a sync would carry them to the other machines.
+func (s *VaultService) Health() (VaultHealth, error) {
+	bad, err := s.c.Vault.Unreadable()
+	if err != nil {
+		return VaultHealth{}, vaultErr(err)
+	}
+	h := VaultHealth{Unreadable: []UnreadableItem{}}
+	for _, x := range s.c.Vault.Secrets() {
+		if !x.Deleted() {
+			h.Checked++
+		}
+	}
+	byRef := map[string]domain.Identity{}
+	for _, i := range s.c.Store.ListIdentities() {
+		if i.SecretRef != "" {
+			byRef[i.SecretRef] = i
+		}
+	}
+	hosts := s.c.Store.ListHosts(domain.HostFilter{})
+	for _, id := range bad {
+		it := UnreadableItem{SecretID: id, Name: "A saved item", Kind: "other"}
+		if i, ok := byRef[id]; ok {
+			it.Name, it.IdentityID, it.Kind = i.Name, i.ID, string(i.AuthType)
+		} else if hostID, ok := strings.CutPrefix(id, "telnet:"); ok {
+			it.Kind = "telnet"
+			for _, host := range hosts {
+				if host.ID == hostID {
+					it.Name = "Telnet password of " + host.Label
+				}
+			}
+		}
+		h.Unreadable = append(h.Unreadable, it)
+	}
+	return h, nil
+}
+
 // AddKey imports a private key file. An encrypted key needs its passphrase; the key is
 // stored decrypted inside the (encrypted) vault so no passphrase prompt is needed later.
 func (s *VaultService) AddKey(name, path, passphrase string) (domain.Identity, error) {

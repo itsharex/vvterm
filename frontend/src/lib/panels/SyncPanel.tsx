@@ -83,14 +83,21 @@ export function SyncPanel({vault, onClose, onChanged, page = false}: {vault: Vau
       )}
       {vault.unlocked && offerJoin && (
         <div className="card-section" role="group" aria-label="Join the synced vault">
-          <h4>This repository belongs to another vault</h4>
-          <p className="muted">
-            Its data is locked with a different key, so the two cannot be merged as they are. To sync with it, enter the master password of
-            the vault that made it. This Mac keeps its own hosts and saved keys and merges them in, then uses that master password from now on.
-            A copy of this vault is saved first, in the <b>backups</b> folder of the app's data.
-          </p>
+          <h4>{st?.local_empty ? 'Use the vault of this repository' : 'This repository belongs to another vault'}</h4>
+          {st?.local_empty ? (
+            <p className="muted">
+              This Mac has nothing in it yet, so there is nothing to merge. Enter the master password of the vault in the repository: its hosts,
+              keys and snippets come here, and that master password is the one you use from now on.
+            </p>
+          ) : (
+            <p className="muted">
+              Its data is locked with a different key, so the two cannot be merged as they are. To sync with it, enter the master password of
+              the vault that made it. This Mac keeps its own hosts and saved keys and merges them in, then uses that master password from now on.
+              A copy of this vault is saved first, in the <b>backups</b> folder of the app's data.
+            </p>
+          )}
           <Field label="Master password of the synced vault"><input aria-label="Master password of the repository's vault" type="password" value={joinPw} onChange={e => setJoinPw(e.target.value)} /></Field>
-          <button className="primary" disabled={busy || !joinPw} onClick={() => run(async () => { await be.sync.joinRemoteVault(joinPw); setJoinPw('') }, true)}>Join this vault and sync</button>
+          <button className="primary" disabled={busy || !joinPw} onClick={() => run(async () => { await be.sync.joinRemoteVault(joinPw); setJoinPw('') }, true)}>{st?.local_empty ? "Use the repository's vault" : 'Join this vault and sync'}</button>
           <details open={err.includes('use Replace below')}>
             <summary>The password does not work, or nobody can open that repository any more</summary>
             <p className="muted">

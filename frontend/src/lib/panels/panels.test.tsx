@@ -154,6 +154,21 @@ describe('null slices from Go (regression)', () => {
     await waitFor(() => expect(be.state.calls).toContainEqual(['sync.joinRemoteVault', 'remote password']))
   })
 
+  it('on a machine with nothing in it, offers to simply use the vault of the repository', async () => {
+    const be = makeFake()
+    be.sync.status = async () => ({configured: true, repo_url: 'git@example.com:me/sync.git', folder: '', last_sync: '0001-01-01T00:00:00Z', syncing: false, local_empty: true})
+    be.sync.syncNow = async () => { throw 'remote bundle was encrypted with a different vault key' }
+    render(<Providers be={be}><SyncPanel vault={vaultSt} onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+    await userEvent.click(await screen.findByRole('button', {name: 'Sync now'}))
+    const box = await screen.findByRole('group', {name: 'Join the synced vault'})
+    expect(within(box).getByText('Use the vault of this repository')).toBeInTheDocument()
+    expect(within(box).getByText(/nothing in it yet, so there is nothing to merge/)).toBeInTheDocument()
+    expect(within(box).queryByText(/keeps its own hosts/)).toBeNull() // no talk of merging what is not there
+    await userEvent.type(within(box).getByLabelText("Master password of the repository's vault"), 'remote password')
+    await userEvent.click(within(box).getByRole('button', {name: "Use the repository's vault"}))
+    await waitFor(() => expect(be.state.calls).toContainEqual(['sync.joinRemoteVault', 'remote password']))
+  })
+
   it('replaces an unreadable repository only after REPLACE is typed', async () => {
     const be = makeFake()
     be.sync.syncNow = async () => { throw 'remote bundle was encrypted with a different vault key' }

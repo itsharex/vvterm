@@ -574,3 +574,57 @@ func TestKeyCheckSurvivesChangePasswordAndAdopt(t *testing.T) {
 		t.Fatal("Adopt must add the check")
 	}
 }
+
+func TestCheckKeyAndUnreadable(t *testing.T) {
+	v, _, _ := newVault(t)
+	if err := v.CheckKey(); err != ErrNoVault {
+		t.Fatalf("no vault: %v", err)
+	}
+	if err := v.Create(pw); err != nil {
+		t.Fatal(err)
+	}
+	good, _ := v.AddSecret(domain.SecretPassword, []byte("one"))
+	if err := v.CheckKey(); err != nil {
+		t.Fatalf("the key of the vault was refused: %v", err)
+	}
+	if bad, err := v.Unreadable(); err != nil || len(bad) != 0 {
+		t.Fatalf("%v %v", bad, err)
+	}
+
+	// a secret that another vault sealed arrives with a sync: it is listed, nothing else is
+	other, _, _ := newVault(t)
+	if err := other.Create("another master password"); err != nil {
+		t.Fatal(err)
+	}
+	foreign, _ := other.AddSecret(domain.SecretPassword, []byte("two"))
+	if err := v.ReplaceSecrets(append(v.Secrets(), other.Secrets()...)); err != nil {
+		t.Fatal(err)
+	}
+	bad, err := v.Unreadable()
+	if err != nil || len(bad) != 1 || bad[0] != foreign {
+		t.Fatalf("unreadable %v %v (good one was %s)", bad, err, good)
+	}
+	// a deleted secret is not reported
+	if err := v.DeleteSecret(foreign); err != nil {
+		t.Fatal(err)
+	}
+	if bad, _ := v.Unreadable(); len(bad) != 0 {
+		t.Fatalf("a deleted secret was reported: %v", bad)
+	}
+
+	// a key that is not the header's (a leftover from another vault) is caught
+	v.mu.Lock()
+	realKey := v.dek
+	v.dek = bytes.Repeat([]byte{7}, len(realKey))
+	v.mu.Unlock()
+	if err := v.CheckKey(); err != ErrKeyMismatch {
+		t.Fatalf("a wrong key passed: %v", err)
+	}
+	v.Lock()
+	if err := v.CheckKey(); err != ErrLocked {
+		t.Fatalf("locked: %v", err)
+	}
+	if _, err := v.Unreadable(); err != ErrLocked {
+		t.Fatalf("locked: %v", err)
+	}
+}

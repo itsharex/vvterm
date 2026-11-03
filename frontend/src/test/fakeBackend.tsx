@@ -2,7 +2,7 @@ import {ReactNode} from 'react'
 import {BackendContext, Backend} from '../lib/backend'
 import {ToastProvider} from '../lib/ui/Toast'
 import {DEFAULT_SETTINGS} from '../lib/settings/defaults'
-import type {ActivityEntry, KnownHost, QueueJob, RemoteEntry, SyncDiff, TransferResult, ConnectionTest, ForwardStatus, Group, Host, Identity, PortForward, Settings, Snippet, VaultStatus,
+import type {VaultHealth, ActivityEntry, KnownHost, QueueJob, RemoteEntry, SyncDiff, TransferResult, ConnectionTest, ForwardStatus, Group, Host, Identity, PortForward, Settings, Snippet, VaultStatus,
   CacheReport, AiCommandCheck, AiModelList, AiPreview, AiProvider, AiReply, AiSessionState, AiSettings, McpImportItem, McpServer, McpTool} from '../lib/types'
 
 export interface Fake extends Backend {
@@ -38,6 +38,8 @@ export interface Fake extends Backend {
     /** the activity log, newest first */
     logs: ActivityEntry[]
     testResult: ConnectionTest
+    /** what the vault health check finds (default: nothing wrong) */
+    health?: VaultHealth
     calls: Array<[string, ...unknown[]]>
     /** the AI assistant */
     ai: {
@@ -221,6 +223,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       enableBiometric: async () => { state.vault = {...state.vault, keychain_enabled: true} },
       disableBiometric: async () => { state.vault = {...state.vault, keychain_enabled: false} },
       listIdentities: async () => [...state.identities],
+      health: async () => { rec('vault.health'); return state.health ?? {checked: state.identities.length, unreadable: []} },
       addKey: async (name, path, pass) => { rec('vault.addKey', name, path, pass); return upsert(state.identities, {name, auth_type: 'key', public_key: 'ssh-ed25519 AAAAimported'}, 'i') },
       addKeyPair: async (name, pem, pass, pub, cert) => { rec('vault.addKeyPair', name, pem, pass, pub, cert); return upsert(state.identities, {name, auth_type: 'key', public_key: pub.trim() || 'ssh-ed25519 AAAApasted', certificate: cert.trim() || undefined}, 'i') },
       addKeyPEM: async (name, pem, pass) => { rec('vault.addKeyPEM', name, pem, pass); return upsert(state.identities, {name, auth_type: 'key', public_key: 'ssh-ed25519 AAAApasted'}, 'i') },

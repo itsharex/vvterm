@@ -1,5 +1,5 @@
 import {createContext, useContext} from 'react'
-import type {
+import type {VaultHealth, 
   CacheReport, ConnectionTest, ExportReport, ForwardStatus, Group, Host, HostFilter, Identity, ImportReport, PortForward, Settings,
   ActivityEntry, KnownHost, QueueJob, QueueSpec, RemoteEntry, SftpInfo, SyncDiff, Snippet, SyncStatus, TransferResult, VaultStatus,
   AiAskOptions, AiAttachment, AiCommandCheck, AiCustomProvider, AiModelList, AiPolicy, AiPreview, AiProvider, AiSessionState, AiSettings,
@@ -26,6 +26,8 @@ export interface Backend {
     enableBiometric(): Promise<void>
     disableBiometric(): Promise<void>
     listIdentities(): Promise<Identity[]>
+    /** opens every saved secret to find the ones the vault's key cannot read (they have to be entered again) */
+    health(): Promise<VaultHealth>
     addKey(name: string, path: string, passphrase: string): Promise<Identity>
     addKeyPair(name: string, pem: string, passphrase: string, publicKey: string, certificate: string): Promise<Identity>
     addKeyPEM(name: string, pem: string, passphrase: string): Promise<Identity>
@@ -271,6 +273,7 @@ export function wailsBackend(): Backend {
       enableBiometric: () => u('VaultService', 'EnableBiometric'),
       disableBiometric: () => u('VaultService', 'DisableBiometric'),
       listIdentities: () => u('VaultService', 'ListIdentities'),
+      health: async () => { const h = await u<VaultHealth>('VaultService', 'Health'); return {...h, unreadable: h.unreadable ?? []} },
       addKey: (n, p, pp) => u('VaultService', 'AddKey', n, p, pp),
       addKeyPEM: (n, p, pp) => u('VaultService', 'AddKeyPEM', n, p, pp),
       addKeyPair: (n, p, pp, pub, cert) => u('VaultService', 'AddKeyPair', n, p, pp, pub, cert),

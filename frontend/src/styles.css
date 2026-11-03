@@ -1176,3 +1176,6 @@ input[type='password']::-webkit-credentials-auto-fill-button { visibility: hidde
 .dx-ok { display: flex; align-items: center; gap: 7px; margin-top: 12px; }
 .dx-ok svg { flex: none; color: var(--ok); }
 @media (max-width: 700px) { .dx-pair { grid-template-columns: 1fr; } }
+
+/* a saved secret that the vault's key cannot open */
+.badge.warn { margin-left: 8px; background: #f0b4292e; color: var(--warn); font-weight: 600; vertical-align: 1px; }
