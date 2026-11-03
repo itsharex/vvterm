@@ -157,6 +157,14 @@ export interface ExportReport {
   warnings: string[]
 }
 
+/** What a server asks while signing in (keyboard-interactive): each prompt wants one answer. */
+export interface AuthChallenge {
+  host: string
+  name: string
+  instruction: string
+  prompts: {text: string; echo: boolean}[]
+}
+
 export interface HostKeyPrompt {
   host: string
   fingerprint: string

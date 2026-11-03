@@ -85,6 +85,40 @@ describe('TerminalPane', () => {
     expect(be.state.calls).toContainEqual(['session.trustHostKey', sid, ''])
   })
 
+  it('asks what the server asks while signing in (a verification code) and sends the answer, hidden while typing', async () => {
+    const {be, sid} = await mount()
+    act(() => be.emit(`term:auth:${sid}`, {host: 'bastion', name: '', instruction: '', prompts: [{text: 'Verification code: ', echo: false}]}))
+    const dlg = screen.getByRole('alertdialog', {name: 'Sign-in question'})
+    expect(within(dlg).getByText('Sign in to bastion')).toBeInTheDocument()
+    const box = within(dlg).getByLabelText('Verification code')
+    expect(box).toHaveAttribute('type', 'password') // not echoed
+    expect(within(dlg).getByRole('button', {name: 'Continue'})).toBeDisabled() // nothing typed yet
+    await userEvent.type(box, '123456{Enter}')
+    expect(be.state.calls).toContainEqual(['session.answerAuth', sid, ['123456']])
+    expect(screen.queryByRole('alertdialog', {name: 'Sign-in question'})).toBeNull()
+  })
+
+  it('cancelling the sign-in question sends null, and the question goes away when the shell is ready', async () => {
+    const {be, sid} = await mount()
+    act(() => be.emit(`term:auth:${sid}`, {host: 'b', name: 'Duo', instruction: 'Choose a method', prompts: [{text: 'Passcode or option (1-3): ', echo: true}]}))
+    expect(screen.getByText('Choose a method')).toBeInTheDocument()
+    expect(screen.getByLabelText('Passcode or option (1-3)')).toHaveAttribute('type', 'text') // the server allows it to be shown
+    await userEvent.click(screen.getByRole('button', {name: 'Cancel'}))
+    expect(be.state.calls).toContainEqual(['session.answerAuth', sid, null])
+    act(() => be.emit(`term:auth:${sid}`, {host: 'b', name: '', instruction: '', prompts: [{text: 'Verification code: ', echo: false}]}))
+    expect(screen.getByRole('alertdialog', {name: 'Sign-in question'})).toBeInTheDocument()
+    act(() => be.emit(`term:ready:${sid}`, {}))
+    expect(screen.queryByRole('alertdialog', {name: 'Sign-in question'})).toBeNull()
+  })
+
+  it('a refused answer is shown on the pane, not swallowed', async () => {
+    const {be, sid} = await mount()
+    be.session.answerAuth = async () => { throw 'no question is waiting for an answer' }
+    act(() => be.emit(`term:auth:${sid}`, {host: 'b', name: '', instruction: '', prompts: [{text: 'Verification code: ', echo: false}]}))
+    await userEvent.type(screen.getByLabelText('Verification code'), '1{Enter}')
+    expect(await screen.findByRole('alert')).toHaveTextContent('no question is waiting for an answer')
+  })
+
   it('shows the connection-lost banner and reconnects only on Enter', async () => {
     const {be, sid, term} = await mount()
     act(() => be.emit(`term:ready:${sid}`, {}))

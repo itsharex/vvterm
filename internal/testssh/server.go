@@ -26,6 +26,13 @@ type Config struct {
 	Banner   string          // optional text printed after READY (demos)
 	Prompt   string          // optional prompt printed after READY and each echoed line (demos)
 
+	// Code is a second factor: once the password or the key was accepted the server asks "Verification code: "
+	// (keyboard-interactive, no echo) and lets the client in only with this answer.
+	Code string
+	// PAM makes the server offer nothing but keyboard-interactive, the way a PAM stack does: one round with the
+	// question "Password: " and, when Code is set, "Verification code: ".
+	PAM bool
+
 	// Version is the SSH software version announced after "SSH-2.0-" (default: the library's).
 	Version string
 	// ExecReply is written for any `exec` request (the command itself is not run); empty refuses exec.
@@ -80,21 +87,50 @@ func Start(cfg Config) (*Server, error) {
 			return nil, err
 		}
 	}
+	// the first factor passed: done, or on to the code when there is one
+	passed := func() (*ssh.Permissions, error) {
+		if cfg.Code == "" {
+			return nil, nil
+		}
+		return nil, &ssh.PartialSuccessError{Next: ssh.ServerAuthCallbacks{
+			KeyboardInteractiveCallback: func(c ssh.ConnMetadata, ask ssh.KeyboardInteractiveChallenge) (*ssh.Permissions, error) {
+				ans, err := ask(c.User(), "", []string{"Verification code: "}, []bool{false})
+				if err != nil || len(ans) != 1 || ans[0] != cfg.Code {
+					return nil, fmt.Errorf("wrong code")
+				}
+				return nil, nil
+			},
+		}}
+	}
 	sc := &ssh.ServerConfig{
 		PasswordCallback: func(c ssh.ConnMetadata, pw []byte) (*ssh.Permissions, error) {
 			if cfg.Password != "" && c.User() == cfg.User && string(pw) == cfg.Password {
-				return nil, nil
+				return passed()
 			}
 			return nil, fmt.Errorf("password rejected")
 		},
 		PublicKeyCallback: func(c ssh.ConnMetadata, k ssh.PublicKey) (*ssh.Permissions, error) {
 			for _, a := range cfg.AuthKeys {
 				if c.User() == cfg.User && string(a.Marshal()) == string(k.Marshal()) {
-					return nil, nil
+					return passed()
 				}
 			}
 			return nil, fmt.Errorf("key rejected")
 		},
+	}
+	if cfg.PAM {
+		sc.PasswordCallback, sc.PublicKeyCallback = nil, nil
+		sc.KeyboardInteractiveCallback = func(c ssh.ConnMetadata, ask ssh.KeyboardInteractiveChallenge) (*ssh.Permissions, error) {
+			qs, echo := []string{"Password: "}, []bool{false}
+			if cfg.Code != "" {
+				qs, echo = append(qs, "Verification code: "), append(echo, false)
+			}
+			ans, err := ask(c.User(), "", qs, echo)
+			if err != nil || len(ans) != len(qs) || c.User() != cfg.User || ans[0] != cfg.Password || (cfg.Code != "" && ans[1] != cfg.Code) {
+				return nil, fmt.Errorf("rejected")
+			}
+			return nil, nil
+		}
 	}
 	if cfg.Version != "" {
 		sc.ServerVersion = "SSH-2.0-" + cfg.Version

@@ -42,7 +42,7 @@ func (c *Core) hopFor(h domain.Host) (sshx.Hop, error) {
 		if err != nil {
 			return hop, vaultErr(err)
 		}
-		hop.Auth = sshx.PasswordAuth(string(pw))
+		hop.Auth, hop.Password = sshx.SavedPassword(string(pw)), string(pw)
 	case domain.AuthKey:
 		pem, err := c.Vault.GetSecret(id.SecretRef)
 		if err != nil {
@@ -85,6 +85,34 @@ func (c *Core) progress(sid, stage string) {
 // hostKeyTimeout bounds how long a connection waits for the user to answer a fingerprint prompt.
 const hostKeyTimeout = 2 * time.Minute
 
+// authTimeout bounds how long a connection waits for a verification code: long enough to find the phone.
+const authTimeout = 3 * time.Minute
+
+// askUser is how a connection puts the questions of a server (a verification code, a Duo choice…) to the user: the
+// term:auth:<promptKey> event carries them, AnswerAuth brings the answers back. What the user types is never kept or logged.
+func (c *Core) askUser(promptKey string, abort <-chan struct{}) sshx.Asker {
+	return func(ch sshx.Challenge) ([]string, error) {
+		payload := map[string]any{"host": ch.Host, "name": ch.Name, "instruction": ch.Instruction, "prompts": ch.Prompts}
+		reply := c.authPrompts.ask(promptKey, payload)
+		defer c.authPrompts.clear(promptKey)
+		c.emit("term:auth:"+promptKey, payload)
+		select {
+		case a := <-reply:
+			if !a.ok {
+				return nil, errors.New("sign-in cancelled")
+			}
+			if len(a.answers) != len(ch.Prompts) {
+				return nil, errors.New("the answers do not match the questions")
+			}
+			return a.answers, nil
+		case <-abort:
+			return nil, errors.New("cancelled")
+		case <-time.After(authTimeout):
+			return nil, errors.New("timed out waiting for the verification code")
+		}
+	}
+}
+
 // connect dials the host (through its jump chain). Unknown host keys raise the
 // term:hostkey:<promptKey> event and block until TrustHostKey answers.
 func (c *Core) connect(hostID, promptKey string, abort <-chan struct{}) (*sshx.Client, domain.Host, error) {
@@ -113,6 +141,10 @@ func (c *Core) connect(hostID, promptKey string, abort <-chan struct{}) (*sshx.C
 // dialHops dials a prepared chain. Unknown host keys raise term:hostkey:<promptKey> and wait for
 // TrustHostKey; known keys are checked against known_hosts as usual.
 func (c *Core) dialHops(hops []sshx.Hop, promptKey string, abort <-chan struct{}) (*sshx.Client, error) {
+	hops = append([]sshx.Hop(nil), hops...)
+	for i := range hops {
+		hops[i].Ask = c.askUser(promptKey, abort)
+	}
 	d := &sshx.Dialer{Timeout: c.Dialer.Timeout, HostKeys: &sshx.HostKeyChecker{
 		Path: c.Dialer.HostKeys.Path,
 		Prompt: func(host string, key ssh.PublicKey) (bool, error) {

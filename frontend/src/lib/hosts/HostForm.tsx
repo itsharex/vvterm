@@ -7,7 +7,8 @@ import {Select} from '../ui/Select'
 import {useBackend} from '../backend'
 import {errMsg, parseTags} from '../util'
 import {IconCheckCircle, IconEye, IconEyeOff, IconPlus, IconServer, IconXCircle} from '../ui/Icons'
-import type {AiPolicy, ConnectionTest, Group, Host, HostKeyPrompt, Identity, Settings} from '../types'
+import {AuthPrompt} from '../ui/AuthPrompt'
+import type {AiPolicy, AuthChallenge, ConnectionTest, Group, Host, HostKeyPrompt, Identity, Settings} from '../types'
 
 interface Props {
   host?: Host
@@ -67,6 +68,7 @@ export function HostForm({host, isNew, groups, defaultGroupId, hosts, identities
   const [busy, setBusy] = useState(false)
   const [test, setTest] = useState<Test>({state: 'idle'})
   const [prompt, setPrompt] = useState<{key: string; p: HostKeyPrompt} | null>(null)
+  const [auth, setAuth] = useState<{key: string; c: AuthChallenge} | null>(null)
   const alive = useRef(true)
   useEffect(() => () => { alive.current = false }, [])
   const [showTelnetPw, setShowTelnetPw] = useState(false)
@@ -141,7 +143,9 @@ export function HostForm({host, isNew, groups, defaultGroupId, hosts, identities
     if (!h) return
     const key = `test-${Date.now().toString(36)}-${++testSeq}`
     setTest({state: 'running'})
-    const off = be.on(`term:hostkey:${key}`, (p: HostKeyPrompt) => setPrompt({key, p}))
+    const off1 = be.on(`term:hostkey:${key}`, (p: HostKeyPrompt) => setPrompt({key, p}))
+    const off2 = be.on(`term:auth:${key}`, (c: AuthChallenge) => setAuth({key, c}))
+    const off = () => { off1(); off2() }
     try {
       const result = await be.session.testConnection(h, f.identity_id ? '' : f.password, key)
       if (alive.current) setTest({state: 'done', result})
@@ -149,7 +153,7 @@ export function HostForm({host, isNew, groups, defaultGroupId, hosts, identities
       if (alive.current) setTest({state: 'failed', message: errMsg(e)})
     } finally {
       off()
-      if (alive.current) setPrompt(null)
+      if (alive.current) { setPrompt(null); setAuth(null) }
     }
   }
 
@@ -245,6 +249,8 @@ export function HostForm({host, isNew, groups, defaultGroupId, hosts, identities
         </Field>
         <div className="inline-field"><span>Keepalive</span><input aria-label="Keepalive" className="port" value={f.keepalive_sec} onChange={set('keepalive_sec')} /><span>seconds</span></div>
       </Section>
+
+      <AuthPrompt inline challenge={auth?.c ?? null} promptKey={auth?.key ?? ''} onDone={() => setAuth(null)} onError={setErr} />
 
       {prompt && (
         <div className="notice" role="alertdialog" aria-label="Host key confirmation">

@@ -14,7 +14,8 @@ import {registerPane, registerSelection, setPaneSession, setPaneStatus} from './
 import {createHighlighter, HighlightTerm} from './highlight'
 import {matches} from '../shortcuts/shortcuts'
 import {IconArrowDown, IconArrowUp} from '../ui/Icons'
-import type {ClosedInfo, HostKeyPrompt} from '../types'
+import {AuthPrompt} from '../ui/AuthPrompt'
+import type {AuthChallenge, ClosedInfo, HostKeyPrompt} from '../types'
 
 interface Props {
   hostId: string
@@ -134,6 +135,7 @@ export function TerminalPane(p: Props) {
   const stateRef = useRef<State>('connecting')
   const [state, setState] = useState<State>('connecting')
   const [prompt, setPrompt] = useState<HostKeyPrompt | null>(null)
+  const [auth, setAuth] = useState<AuthChallenge | null>(null)
   const [closed, setClosed] = useState<ClosedInfo | null>(null)
   const [showSearch, setShowSearch] = useState(false)
   const [needle, setNeedle] = useState('')
@@ -332,11 +334,13 @@ export function TerminalPane(p: Props) {
           // output can only come from a live shell: do not keep the connecting screen up until the ready event
           if (stateRef.current === 'connecting') setSt('ready')
         }))
-        offs.push(be.on(`term:ready:${id}`, () => { setPrompt(null); setClosed(null); setSt('ready') }))
+        offs.push(be.on(`term:ready:${id}`, () => { setPrompt(null); setAuth(null); setClosed(null); setSt('ready') }))
         offs.push(be.on(`term:hostkey:${id}`, (hk: HostKeyPrompt) => setPrompt(hk)))
+        offs.push(be.on(`term:auth:${id}`, (a: AuthChallenge) => setAuth(a)))
         offs.push(be.on(`term:progress:${id}`, (e: {stage?: string}) => { if (e?.stage === 'authenticated') setStage('authenticated') }))
         offs.push(be.on(`term:closed:${id}`, (c: ClosedInfo) => {
           setPrompt(null)
+          setAuth(null)
           setSt('closed')
           if (c.clean) onExit.current()
           else setClosed(c)
@@ -480,6 +484,7 @@ export function TerminalPane(p: Props) {
           <b>Press Enter to reconnect</b>
         </div>
       )}
+      <AuthPrompt challenge={auth} promptKey={sid.current} onDone={() => setAuth(null)} onError={m => { setClosed({reason: m, clean: false}); setSt('closed') }} />
       {prompt && (
         <div className="overlay" role="alertdialog" aria-label="Host key confirmation">
           <div className="card">

@@ -342,6 +342,8 @@ Opening a host first asks **which protocol** to use (SSH, Mosh, Telnet). SSH is 
 
 Then the **connecting screen** shows who you are connecting to and a line from the plug to the terminal. The line moves **smoothly**: slowly while the server answers, further once the login is done, and to the end when the shell is open, and only then does the terminal show. If it fails, the line stops where it got to and turns red, with the reason and **Retry**, **Show logs** (opens the Logs page) and **Close**.
 
+**Servers that ask for a code.** A bastion or a company server often wants a second step after the password or the key: a verification code from an authenticator app, a Duo choice, a one-time password. When the server asks, a **Sign in to <host>** box appears over the terminal (or in the SFTP pane, the sidebar, the port forward and the host form's **Test connection**) with the server's own questions: type the code and press **Continue**, or **Cancel** to stop. A box that asks for a code hides what you type, unless the server says it may be shown. A saved password answers the question that asks for the password by itself, so you are only asked for what is left. Nothing you type here is saved or written to the logs, and you have three minutes to answer. If a host asks for a code, a connection that starts by itself (a port forward that starts with the app) has nobody to answer it: it waits the three minutes and then fails; start it from the Port Forwarding page instead.
+
 The state of every tab is a small badge on its icon: a spinner while connecting, a **green** dot while connected, a **red** dot when the connection is lost (press Enter in the pane, or Retry, to reconnect: Vutty never reconnects by itself).
 
 ## 18. Tabs: order, split, new window

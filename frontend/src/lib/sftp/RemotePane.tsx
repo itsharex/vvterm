@@ -8,7 +8,8 @@ import {OsIcon} from '../ui/OsIcon'
 import {joinPath} from './format'
 import {LOCAL_HOST, LOCAL_HOST_ID, localPaneFs} from './localFs'
 import {FilePane, PaneFs, PaneState, DragPayload, Item} from './FilePane'
-import type {EditEvent, Host, HostKeyPrompt} from '../types'
+import {AuthPrompt} from '../ui/AuthPrompt'
+import type {AuthChallenge, EditEvent, Host, HostKeyPrompt} from '../types'
 
 export interface RemoteHost {id: string; label: string}
 let seq = 0
@@ -47,6 +48,7 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
   const [home, setHome] = useState('')
   const [closedReason, setClosedReason] = useState('')
   const [prompt, setPrompt] = useState<{key: string; p: HostKeyPrompt} | null>(null)
+  const [auth, setAuth] = useState<{key: string; c: AuthChallenge} | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [picking, setPicking] = useState(false)
   const [filter, setFilter] = useState('')
@@ -73,7 +75,7 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
       return () => { alive.current = false }
     }
     const key = `sftp-${Date.now().toString(36)}-${++seq}`
-    const offs: Array<() => void> = [be.on(`term:hostkey:${key}`, (p: HostKeyPrompt) => setPrompt({key, p}))]
+    const offs: Array<() => void> = [be.on(`term:hostkey:${key}`, (p: HostKeyPrompt) => setPrompt({key, p})), be.on(`term:auth:${key}`, (c: AuthChallenge) => setAuth({key, c}))]
     setState('connecting')
     setClosedReason('')
     ;(async () => {
@@ -91,6 +93,7 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
         }))
         offs.push(be.on(`sftp:closed:${info.sid}`, () => { setState('closed'); setClosedReason('The connection was lost.'); sid.current = ''; setFs(null); onSession('') }))
         setPrompt(null)
+        setAuth(null)
         const s = info.sid
         setFs({
           list: d => be.sftp.list(s, d),
@@ -127,7 +130,7 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
         setState('ready')
         onSession(s)
       } catch (e) {
-        if (alive.current) { setPrompt(null); setState('closed'); setClosedReason(errMsg(e)) }
+        if (alive.current) { setPrompt(null); setAuth(null); setState('closed'); setClosedReason(errMsg(e)) }
       }
     })()
     return () => {
@@ -196,7 +199,8 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
       <FilePane side="remote" title={host.label} icon={isLocal ? <IconFolder size={16} /> : <OsIcon os={hosts.find(x => x.id === host.id)?.os} size={16} />} fs={fs} startDir={home} reloadKey={reloadKey} showHiddenDefault={!isLocal}
         onState={onState} onDropEntry={onDropEntry} onCopyOut={onCopyOut} copyLabel={isLocal ? 'Copy to Local' : 'Download'} onClose={() => onHost(null)} onAdd={() => setPicking(true)} lead={tabsLead?.(() => setPicking(true))} />
       {picking && <div className="overlay" role="dialog" aria-label="Select host"><div className="card">{picker}</div></div>}
-      {state === 'connecting' && !prompt && <div className="banner info">Connecting to {host.label}…</div>}
+      {state === 'connecting' && !prompt && !auth && <div className="banner info">Connecting to {host.label}…</div>}
+      <AuthPrompt challenge={auth?.c ?? null} promptKey={auth?.key ?? ''} onDone={() => setAuth(null)} onError={setClosedReason} />
       {state === 'closed' && (
         <div className="banner" role="alert">
           <span>{closedReason || 'Disconnected.'}</span>

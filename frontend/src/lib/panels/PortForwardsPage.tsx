@@ -6,7 +6,8 @@ import {errMsg} from '../util'
 import {IconEdit, IconPlus, IconTrash} from '../ui/Icons'
 import {TYPE_LABEL} from './ForwardPanel'
 import {byName, FilterChip, ListToolbar, usePref, VIEWS, type SortOption} from '../ui/ListTools'
-import type {ForwardStatus, ForwardType, Host, HostKeyPrompt, PortForward} from '../types'
+import {AuthPrompt} from '../ui/AuthPrompt'
+import type {AuthChallenge, ForwardStatus, ForwardType, Host, HostKeyPrompt, PortForward} from '../types'
 
 export function describeForward(f: PortForward): string {
   const bind = `${f.bind_addr}:${f.bind_port || 'auto'}`
@@ -38,6 +39,7 @@ export function PortForwardsPage({hosts, draft, reloadKey = 0, onNew, onEdit}: P
   const confirm = useConfirm()
   const [items, setItems] = useState<ForwardStatus[]>([])
   const [prompt, setPrompt] = useState<{id: string; p: HostKeyPrompt} | null>(null)
+  const [auth, setAuth] = useState<{id: string; c: AuthChallenge} | null>(null)
   const [q, setQ] = useState('')
   const [states, setStates] = useState<string[]>([])
   const [types, setTypes] = useState<ForwardType[]>([])
@@ -54,13 +56,16 @@ export function PortForwardsPage({hosts, draft, reloadKey = 0, onNew, onEdit}: P
 
   const start = async (id: string) => {
     const off = be.on('term:hostkey:fwd-' + id, (p: HostKeyPrompt) => setPrompt({id, p}))
+    const offAuth = be.on('term:auth:fwd-' + id, (c: AuthChallenge) => setAuth({id, c}))
     try {
       await be.forwards.start(id)
     } catch (e) {
       toast.error(errMsg(e))
     } finally {
       off()
+      offAuth()
       setPrompt(null)
+      setAuth(null)
       void reload()
     }
   }
@@ -141,6 +146,13 @@ export function PortForwardsPage({hosts, draft, reloadKey = 0, onNew, onEdit}: P
       {items.length > 0 && shown.length === 0 && <div className="empty-hint">No port forward matches.</div>}
       {items.length === 0 && !draft && <div className="empty-hint">No port forwards yet. Choose “New forwarding” to add one.</div>}
 
+      {auth && (
+        <div className="modal-back" role="presentation">
+          <div className="modal confirm">
+            <div className="modal-body"><AuthPrompt inline challenge={auth.c} promptKey={'fwd-' + auth.id} onDone={() => setAuth(null)} onError={m => toast.error(m)} /></div>
+          </div>
+        </div>
+      )}
       {prompt && (
         <div className="modal-back" role="presentation">
           <div className="modal confirm" role="alertdialog" aria-label="Host key confirmation">

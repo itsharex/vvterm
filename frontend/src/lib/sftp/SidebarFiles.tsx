@@ -7,7 +7,8 @@ import {errMsg} from '../util'
 import {formatBytes, parentOf} from './format'
 import {QueuePanel} from './QueuePanel'
 import {queueTransfer, summarize, useQueues, verbOf} from './transfer'
-import type {Host, HostKeyPrompt, QueueJob, RemoteEntry} from '../types'
+import {AuthPrompt} from '../ui/AuthPrompt'
+import type {AuthChallenge, Host, HostKeyPrompt, QueueJob, RemoteEntry} from '../types'
 
 let seq = 0
 
@@ -31,6 +32,7 @@ function HostFiles({host}: {host: Host}) {
   const [phase, setPhase] = useState<'connecting' | 'ready' | 'closed'>('connecting')
   const [reason, setReason] = useState('')
   const [prompt, setPrompt] = useState<{key: string; p: HostKeyPrompt} | null>(null)
+  const [auth, setAuth] = useState<{key: string; c: AuthChallenge} | null>(null)
   const [sid, setSid] = useState('')
   const [home, setHome] = useState('')
   const [cwd, setCwd] = useState('')
@@ -62,7 +64,7 @@ function HostFiles({host}: {host: Host}) {
     alive.current = true
     let opened = ''
     const key = `sftp-side-${Date.now().toString(36)}-${++seq}`
-    const offs: Array<() => void> = [be.on(`term:hostkey:${key}`, (p: HostKeyPrompt) => setPrompt({key, p}))]
+    const offs: Array<() => void> = [be.on(`term:hostkey:${key}`, (p: HostKeyPrompt) => setPrompt({key, p})), be.on(`term:auth:${key}`, (c: AuthChallenge) => setAuth({key, c}))]
     setPhase('connecting')
     setReason('')
     setSid('')
@@ -73,12 +75,13 @@ function HostFiles({host}: {host: Host}) {
         opened = info.sid
         offs.push(be.on(`sftp:closed:${info.sid}`, () => { setPhase('closed'); setReason('The connection was lost.'); setSid(''); opened = '' }))
         setPrompt(null)
+        setAuth(null)
         setSid(info.sid)
         setHome(info.home || '/')
         setPhase('ready')
         await load(info.sid, info.home || '/')
       } catch (e) {
-        if (alive.current) { setPrompt(null); setPhase('closed'); setReason(errMsg(e)) }
+        if (alive.current) { setPrompt(null); setAuth(null); setPhase('closed'); setReason(errMsg(e)) }
       }
     })()
     return () => {
@@ -154,7 +157,8 @@ function HostFiles({host}: {host: Host}) {
           <IconDownload size={14} /> Download{chosen.length > 1 ? ` ${chosen.length}` : ''}
         </button>
       </div>
-      {phase === 'connecting' && !prompt && <div className="side-empty">Connecting to {host.label}…</div>}
+      {phase === 'connecting' && !prompt && !auth && <div className="side-empty">Connecting to {host.label}…</div>}
+      <AuthPrompt inline challenge={auth?.c ?? null} promptKey={auth?.key ?? ''} onDone={() => setAuth(null)} onError={setReason} />
       {phase === 'closed' && (
         <div className="side-empty" role="alert">
           <div>{reason || 'Disconnected.'}</div>

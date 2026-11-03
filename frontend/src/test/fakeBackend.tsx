@@ -263,6 +263,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       close: async s => { rec('session.close', s) },
       hostHistory: async s => { rec('session.hostHistory', s); return [...state.hostHistory] },
       trustHostKey: async (s, f) => { rec('session.trustHostKey', s, f) },
+      answerAuth: async (k, a) => { rec('session.answerAuth', k, a) },
       testConnection: async (h, p, k) => { rec('session.testConnection', h, p, k); return state.testResult },
     },
     forwards: {

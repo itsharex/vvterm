@@ -210,6 +210,9 @@ func (s *SessionService) Attach(sid string) error {
 	if p, ok := s.c.prompts.payload(sid); ok {
 		s.c.emit("term:hostkey:"+sid, p)
 	}
+	if p, ok := s.c.authPrompts.payload(sid); ok {
+		s.c.emit("term:auth:"+sid, p)
+	}
 	sess.mu.Lock()
 	defer sess.mu.Unlock()
 	switch sess.state {
@@ -324,6 +327,12 @@ func (s *SessionService) Close(sid string) error {
 // Passing an empty fingerprint rejects the key.
 func (s *SessionService) TrustHostKey(sid, fingerprint string) error {
 	return s.c.prompts.answer(sid, fingerprint, fingerprint != "")
+}
+
+// AnswerAuth answers a term:auth:<key> event: one answer for each question it asked, in the same order. Passing nil
+// cancels the sign-in.
+func (s *SessionService) AnswerAuth(key string, answers []string) error {
+	return s.c.authPrompts.answer(key, answers)
 }
 
 // activeClient returns a connected client for hostID, if a terminal session is open on it.

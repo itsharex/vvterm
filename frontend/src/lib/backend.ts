@@ -56,6 +56,8 @@ export interface Backend {
     /** commands in the shell history of the server, newest first (only when Suggest from host history is on) */
     hostHistory(sid: string): Promise<string[]>
     trustHostKey(sid: string, fingerprint: string): Promise<void>
+    /** answers a `term:auth:<key>` question (a verification code…): one answer per prompt, or null to cancel the sign-in */
+    answerAuth(key: string, answers: string[] | null): Promise<void>
     testConnection(host: Partial<Host>, password: string, promptKey: string): Promise<ConnectionTest>
   }
   forwards: {
@@ -296,6 +298,7 @@ export function wailsBackend(): Backend {
       close: s => u('SessionService', 'Close', s),
       hostHistory: async s => (await u<string[]>('SessionService', 'HostHistory', s)) ?? [],
       trustHostKey: (s, f) => u('SessionService', 'TrustHostKey', s, f),
+      answerAuth: (k, a) => u('SessionService', 'AnswerAuth', k, a),
       testConnection: (h, p, k) => u('SessionService', 'TestConnection', h, p, k),
     },
     forwards: {

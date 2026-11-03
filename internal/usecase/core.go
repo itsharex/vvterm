@@ -91,7 +91,8 @@ type Core struct {
 	setMu          sync.Mutex
 	settings       Settings
 
-	prompts *prompter
+	prompts     *prompter
+	authPrompts *authPrompter
 }
 
 // Options carries the adapters and settings NewCore needs. The composition root builds the
@@ -124,7 +125,7 @@ func NewCore(dir string, opt Options) (*Core, error) {
 		return nil, errors.New("store and vault ports are required")
 	}
 	c := &Core{CacheDir: opt.CacheDir, Dir: dir, DataDir: filepath.Join(dir, "data"), SyncDir: filepath.Join(dir, "sync"), emit: opt.Emit,
-		Store: opt.Store, Vault: opt.Vault, prompts: newPrompter(), OpenRemoteFS: opt.OpenRemoteFS,
+		Store: opt.Store, Vault: opt.Vault, prompts: newPrompter(), authPrompts: newAuthPrompter(), OpenRemoteFS: opt.OpenRemoteFS,
 		OpenLocalShell: opt.OpenLocalShell, OpenSerial: opt.OpenSerial, OpenTelnet: opt.OpenTelnet, ListSerial: opt.ListSerial, Activity: opt.Activity,
 		Agents: opt.Agents, NewCustomAgent: opt.NewCustomAgent, ToolGateway: opt.ToolGateway, MCP: opt.MCP}
 	if c.emit == nil {
@@ -213,6 +214,63 @@ func (p *prompter) answer(key, fingerprint string, trust bool) error {
 	}
 	select {
 	case ch <- trust:
+	default:
+	}
+	return nil
+}
+
+// authAnswer is what the user gave to a keyboard-interactive round: one answer per question, or ok false when they
+// cancelled.
+type authAnswer struct {
+	answers []string
+	ok      bool
+}
+
+// authPrompter pairs a pending keyboard-interactive round (a verification code…) with its answer, like prompter does for
+// a host key.
+type authPrompter struct {
+	mu      sync.Mutex
+	pending map[string]chan authAnswer
+	pay     map[string]any
+}
+
+func newAuthPrompter() *authPrompter {
+	return &authPrompter{pending: map[string]chan authAnswer{}, pay: map[string]any{}}
+}
+
+func (p *authPrompter) ask(key string, payload any) chan authAnswer {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	ch := make(chan authAnswer, 1)
+	p.pending[key], p.pay[key] = ch, payload
+	return ch
+}
+
+// payload returns the pending round's event payload, for replay on Attach.
+func (p *authPrompter) payload(key string) (any, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	v, ok := p.pay[key]
+	return v, ok
+}
+
+func (p *authPrompter) clear(key string) {
+	p.mu.Lock()
+	delete(p.pending, key)
+	delete(p.pay, key)
+	p.mu.Unlock()
+}
+
+// answer delivers the user's answers; nil answers mean they cancelled.
+func (p *authPrompter) answer(key string, answers []string) error {
+	p.mu.Lock()
+	ch, ok := p.pending[key]
+	p.mu.Unlock()
+	if !ok {
+		return errors.New("no question is waiting for an answer")
+	}
+	select {
+	case ch <- authAnswer{answers: answers, ok: answers != nil}:
 	default:
 	}
 	return nil

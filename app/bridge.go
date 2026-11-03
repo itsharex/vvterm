@@ -101,7 +101,7 @@ func NewBridge(a *App, onChange func(service string)) *Bridge {
 			"VaultService":    {a.Vault, allow("Status", "ChangePassword", "SetAutoLock", "EnableBiometric", "DisableBiometric", "ResetVault", "SetHint")},
 			"SyncService":     {a.Sync, allow("Configure", "ConfigureFolder", "SyncNow", "JoinExisting", "JoinRemoteVault", "ReplaceRemote", "Status")},
 			// a terminal window drives its own session and reads the hosts for their names and themes
-			"SessionService": {a.Session, allow("Open", "Attach", "Write", "Resize", "Reconnect", "Close", "TrustHostKey")},
+			"SessionService": {a.Session, allow("Open", "Attach", "Write", "Resize", "Reconnect", "Close", "TrustHostKey", "AnswerAuth")},
 			"HostService":    {a.Host, allow("ListHosts")},
 			// the AI assistant page of Settings: providers, models, redaction options and MCP servers (never a terminal)
 			"AssistantService": {a.Assistant, allow("Providers", "RefreshProviders", "SetProviderEnabled", "SetDefaultProvider", "SetProviderModel",
