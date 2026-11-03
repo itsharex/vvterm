@@ -201,8 +201,8 @@ func TestExpandHostVars(t *testing.T) {
 	h := domain.Host{Label: "web-1", Hostname: "10.0.0.5", Username: "deploy"}
 	for in, want := range map[string]string{
 		"echo {{host}} {{ hostname }} {{user}}": "echo web-1 10.0.0.5 deploy",
-		"{{other}} stays":                        "{{other}} stays",
-		"no vars":                                "no vars",
+		"{{other}} stays":                       "{{other}} stays",
+		"no vars":                               "no vars",
 	} {
 		if got := expandHostVars(in, h); got != want {
 			t.Errorf("%q: got %q, want %q", in, got, want)

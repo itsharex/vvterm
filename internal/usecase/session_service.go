@@ -149,6 +149,9 @@ func (s *SessionService) run(sess *session) {
 	cols, rows := sess.cols, sess.rows
 	sess.mu.Unlock()
 
+	if host.ForwardAgent {
+		s.c.enableAgentForwarding(cl, host)
+	}
 	batch := s.batcher(sess)
 	sh, err := cl.OpenShell(cols, rows, batch.Write)
 	if err != nil {

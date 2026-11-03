@@ -216,3 +216,27 @@ func TestSSHConfigSkipsHostWithInjectedHostname(t *testing.T) {
 		t.Fatalf("warnings=%v\n%s", rep.Warnings, b)
 	}
 }
+
+func TestForwardAgentIsExportedAndComesBack(t *testing.T) {
+	dir := t.TempDir()
+	d := domain.Data{Hosts: []domain.Host{
+		{Meta: domain.Meta{ID: "a1"}, Label: "bastion", Hostname: "b.example.com", Port: 22, ForwardAgent: true},
+		{Meta: domain.Meta{ID: "a2"}, Label: "other", Hostname: "o.example.com", Port: 22},
+	}}
+	if _, err := SSHConfig(dir, d, false, nil); err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, "config"))
+	if strings.Count(string(raw), "ForwardAgent yes") != 1 {
+		t.Fatalf("only the host that asked for it:\n%s", raw)
+	}
+	parsed, err := importer.ParseFile(filepath.Join(dir, "config"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, h := range importer.Build(parsed, domain.Data{}, importer.PolicySkip).Hosts {
+		if want := h.Label == "bastion"; h.ForwardAgent != want {
+			t.Fatalf("%s: forward agent %v", h.Label, h.ForwardAgent)
+		}
+	}
+}

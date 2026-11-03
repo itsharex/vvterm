@@ -24,6 +24,8 @@ export interface Host {
   keepalive_sec: number
   /** server type learned on the first connection (ubuntu, debian, freebsd…); '' until then */
   os?: string
+  /** this host may use the keys of the user's ssh-agent (or this host's saved key) to sign in to other machines while connected (ssh -A) */
+  forward_agent?: boolean
   /** also reachable with Telnet (unencrypted) on this port */
   telnet_enabled?: boolean
   telnet_port?: number

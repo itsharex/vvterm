@@ -374,3 +374,33 @@ describe('HostForm: Telnet and terminal theme', () => {
     await waitFor(() => expect(savedPayload(be)).toMatchObject({terminal_theme: ''}))
   })
 })
+
+describe('HostForm: forwarding the ssh-agent', () => {
+  it('is off for a new host and saved off', async () => {
+    const {be} = setup()
+    await userEvent.type(screen.getByLabelText('Hostname'), 'a.example.com')
+    expect(screen.getByRole('switch', {name: 'Forward my keys to this host'})).not.toBeChecked()
+    expect(screen.queryByRole('note')).toBeNull()
+    await userEvent.click(screen.getByRole('button', {name: 'Save'}))
+    await waitFor(() => expect(savedPayload(be)).toMatchObject({forward_agent: false}))
+  })
+
+  it('turning it on is saved, and warns about trusting the server (and about production)', async () => {
+    const {be} = setup()
+    await userEvent.type(screen.getByLabelText('Hostname'), 'a.example.com')
+    await userEvent.click(screen.getByRole('switch', {name: 'Forward my keys to this host'}))
+    expect(screen.getByRole('note')).toHaveTextContent('Turn this on only for a server you trust')
+    expect(screen.getByRole('note')).not.toHaveTextContent('production host')
+    await userEvent.selectOptions(screen.getByLabelText('Environment'), 'prod')
+    expect(screen.getByRole('note')).toHaveTextContent('This is a production host.')
+    await userEvent.click(screen.getByRole('button', {name: 'Save'}))
+    await waitFor(() => expect(savedPayload(be)).toMatchObject({forward_agent: true, env: 'prod'}))
+  })
+
+  it('shows and keeps the stored choice when a host is edited', async () => {
+    const {be} = setup(host({id: 'h9', hostname: 'a.example.com', forward_agent: true}))
+    expect(screen.getByRole('switch', {name: 'Forward my keys to this host'})).toBeChecked()
+    await userEvent.click(screen.getByRole('button', {name: 'Save'}))
+    await waitFor(() => expect(savedPayload(be)).toMatchObject({forward_agent: true}))
+  })
+})

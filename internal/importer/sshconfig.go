@@ -17,6 +17,7 @@ type Entry struct {
 	Port         int
 	User         string
 	IdentityFile string
+	ForwardAgent bool
 	ProxyJump    []string // alias or [user@]host[:port], outermost first
 	Local        []Fwd
 	Remote       []Fwd
@@ -155,6 +156,9 @@ func (p *Parsed) apply(e *Entry, key, val, path string, line int) {
 		}
 	case "user":
 		e.User = val
+	case "forwardagent":
+		// yes, or the path or the name of an agent socket: any of them asks for a forwarded agent; no does not
+		e.ForwardAgent = !strings.EqualFold(val, "no") && val != ""
 	case "identityfile":
 		if e.IdentityFile == "" {
 			e.IdentityFile = expandHome(strings.Trim(val, `"`))

@@ -6,7 +6,8 @@ import {useAppearance} from '../settings/appearance'
 import {Select} from '../ui/Select'
 import {useBackend} from '../backend'
 import {errMsg, parseTags} from '../util'
-import {IconCheckCircle, IconEye, IconEyeOff, IconPlus, IconServer, IconXCircle} from '../ui/Icons'
+import {IconCheckCircle, IconEye, IconEyeOff, IconPlus, IconServer, IconWarn, IconXCircle} from '../ui/Icons'
+import {Switch} from '../ui/Switch'
 import {AuthPrompt} from '../ui/AuthPrompt'
 import type {AiPolicy, AuthChallenge, ConnectionTest, Group, Host, HostKeyPrompt, Identity, Settings} from '../types'
 
@@ -62,6 +63,7 @@ export function HostForm({host, isNew, groups, defaultGroupId, hosts, identities
     telnet_encoding: host?.telnet_encoding || 'utf-8',
     terminal_theme: host?.terminal_theme ?? '',
     ai_policy: (host?.ai_policy ?? '') as AiPolicy,
+    forward_agent: !!host?.forward_agent,
   })
   const [showPw, setShowPw] = useState(false)
   const [err, setErr] = useState('')
@@ -95,6 +97,7 @@ export function HostForm({host, isNew, groups, defaultGroupId, hosts, identities
       telnet_encoding: f.telnet_on && f.telnet_encoding !== 'utf-8' ? f.telnet_encoding : '',
       terminal_theme: f.terminal_theme,
       ai_policy: f.ai_policy,
+      forward_agent: f.forward_agent,
       label: f.label.trim(),
       hostname: f.hostname.trim(),
       port,
@@ -247,6 +250,16 @@ export function HostForm({host, isNew, groups, defaultGroupId, hosts, identities
           <Select label="Jump host" value={f.jump_host_id} onChange={v => setF(x => ({...x, jump_host_id: v}))}
             options={[{value: '', label: 'Direct connection'}, ...hosts.filter(h => h.id !== host?.id).map(h => ({value: h.id, label: `Via ${h.label}`, hint: h.hostname}))]} />
         </Field>
+        <div className="setting-row">
+          <div>
+            <b>Forward my keys to this host</b>
+            <div className="muted">Lets this server use your ssh-agent (or, with no agent running, this host's saved key) to sign in to other machines while you are connected, like <code>ssh -A</code>. Nothing is copied to the server, but anyone with root there can use your keys until you disconnect.</div>
+          </div>
+          <Switch label="Forward my keys to this host" checked={f.forward_agent} onChange={v => setF(x => ({...x, forward_agent: v}))} />
+        </div>
+        {f.forward_agent && (
+          <div className="dx-warn" role="note"><IconWarn size={15} /> <span>{f.env === 'prod' ? 'This is a production host. ' : ''}Turn this on only for a server you trust. If it is only a stop on the way to other servers, a jump host does the same without exposing your keys.</span></div>
+        )}
         <div className="inline-field"><span>Keepalive</span><input aria-label="Keepalive" className="port" value={f.keepalive_sec} onChange={set('keepalive_sec')} /><span>seconds</span></div>
       </Section>
 

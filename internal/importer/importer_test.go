@@ -244,3 +244,38 @@ func TestJumpToExistingHostReusesIt(t *testing.T) {
 		t.Fatalf("%+v", plan.Hosts)
 	}
 }
+
+func TestForwardAgentIsImportedWithAWarning(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "config"), `
+Host yes-host
+    ForwardAgent yes
+Host path-host
+    ForwardAgent /run/user/1000/agent.sock
+Host no-host
+    ForwardAgent no
+Host plain
+    HostName 10.0.0.9
+`)
+	parsed, err := ParseFile(filepath.Join(dir, "config"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan := Build(parsed, domain.Data{}, PolicySkip)
+	got := map[string]bool{}
+	for _, h := range plan.Hosts {
+		got[h.Label] = h.ForwardAgent
+	}
+	if !got["yes-host"] || !got["path-host"] || got["no-host"] || got["plain"] {
+		t.Fatalf("%v", got)
+	}
+	warned := 0
+	for _, w := range plan.Warnings {
+		if strings.Contains(w, "ForwardAgent is on") {
+			warned++
+		}
+	}
+	if warned != 2 {
+		t.Fatalf("warnings %v", plan.Warnings)
+	}
+}

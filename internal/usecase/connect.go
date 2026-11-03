@@ -3,10 +3,12 @@ package usecase
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 
 	"vutty/internal/domain"
 	"vutty/internal/sshx"
@@ -218,4 +220,67 @@ func (c *Core) connectQuiet(hostID string) (*sshx.Client, domain.Host, error) {
 		c.record(domain.ActHostKey, target.ID, target.Label, "HOST KEY CHANGED: connection blocked (possible man-in-the-middle)", false)
 	}
 	return cl, target, err
+}
+
+// enableAgentForwarding lets the host use the user's keys to sign in to other machines for as long as the connection lasts
+// (ssh -A). It forwards the running ssh-agent when there is one; without it, the key of this host's own identity, which lives
+// in the vault, from a keyring that exists only for this connection. When neither works the terminal opens without it and the
+// Logs say why.
+func (c *Core) enableAgentForwarding(cl *sshx.Client, host domain.Host) {
+	fail := func(err error) {
+		c.record(domain.ActConnect, host.ID, host.Label, "Agent forwarding is on for this host but could not be set up: "+err.Error(), false)
+	}
+	if sock := os.Getenv("SSH_AUTH_SOCK"); sock != "" {
+		if err := cl.ForwardAgentSocket(sock); err != nil {
+			fail(err)
+		}
+		return
+	}
+	ag, err := c.vaultAgent(host)
+	if err != nil {
+		fail(err)
+		return
+	}
+	if err := cl.ForwardAgentKeys(ag); err != nil {
+		fail(err)
+	}
+}
+
+// vaultAgent is an agent in this process that holds the saved key of the host's identity (and its certificate, if it has one).
+func (c *Core) vaultAgent(host domain.Host) (agent.Agent, error) {
+	if host.IdentityID == "" {
+		return nil, errors.New("there is no ssh-agent running and the host has no saved key to offer")
+	}
+	id, err := c.Store.GetIdentity(host.IdentityID)
+	if err != nil {
+		return nil, err
+	}
+	if id.AuthType != domain.AuthKey {
+		return nil, errors.New("there is no ssh-agent running, and the identity of this host is not a key")
+	}
+	pem, err := c.Vault.GetSecret(id.SecretRef)
+	if err != nil {
+		return nil, secretErr(id.Name, err)
+	}
+	raw, err := ssh.ParseRawPrivateKey(pem)
+	if err != nil {
+		return nil, fmt.Errorf("identity %q: %w", id.Name, err)
+	}
+	add := agent.AddedKey{PrivateKey: normalizeKey(raw), Comment: id.Name}
+	if id.Certificate != "" {
+		parsed, _, _, _, err := ssh.ParseAuthorizedKey([]byte(id.Certificate))
+		if err != nil {
+			return nil, fmt.Errorf("identity %q: %w", id.Name, err)
+		}
+		cert, ok := parsed.(*ssh.Certificate)
+		if !ok {
+			return nil, errors.New("stored certificate is not a certificate")
+		}
+		add.Certificate = cert
+	}
+	ring := agent.NewKeyring()
+	if err := ring.Add(add); err != nil {
+		return nil, err
+	}
+	return ring, nil
 }

@@ -16,6 +16,7 @@ import (
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 )
 
 type Config struct {
@@ -41,6 +42,9 @@ type Config struct {
 	// standard output and to standard error and the exit status. It may block (a command that takes a while).
 	ExecFunc func(cmd string) (stdout, stderr string, status int)
 
+	// RefuseAgent makes the server answer no to an agent forwarding request.
+	RefuseAgent bool
+
 	// SFTP enables the sftp subsystem on an in-memory filesystem (no real files are exposed).
 	// SFTPSeed pre-creates entries: a path ending in "/" is a directory, otherwise a file with that content.
 	SFTP     bool
@@ -63,6 +67,8 @@ type Server struct {
 	window   [2]uint32
 	keepalvs atomic.Int64
 	logins   atomic.Int64
+	agentReq atomic.Int64
+	agentFPs []string
 	wg       sync.WaitGroup
 }
 
@@ -161,6 +167,35 @@ func (s *Server) LastWindow() (cols, rows uint32) {
 // Keepalives is the number of keepalive@openssh.com requests received.
 func (s *Server) Keepalives() int64 { return s.keepalvs.Load() }
 
+// AgentRequests is the number of agent forwarding requests received.
+func (s *Server) AgentRequests() int64 { return s.agentReq.Load() }
+
+// AgentKeys returns the fingerprints of the keys the forwarded agent listed when the server asked it (the client's keys).
+func (s *Server) AgentKeys() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]string(nil), s.agentFPs...)
+}
+
+// probeAgent opens the agent channel back to the client and lists the keys it offers.
+func (s *Server) probeAgent(conn *ssh.ServerConn) {
+	ch, reqs, err := conn.OpenChannel("auth-agent@openssh.com", nil)
+	if err != nil {
+		return
+	}
+	go ssh.DiscardRequests(reqs)
+	defer ch.Close()
+	keys, err := agent.NewClient(ch).List()
+	if err != nil {
+		return
+	}
+	s.mu.Lock()
+	for _, k := range keys {
+		s.agentFPs = append(s.agentFPs, ssh.FingerprintSHA256(k))
+	}
+	s.mu.Unlock()
+}
+
 // Logins is the number of successful SSH handshakes.
 func (s *Server) Logins() int64 { return s.logins.Load() }
 
@@ -256,7 +291,7 @@ func (s *Server) serve(nc net.Conn) {
 		case "session":
 			ch, creqs, err := nch.Accept()
 			if err == nil {
-				go s.session(ch, creqs)
+				go s.session(conn, ch, creqs)
 			}
 		case "direct-tcpip":
 			var p struct {
@@ -322,7 +357,7 @@ func pipe(ch ssh.Channel, c net.Conn) {
 
 // session implements the demo shell: it prints READY, echoes each completed
 // line as "ECHO:<line>" and exits on the line "exit".
-func (s *Server) session(ch ssh.Channel, reqs <-chan *ssh.Request) {
+func (s *Server) session(conn *ssh.ServerConn, ch ssh.Channel, reqs <-chan *ssh.Request) {
 	defer ch.Close()
 	started := make(chan struct{})
 	done := make(chan struct{})
@@ -368,6 +403,14 @@ func (s *Server) session(ch ssh.Channel, reqs <-chan *ssh.Request) {
 				s.window = [2]uint32{p.Cols, p.Rows}
 				s.mu.Unlock()
 				r.Reply(true, nil)
+			case "auth-agent-req@openssh.com":
+				s.agentReq.Add(1)
+				if s.cfg.RefuseAgent {
+					r.Reply(false, nil)
+					continue
+				}
+				r.Reply(true, nil)
+				go s.probeAgent(conn)
 			case "exec":
 				if f := s.cfg.ExecFunc; f != nil {
 					var p struct{ Command string }

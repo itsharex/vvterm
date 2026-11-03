@@ -38,7 +38,26 @@ func (h Hop) addr() string { return net.JoinHostPort(h.Hostname, strconv.Itoa(h.
 // Client is an SSH connection that owns every intermediate jump connection.
 type Client struct {
 	*ssh.Client
-	jumps []*ssh.Client
+	jumps    []*ssh.Client
+	agentFwd bool // shells of this connection ask the server to forward the agent
+}
+
+// ForwardAgentSocket lets the server use the ssh-agent at sock (SSH_AUTH_SOCK) for as long as this connection lasts, like ssh -A.
+func (c *Client) ForwardAgentSocket(sock string) error {
+	if err := agent.ForwardToRemote(c.Client, sock); err != nil {
+		return err
+	}
+	c.agentFwd = true
+	return nil
+}
+
+// ForwardAgentKeys lets the server use the keys of ag (an agent that lives in this process) for as long as this connection lasts.
+func (c *Client) ForwardAgentKeys(ag agent.Agent) error {
+	if err := agent.ForwardToAgent(c.Client, ag); err != nil {
+		return err
+	}
+	c.agentFwd = true
+	return nil
 }
 
 // Close closes the target connection first, then the jump hosts (innermost first).

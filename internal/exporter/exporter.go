@@ -109,6 +109,9 @@ func SSHConfig(dir string, d domain.Data, withKeys bool, keys KeyProvider) (SSHR
 		if h.KeepaliveSec > 0 {
 			fmt.Fprintf(b, "    ServerAliveInterval %d\n", h.KeepaliveSec)
 		}
+		if h.ForwardAgent {
+			b.WriteString("    ForwardAgent yes\n")
+		}
 		if chain := jumpChain(h, hosts, alias); len(chain) > 0 {
 			fmt.Fprintf(b, "    ProxyJump %s\n", strings.Join(chain, ","))
 		}
