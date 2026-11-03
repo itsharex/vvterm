@@ -67,7 +67,7 @@ export function DataPanel({onClose, onChanged}: {onClose(): void; onChanged(): v
 
       {tab === 'import' && (
         <div className="dx-page" role="tabpanel" aria-label="Import">
-          <div className="segmented" role="group" aria-label="What to import from">
+          <div className="segmented keep-case" role="group" aria-label="What to import from">
             <button className={source === 'ssh' ? 'on' : ''} aria-pressed={source === 'ssh'} onClick={() => pickSource('ssh')}>SSH config</button>
             <button className={source === 'inventory' ? 'on' : ''} aria-pressed={source === 'inventory'} onClick={() => pickSource('inventory')}>Cloud and inventory</button>
           </div>
@@ -149,8 +149,8 @@ export function DataPanel({onClose, onChanged}: {onClose(): void; onChanged(): v
           <p className="dx-lead">Take your hosts out of Vutty in a format other tools can read.</p>
           <div className="dx-card">
             <div className="dx-head"><span className="dx-ico"><IconFile size={17} /></span><div><b>SSH config</b><div className="muted">Config files for OpenSSH, with your hosts, groups and port forwards. They go into a folder you choose.</div></div></div>
-            <label className="dx-check"><input type="checkbox" checked={withKeys} onChange={e => setWithKeys(e.target.checked)} /> Also export private keys</label>
-            {withKeys && <div className="dx-warn"><IconWarn size={15} /> Private keys will be written to disk unencrypted (mode 0600). Only do this to a location you trust.</div>}
+            <label className="dx-check indent"><input type="checkbox" checked={withKeys} onChange={e => setWithKeys(e.target.checked)} /> Also export private keys</label>
+            {withKeys && <div className="dx-warn indent"><IconWarn size={15} /> Private keys will be written to disk unencrypted (mode 0600). Only do this to a location you trust.</div>}
             <div className="dx-actions">
               <button className="primary" disabled={busy} onClick={() => guard(async () => {
                 const dir = await choose('Export folder', 'dir')

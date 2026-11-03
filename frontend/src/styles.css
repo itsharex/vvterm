@@ -504,7 +504,7 @@ button.on-banner { background: #ffffff33; color: #fff; }
 .fw-row { display: grid; grid-template-columns: 1fr 110px; gap: 8px; }
 .tile.fw-tile { font-weight: 800; font-size: 18px; color: #fff; }
 .check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-.check input { width: auto; }
+
 
 /* wizard steps */
 .back-link { align-self: flex-start; border: 0; background: transparent; color: var(--accent); padding: 0; font-weight: 600; }
@@ -903,7 +903,7 @@ input[type='password']::-webkit-credentials-auto-fill-button { visibility: hidde
 .ai-kv input:first-child { max-width: 38%; }
 .ai-scope { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 6px; }
 .ai-scope label { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; }
-.ai-scope input[type='checkbox'] { width: auto; }
+
 .ai-tools { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: 8px; }
 .ai-models-error { display: flex; gap: 8px; align-items: center; justify-content: space-between; color: var(--danger); }
 .ai-panel { position: relative; }
@@ -1163,7 +1163,7 @@ input[type='password']::-webkit-credentials-auto-fill-button { visibility: hidde
 .dx-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .dx-actions .muted { font-size: 12px; margin-right: auto; }
 .dx-check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-.dx-check input { width: auto; height: auto; }
+
 .dx-warn { display: flex; gap: 8px; align-items: flex-start; padding: 9px 12px; border-radius: 9px; background: #f0b4291f; border: 1px solid #f0b42966; font-size: 12px; line-height: 1.45; }
 .dx-warn svg { flex: none; margin-top: 1px; color: var(--warn); }
 .dx-hint { font-size: 12px; line-height: 1.45; color: var(--muted); }
@@ -1188,7 +1188,7 @@ input[type='password']::-webkit-credentials-auto-fill-button { visibility: hidde
 .xr-hosts-head { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
 .xr-hosts-head input[type='text'], .xr-hosts-head input:not([type]) { flex: 1; }
 .xr-check { display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
-.xr-check input, .xr-host input { width: auto; height: auto; }
+
 .xr-hosts { max-height: 230px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
 .xr-host { display: flex; align-items: center; gap: 10px; padding: 7px 12px; cursor: pointer; border-bottom: 1px solid var(--line); }
 .xr-host:last-child { border-bottom: 0; }
@@ -1226,3 +1226,29 @@ input[type='password']::-webkit-credentials-auto-fill-button { visibility: hidde
 .dx-how .muted { margin-top: 6px; display: flex; flex-direction: column; gap: 5px; line-height: 1.5; }
 .dx-how code { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; font-size: 11.5px; user-select: text; }
 @media (max-width: 700px) { .dx-two { grid-template-columns: 1fr; } }
+
+/* ---------- check boxes: one look everywhere (the system's own box is square, grey and ignores the theme) ---------- */
+input[type='checkbox'], .card-section input[type='checkbox'] {
+  -webkit-appearance: none; appearance: none;
+  flex: none; display: inline-grid; place-content: center; box-sizing: border-box;
+  width: 18px; height: 18px; min-width: 18px; margin: 0; padding: 0; vertical-align: middle; cursor: pointer;
+  border: 1.5px solid color-mix(in srgb, var(--text) 38%, transparent); border-radius: 5px; background: var(--bg);
+  transition: background .12s, border-color .12s, box-shadow .12s;
+}
+input[type='checkbox']:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+input[type='checkbox']:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1.5px var(--accent); border-color: var(--accent); }
+input[type='checkbox']:checked, input[type='checkbox']:indeterminate { background: var(--accent); border-color: var(--accent); }
+input[type='checkbox']:checked:hover:not(:disabled), input[type='checkbox']:indeterminate:hover:not(:disabled) { background: var(--accent-2); border-color: var(--accent-2); }
+/* the tick, drawn with two borders of a small box */
+input[type='checkbox']:checked::after { content: ''; width: 9px; height: 5px; margin-top: -2px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg); }
+input[type='checkbox']:indeterminate::after { content: ''; width: 9px; height: 2px; border-radius: 1px; background: #fff; }
+input[type='checkbox']:disabled { opacity: .45; cursor: default; }
+label:has(> input[type='checkbox']:not(:disabled)) { cursor: pointer; }
+.perm-grid input[type='checkbox'] { width: 16px; height: 16px; min-width: 16px; border-radius: 4px; }
+.perm-grid input[type='checkbox']:checked::after { width: 8px; height: 4px; }
+.segmented.keep-case button { text-transform: none; }
+
+/* an option that belongs to a titled block: the box sits under the icon, its words under the title */
+.dx-check.indent { display: grid; grid-template-columns: 32px 1fr; column-gap: 12px; align-items: center; }
+.dx-check.indent input { justify-self: center; }
+.dx-warn.indent { margin-left: 44px; }
