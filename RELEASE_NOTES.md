@@ -1,8 +1,32 @@
 <p align="center"><img src="docs/brand/logo-mark-256.png" alt="Vutty" width="88"></p>
 
-# Vutty 1.2.1
+# Vutty 1.3.0
 
-Release date: 2026-11-02 · Platform: macOS (arm64 build verified) · Status: beta. Read [Known issues](#known-issues) first.
+Release date: 2026-11-03 · Platform: macOS (arm64 build verified) · Status: beta. Read [Known issues](#known-issues) first.
+
+## What's new in 1.3.0
+
+**Updates that install themselves (macOS, Apple silicon).** *Help → About → Check for updates → Install and restart* downloads the new version, checks that the release's checksum list is signed with the project's key and that the download matches it, replaces the app and restarts it. An update that fails either check is not installed. It does not need an Apple certificate: macOS only asks about files that a browser downloaded, and the signature, not Apple, is what makes the update trustworthy ([Release signing](docs/ReleaseSigning.md)). **This version has to be installed by hand once** (earlier versions do not carry the key); from the next release on, updates install from inside the app. Windows, Linux and Intel Macs still use the release page.
+
+**Signing in and the vault**
+- **Servers that ask for more than a password** (a verification code, a Duo choice, a one-time password): a *Sign in to <host>* box shows the server's own questions, over the terminal, in the SFTP pane, the sidebar, port forwards and *Test connection*. A saved password answers the password question by itself, and nothing you type is saved or logged.
+- **Vault health check.** Keys and passwords that were sealed with another key (the leftover quick-unlock key of older versions) are marked *Can't be read* in Keychain, and a host that uses one says what to do instead of "message authentication failed". Enter it again with **Edit**.
+- **Sync refuses to send** what was sealed with a key that is not the vault's, and a Mac with nothing in it can simply use the repository's vault (*Use the repository's vault*).
+- **Edit a key, password or ssh-agent identity** in Keychain; the hosts that use it keep using it.
+- **Lock when the computer sleeps** (on by default): the vault locks as a Mac goes to sleep and when its screen is locked; elsewhere it locks when the computer wakes up.
+
+**Everyday work**
+- **Run on hosts**: one command on several hosts at once, each on its own connection, with the exit code and output of every host (the first 64 KB), a timeout, *Cancel* and *Copy all output*. A confirmation is asked when a production host is among them.
+- **Snippet blanks**: `{{name}}` and `{{name|default}}` in a script are asked for when it runs; `{{host}}`, `{{hostname}}` and `{{user}}` are filled in by *Run on hosts*.
+- **Forward my keys to this host** (`ssh -A`): your running ssh-agent, or the host's saved key when there is none; off by default, and read from and written to ssh config.
+- **Production hosts** are marked (a red frame and a PROD badge) and, with *Be careful on production hosts* (on by default), Vutty asks before text with a line break is pasted there or a snippet is run.
+- **`ssh://` links** open a saved host after a yes, or the New host form filled in: a link never connects by itself.
+- **Session logs** (off by default): one text file per session, line by line with the time, readable only by you.
+- **SFTP**: choose *This computer* on the right side to copy between two folders of your own machine.
+- **Import hosts from a cloud or an inventory**: a listing you made with `aws ec2 describe-instances`, `gcloud compute instances list`, `ansible-inventory --list` (or an INI inventory) or a CSV. Vutty never contacts a cloud and never sees its credentials.
+- The **Connect** button of the host search connects only to a saved host typed in full or to a complete address; a half-typed search just filters.
+
+**Look and feel.** Settings was redesigned (grouped menu, page titles, grouped rows) and opens at once with the values it showed last time, on an opaque background; Import & export has three tabs (Import, Export, Backup); check boxes have one design everywhere.
 
 ## What's new in 1.2.1
 
@@ -242,7 +266,7 @@ The complete list of test cases is [docs/TestInventory.md](docs/TestInventory.md
 ## Known issues
 
 1. **Keychain unlock is not biometric-gated**: anyone who can read your login keychain can unlock the vault.
-2. **The vault does not lock when the Mac sleeps**; only the idle timer applies.
+2. **Locking when the Mac sleeps** relies on the notifications macOS sends. The one for a *sleep* was exercised by a test that posts it by hand; the one for a *locked screen* needs the running app and was not exercised. On Windows and Linux the vault locks when the computer wakes up, and a sleep of a few seconds is not noticed.
 3. **Settings runs as a second process**: it shows a second Dock icon while open. It reads and writes through a local, token-protected bridge to the main app, so it needs the main app running. The native window itself could not be screenshotted here, so its look is covered by tests and the in-app variant's screenshots; please check it on your Mac.
 4. The packaged app was built and its icon, About box and bundle were checked, but it is **not notarized**: on first launch right-click → Open. The *release* pipeline can sign and notarize when you provide a Developer ID.
 5. The native macOS window, file dialogs and Keychain prompts were not exercised in this environment (the UI is verified in a browser against the real backend). Run the manual checklist in [docs/TestPlan.md](docs/TestPlan.md).
@@ -250,10 +274,13 @@ The complete list of test cases is [docs/TestInventory.md](docs/TestInventory.md
 7. Sync was tested against local Git remotes only. Edits made during the few seconds of a sync can be overwritten. After a vault reset the sync repository still holds the old vault: use a new repository.
 8. Last-write-wins depends on reasonably correct clocks.
 9. `ssh_config`: `ProxyCommand`, `Match`, token expansion are reported as warnings and skipped.
-10. Snippets run in the focused pane only (no multi-host targets or variables yet). A saved host cannot choose its own terminal theme (the theme is global). No CLI (`vvt`). SFTP moves single files only (no folders, queue or resume). Account sign-in is a placeholder.
-11. Windows and Linux are not built or tested.
+10. No CLI (`vvt`). Account sign-in is a placeholder.
+11. Windows and Linux builds are made by the release workflow but are much less tested than macOS. Updates install by themselves on macOS with Apple silicon only.
 12. Use cases still depend directly on some infrastructure packages (documented debt, capped by a test).
 13. Replacing a saved host password creates a new identity; the old one stays in Keychain until you delete it.
+14. **New in 1.3.0 and not yet exercised on real hardware or against a real release:** installing an update by itself (every step is covered by tests, including the real swap script, but not a whole update of the packaged app), the `ssh://` registration in the macOS bundle, a verification-code prompt against a real bastion, and a hardware (FIDO2) key through ssh-agent. Run the checklist in [docs/TestPlan.md](docs/TestPlan.md) and tell us what you find.
+15. A port forward that starts with the app cannot answer a verification code: it waits three minutes and fails. Start it from the Port Forwarding page. *Run on hosts* never asks anything, so a host with an untrusted key or that wants a code fails there: open it once in a terminal tab first.
+16. Session logs are not rotated or deleted, and hold everything that was shown on screen. No tmux integration, no X11 forwarding, no Mosh.
 
 ## Changes from the original design
 
