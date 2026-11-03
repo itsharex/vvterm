@@ -189,6 +189,10 @@ export interface Backend {
     chmod(path: string, mode: number): Promise<void>
     /** a new private folder for files that are only looked at */
     tempDir(): Promise<string>
+    /** the files that copying sources into destDir would replace (asked about once) */
+    conflicts(sources: string[], destDir: string): Promise<string[]>
+    /** copies files and folders into a folder of this computer; existing files stay unless overwrite */
+    copy(sources: string[], destDir: string, overwrite: boolean): Promise<TransferResult>
   }
   snippets: {
     list(): Promise<Snippet[]>
@@ -401,6 +405,8 @@ export function wailsBackend(): Backend {
       remove: (p, r) => call('usecase', 'LocalService', 'Delete', p, r),
       chmod: (p, m) => call('usecase', 'LocalService', 'Chmod', p, m),
       tempDir: () => call('usecase', 'LocalService', 'TempDir'),
+      conflicts: async (s, d) => (await call<string[]>('usecase', 'LocalService', 'Conflicts', s, d)) ?? [],
+      copy: (s, d, o) => call('usecase', 'LocalService', 'Copy', s, d, o),
     },
     snippets: {
       list: async () => (await u<Snippet[]>('SnippetService', 'List')) ?? [],

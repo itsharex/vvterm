@@ -7,6 +7,7 @@ import {IconClose, IconDownload, IconFolder, IconPlus} from '../ui/Icons'
 import {OsIcon} from '../ui/OsIcon'
 import {DragPayload, FilePane, Item, PaneFs, PaneState} from './FilePane'
 import {RemoteHost, RemotePane} from './RemotePane'
+import {LOCAL_HOST_ID, localPaneFs} from './localFs'
 import {QueuePanel} from './QueuePanel'
 import {SyncDialog} from './SyncDialog'
 import {queueTransfer, replaceQuestion, summarize, useQueues, verbOf} from './transfer'
@@ -116,28 +117,28 @@ export function SftpBrowser({hostId = '', hostLabel = '', nonce = 0, hosts: give
   }
 
   // keep one identity across renders so the pane does not reload every time
-  const [fs] = useState<PaneFs>(() => ({
-    list: d => be.local.list(d),
-    mkdir: p => be.local.mkdir(p),
-    rename: (a, b) => be.local.rename(a, b),
-    remove: (p, isDir) => be.local.remove(p, isDir),
-    chmod: (p, m) => be.local.chmod(p, m),
-    open: e => be.system.openPath(e.path),
-    openWith: async e => {
-      const app = await be.system.pickFile('Open with…')
-      if (app) await be.system.openPathWith(e.path, app)
-    },
-  }))
+  const [fs] = useState<PaneFs>(() => localPaneFs(be))
+  // "This computer" picked on the right: no connection, so a transfer is a plain copy between two folders of this computer
+  const viaLocal = host?.id === LOCAL_HOST_ID
 
   /** Queues everything given; files that already exist are asked about once. */
   const move = async (direction: 'upload' | 'download', items: Item[]) => {
-    if (!sid) return setError('Connect to a host first')
+    if (!sid && !viaLocal) return setError('Connect to a host first')
     const toRemote = direction === 'upload'
     const destDir = toRemote ? remote.cwd : local.cwd
     if (!destDir) return setError('Open a folder on the receiving side first')
     if (items.length === 0) return
     setError('')
     try {
+      if (viaLocal) {
+        const sources = items.map(i => i.path)
+        const clash = await be.local.conflicts(sources, destDir)
+        const overwrite = clash.length > 0 && (await confirm(replaceQuestion({skipped: clash}, destDir), {confirmLabel: 'Replace', danger: true}))
+        const r = await be.local.copy(sources, destDir, overwrite)
+        toast.info(summarize('Copied', r))
+        if (toRemote) setRemoteKey(k => k + 1); else setLocalKey(k => k + 1)
+        return
+      }
       await queueTransfer(be, confirm, sid, direction, items.map(i => i.path), destDir)
       setQueueOpen(true)
     } catch (err) {
@@ -145,17 +146,17 @@ export function SftpBrowser({hostId = '', hostLabel = '', nonce = 0, hosts: give
     }
   }
 
-  const onDropToRemote = useCallback((p: DragPayload) => { void move('upload', p.items) }, [sid, remote.cwd]) // eslint-disable-line react-hooks/exhaustive-deps
-  const onDropToLocal = useCallback((p: DragPayload) => { void move('download', p.items) }, [sid, local.cwd]) // eslint-disable-line react-hooks/exhaustive-deps
+  const onDropToRemote = useCallback((p: DragPayload) => { void move('upload', p.items) }, [sid, remote.cwd, viaLocal]) // eslint-disable-line react-hooks/exhaustive-deps
+  const onDropToLocal = useCallback((p: DragPayload) => { void move('download', p.items) }, [sid, local.cwd, viaLocal]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const canDown = !!sid && remote.selected.length > 0
+  const canDown = (!!sid || viaLocal) && remote.selected.length > 0
   const count = (n: number) => (n > 1 ? ` ${n}` : '')
 
   return (
     <div className="sftp" data-testid="sftp" aria-label={host ? `SFTP ${host.label}` : 'SFTP'}>
       <div className="sftp-panes">
         <FilePane side="local" title="Local" icon={<IconFolder size={16} />} fs={localHome ? fs : null} startDir={localHome} reloadKey={localKey} showHiddenDefault={false}
-          onState={setLocal} onDropEntry={onDropToLocal} onCopyOut={sid ? items => void move('upload', items) : undefined} copyLabel="Upload" />
+          onState={setLocal} onDropEntry={onDropToLocal} onCopyOut={sid || viaLocal ? items => void move('upload', items) : undefined} copyLabel={viaLocal ? 'Copy to right' : 'Upload'} />
         <div className="rpanes">
           {tabs.map(t => {
             const cb = cbFor(t.key)
@@ -166,7 +167,7 @@ export function SftpBrowser({hostId = '', hostLabel = '', nonce = 0, hosts: give
                   <div className="rtabs" role="tablist" aria-label="Remote hosts">
                     {tabs.map(x => (
                       <div key={x.key} role="tab" aria-selected={x.key === activeKey} className={'rtab' + (x.key === activeKey ? ' on' : '')} onClick={() => setActiveKey(x.key)}>
-                        <OsIcon os={hosts.find(h => h.id === x.host.id)?.os} size={15} />
+                        {x.host.id === LOCAL_HOST_ID ? <IconFolder size={15} /> : <OsIcon os={hosts.find(h => h.id === x.host.id)?.os} size={15} />}
                         <span className="rtab-name">{x.host.label}</span>
                         <button className="icon ghost fpane-x" aria-label={tabs.length === 1 ? 'Change host' : `Close ${x.host.label}`} title={tabs.length === 1 ? 'Disconnect and pick another host' : 'Close this host'}
                           onClick={e => { e.stopPropagation(); closeTab(x.key) }}><IconClose size={13} /></button>
@@ -184,7 +185,7 @@ export function SftpBrowser({hostId = '', hostLabel = '', nonce = 0, hosts: give
         </div>
       </div>
       <div className="sftp-foot">
-        <button disabled={!canDown} onClick={() => void move('download', remote.selected)} aria-label="Download selected"><IconDownload size={15} /> Download{count(remote.selected.length)} to local folder</button>
+        <button disabled={!canDown} onClick={() => void move('download', remote.selected)} aria-label={viaLocal ? 'Copy selected to left' : 'Download selected'}><IconDownload size={15} /> {viaLocal ? 'Copy' : 'Download'}{count(remote.selected.length)} to {viaLocal ? 'the left folder' : 'local folder'}</button>
         <button disabled={!sid || !local.cwd || !remote.cwd} onClick={() => setSyncing(true)} aria-label="Sync folders">Sync folders…</button>
         {error && <div className="error" role="alert">{error}</div>}
       </div>

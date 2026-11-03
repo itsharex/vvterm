@@ -466,6 +466,25 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       },
       chmod: async (p, m) => { rec('local.chmod', p, m) },
       tempDir: async () => '/tmp/vutty-open-1',
+      conflicts: async (sources, destDir) => {
+        rec('local.conflicts', sources, destDir)
+        return sources.map(s => destDir + s.slice(s.lastIndexOf('/'))).filter(d => state.local[d] && !state.local[d].dir)
+      },
+      copy: async (sources, destDir, overwrite) => {
+        rec('local.copy', sources, destDir, overwrite)
+        const r: TransferResult = {files: 0, dirs: 0, bytes: 0, skipped: [], ignored: []}
+        for (const s of sources) {
+          const d = destDir + s.slice(s.lastIndexOf('/'))
+          for (const p of Object.keys(state.local)) {
+            if (p !== s && !p.startsWith(s + '/')) continue
+            const to = d + p.slice(s.length), e = state.local[p]
+            if (e.dir) { if (!state.local[to]) { state.local[to] = {...e}; r.dirs++ }; continue }
+            if (state.local[to] && !overwrite) { r.skipped.push(to); continue }
+            state.local[to] = {...e}; r.files++; r.bytes += e.size
+          }
+        }
+        return r
+      },
       mkdir: async p => { rec('local.mkdir', p); if (state.local[p]) throw 'file exists'; state.local[p] = {dir: true, size: 0} },
       rename: async (a, b) => {
         rec('local.rename', a, b)

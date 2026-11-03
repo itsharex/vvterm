@@ -820,3 +820,64 @@ describe('SftpBrowser: edit and save back', () => {
     expect(calls(be, 'sftp.close')).toHaveLength(1)
   })
 })
+
+describe('SftpBrowser: This computer on the right', () => {
+  const openLocal = async () => {
+    await userEvent.click(within(R()).getByRole('button', {name: 'Select host'}))
+    await userEvent.click(screen.getByRole('button', {name: 'Open This computer'}))
+  }
+
+  it('lists This computer first in the host picker, even when there are no saved hosts, and filters it', async () => {
+    setup({hosts: []}, false)
+    await userEvent.click(within(R()).getByRole('button', {name: 'Select host'}))
+    expect(screen.getByRole('button', {name: 'Open This computer'})).toBeInTheDocument()
+    expect(screen.getByText(/No saved hosts yet/)).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Filter hosts'), 'zzz')
+    expect(screen.queryByRole('button', {name: 'Open This computer'})).toBeNull()
+  })
+
+  it('opens a second view of the files of this computer, without connecting to anything', async () => {
+    const be = setup({}, false)
+    await openLocal()
+    await waitFor(() => expect(names(R())).toEqual(['Documents', 'notes.txt'])) // the home folder, hidden files off like the left pane
+    expect(calls(be, 'sftp.open')).toHaveLength(0)
+    expect(within(R()).getByText('This computer')).toBeInTheDocument()
+    expect(screen.getByLabelText('Remote path')).toHaveValue('/Users/me')
+  })
+
+  it('copies between the two panes: a plain copy, the original stays, and what is already there is asked about once', async () => {
+    const be = setup({}, false)
+    await openLocal()
+    await waitFor(() => expect(names(R())).toEqual(['Documents', 'notes.txt']))
+    await userEvent.dblClick(row(R(), 'Documents'))
+    await waitFor(() => expect(names(R())).toEqual(['cv.pdf']))
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    await pick(L(), 'notes.txt')
+    drag(row(L(), 'notes.txt'), within(R()).getByRole('table', {name: 'Remote files'}))
+    await waitFor(() => expect(calls(be, 'local.copy')).toHaveLength(1))
+    expect(calls(be, 'local.copy')[0].slice(1)).toEqual([['/Users/me/notes.txt'], '/Users/me/Documents', false])
+    await waitFor(() => expect(names(R())).toEqual(['cv.pdf', 'notes.txt']))
+    expect(names(L())).toEqual(['Documents', 'notes.txt'])
+    expect(calls(be, 'sftp.enqueue')).toHaveLength(0) // no transfer queue for a local copy
+
+    // the same file again: it is asked about, and left alone when the answer is no
+    drag(row(L(), 'notes.txt'), within(R()).getByRole('table', {name: 'Remote files'}))
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    expect(confirm.mock.calls[0][0]).toMatch(/\/Users\/me\/Documents\/notes\.txt already exists/)
+    await waitFor(() => expect(calls(be, 'local.copy')).toHaveLength(2))
+    expect(calls(be, 'local.copy')[1][3]).toBe(false)
+  })
+
+  it('copies from the right pane to the left with the footer button', async () => {
+    const be = setup({}, false)
+    await openLocal()
+    await waitFor(() => expect(names(R())).toEqual(['Documents', 'notes.txt']))
+    await userEvent.dblClick(row(R(), 'Documents'))
+    await waitFor(() => expect(names(R())).toEqual(['cv.pdf']))
+    await pick(R(), 'cv.pdf')
+    await userEvent.click(screen.getByRole('button', {name: 'Copy selected to left'}))
+    await waitFor(() => expect(calls(be, 'local.copy')).toHaveLength(1))
+    expect(calls(be, 'local.copy')[0].slice(1)).toEqual([['/Users/me/Documents/cv.pdf'], '/Users/me', false])
+    await waitFor(() => expect(names(L())).toEqual(['Documents', 'cv.pdf', 'notes.txt']))
+  })
+})

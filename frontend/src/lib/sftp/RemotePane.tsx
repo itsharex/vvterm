@@ -6,6 +6,7 @@ import {useToast} from '../ui/Toast'
 import {IconFolder} from '../ui/Icons'
 import {OsIcon} from '../ui/OsIcon'
 import {joinPath} from './format'
+import {LOCAL_HOST, LOCAL_HOST_ID, localPaneFs} from './localFs'
 import {FilePane, PaneFs, PaneState, DragPayload, Item} from './FilePane'
 import type {EditEvent, Host, HostKeyPrompt} from '../types'
 
@@ -52,12 +53,25 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
   const [fs, setFs] = useState<PaneFs | null>(null)
 
   const hostId = host?.id ?? ''
+  const isLocal = hostId === LOCAL_HOST_ID
   useEffect(() => {
     setFs(null)
     setHome('')
     onSession('')
     if (!hostId) return
     alive.current = true
+    if (hostId === LOCAL_HOST_ID) {
+      // this computer is no connection: the pane just browses local files, and a transfer into or out of it is a copy
+      setState('connecting')
+      setClosedReason('')
+      void be.local.home().then(h => {
+        if (!alive.current) return
+        setFs(localPaneFs(be))
+        setHome(h)
+        setState('ready')
+      }).catch(e => { if (alive.current) { setState('closed'); setClosedReason(errMsg(e)) } })
+      return () => { alive.current = false }
+    }
     const key = `sftp-${Date.now().toString(36)}-${++seq}`
     const offs: Array<() => void> = [be.on(`term:hostkey:${key}`, (p: HostKeyPrompt) => setPrompt({key, p}))]
     setState('connecting')
@@ -136,18 +150,25 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
   }
 
   const matching = useMemo(() => hosts.filter(h => (h.label + ' ' + h.hostname).toLowerCase().includes(filter.trim().toLowerCase())), [hosts, filter])
+  const showLocal = ('this computer local ' + LOCAL_HOST.label).includes(filter.trim().toLowerCase())
+  const choose = (r: RemoteHost) => { setPicking(false); setFilter(''); if (host && onNewTab) onNewTab(r); else onHost(r) }
 
   const picker = (
     <div className="host-picker">
       <h3>Select host</h3>
       <input aria-label="Filter hosts" autoFocus placeholder="Search hosts" value={filter} onChange={e => setFilter(e.target.value)} />
       <div className="host-picker-list">
+        {showLocal && (
+          <button aria-label="Open This computer" onClick={() => choose(LOCAL_HOST)}>
+            <IconFolder size={18} /><span>{LOCAL_HOST.label}</span><small className="muted">Browse and copy files on this computer</small>
+          </button>
+        )}
         {matching.map(h => (
-          <button key={h.id} aria-label={`Connect to ${h.label}`} onClick={() => { setPicking(false); setFilter(''); const r = {id: h.id, label: h.label}; if (host && onNewTab) onNewTab(r); else onHost(r) }}>
+          <button key={h.id} aria-label={`Connect to ${h.label}`} onClick={() => choose({id: h.id, label: h.label})}>
             <OsIcon os={h.os} size={18} /><span>{h.label}</span><small className="muted">{h.username ? h.username + '@' : ''}{h.hostname}</small>
           </button>
         ))}
-        {matching.length === 0 && <div className="muted">{hosts.length ? 'No host matches.' : 'No saved hosts yet. Add one in Hosts first.'}</div>}
+        {matching.length === 0 && (hosts.length ? !showLocal && <div className="muted">No host matches.</div> : <div className="muted">No saved hosts yet. Add one in Hosts first.</div>)}
       </div>
       <button onClick={() => { setPicking(false); setFilter('') }}>Cancel</button>
     </div>
@@ -172,8 +193,8 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
 
   return (
     <div className="rpane" style={hidden ? {display: 'none'} : undefined}>
-      <FilePane side="remote" title={host.label} icon={<OsIcon os={hosts.find(x => x.id === host.id)?.os} size={16} />} fs={fs} startDir={home} reloadKey={reloadKey} showHiddenDefault
-        onState={onState} onDropEntry={onDropEntry} onCopyOut={onCopyOut} copyLabel="Download" onClose={() => onHost(null)} onAdd={() => setPicking(true)} lead={tabsLead?.(() => setPicking(true))} />
+      <FilePane side="remote" title={host.label} icon={isLocal ? <IconFolder size={16} /> : <OsIcon os={hosts.find(x => x.id === host.id)?.os} size={16} />} fs={fs} startDir={home} reloadKey={reloadKey} showHiddenDefault={!isLocal}
+        onState={onState} onDropEntry={onDropEntry} onCopyOut={onCopyOut} copyLabel={isLocal ? 'Copy to Local' : 'Download'} onClose={() => onHost(null)} onAdd={() => setPicking(true)} lead={tabsLead?.(() => setPicking(true))} />
       {picking && <div className="overlay" role="dialog" aria-label="Select host"><div className="card">{picker}</div></div>}
       {state === 'connecting' && !prompt && <div className="banner info">Connecting to {host.label}…</div>}
       {state === 'closed' && (
