@@ -1,5 +1,5 @@
 import {createContext, useContext} from 'react'
-import type {ExecRun, ExecSpec, SSHLink, VaultHealth, 
+import type {ExecRun, ExecSpec, InventoryOptions, SSHLink, VaultHealth, 
   CacheReport, ConnectionTest, ExportReport, ForwardStatus, Group, Host, HostFilter, Identity, ImportReport, PortForward, Settings,
   ActivityEntry, KnownHost, QueueJob, QueueSpec, RemoteEntry, SftpInfo, SyncDiff, Snippet, SyncStatus, TransferResult, VaultStatus,
   AiAskOptions, AiAttachment, AiCommandCheck, AiCustomProvider, AiModelList, AiPolicy, AiPreview, AiProvider, AiSessionState, AiSettings,
@@ -82,6 +82,8 @@ export interface Backend {
   }
   data: {
     importSSHConfig(path: string, conflict: string): Promise<ImportReport>
+    /** adds the hosts of a listing you made with your own tools (aws ec2 describe-instances, gcloud compute instances list, ansible-inventory --list, an Ansible INI file or a CSV) */
+    importInventory(path: string, conflict: string, opts: InventoryOptions): Promise<ImportReport>
     exportSSHConfig(dir: string, withKeys: boolean): Promise<ExportReport>
     exportPlainJSON(path: string): Promise<void>
     exportBackup(path: string, pw: string): Promise<void>
@@ -335,6 +337,7 @@ export function wailsBackend(): Backend {
     },
     data: {
       importSSHConfig: async (p, c) => normalizeImport(await u<ImportReport>('ImportExportService', 'ImportSSHConfig', p, c)),
+      importInventory: async (p, c, o) => normalizeImport(await u<ImportReport>('ImportExportService', 'ImportInventory', p, c, o)),
       exportSSHConfig: async (d, k) => normalizeExport(await u<ExportReport>('ImportExportService', 'ExportSSHConfig', d, k)),
       exportPlainJSON: p => u('ImportExportService', 'ExportPlainJSON', p),
       exportBackup: (p, pw) => u('ImportExportService', 'ExportBackup', p, pw),

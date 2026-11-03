@@ -152,7 +152,18 @@ export interface HostFilter {
   tag: string
 }
 
+/** What a listing of servers does not say (see ImportInventory). */
+export interface InventoryOptions {
+  user: string
+  /** 'public' (the public address when there is one, else the private one) or 'private' */
+  address: 'public' | 'private'
+  group: string
+  include_stopped: boolean
+}
+
 export interface ImportReport {
+  /** what an inventory import took the file to be */
+  format?: string
   hosts_added: number
   groups_added: number
   forwards_added: number

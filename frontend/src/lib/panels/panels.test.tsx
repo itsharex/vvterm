@@ -25,6 +25,76 @@ describe('DataPanel', () => {
     expect(changed).toHaveBeenCalled()
   })
 
+  describe('importing a listing of servers', () => {
+    const open = async () => {
+      const be = makeFake()
+      render(<Providers be={be}><DataPanel onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+      await userEvent.click(screen.getByRole('button', {name: 'Cloud and inventory'}))
+      return be
+    }
+
+    it('is a choice next to the ssh config, which stays the first', async () => {
+      const be = makeFake()
+      render(<Providers be={be}><DataPanel onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+      expect(screen.getByRole('button', {name: 'SSH config', pressed: true})).toBeInTheDocument()
+      expect(screen.getByLabelText('Config path')).toBeInTheDocument()
+      expect(screen.queryByLabelText('Inventory path')).toBeNull()
+      await userEvent.click(screen.getByRole('button', {name: 'Cloud and inventory'}))
+      expect(screen.queryByLabelText('Config path')).toBeNull()
+      expect(screen.getByLabelText('Inventory path')).toBeInTheDocument()
+      expect(screen.getByText(/never contacts a cloud and never sees its credentials/)).toBeInTheDocument()
+    })
+
+    it('says how to make the file, for each cloud', async () => {
+      await open()
+      await userEvent.click(screen.getByText('How to make the file'))
+      expect(screen.getByText(/aws ec2 describe-instances --output json/)).toBeInTheDocument()
+      expect(screen.getByText(/gcloud compute instances list --format=json/)).toBeInTheDocument()
+      expect(screen.getByText(/ansible-inventory -i inventory --list/)).toBeInTheDocument()
+    })
+
+    it('needs a file, and sends the file with the options that were chosen', async () => {
+      const be = await open()
+      expect(screen.getByRole('button', {name: 'Import'})).toBeDisabled()
+      expect(screen.getByText('Choose a file to import.')).toBeInTheDocument()
+      await userEvent.type(screen.getByLabelText('Inventory path'), '/home/me/aws.json')
+      await userEvent.type(screen.getByLabelText('User name'), '  ubuntu ')
+      await userEvent.type(screen.getByLabelText('Group name'), 'prod-fleet')
+      await userEvent.click(screen.getByRole('combobox', {name: /Address to use/}))
+      await userEvent.click(screen.getByRole('option', {name: /Private only/}))
+      await userEvent.click(screen.getByRole('checkbox', {name: 'Include stopped instances'}))
+      await userEvent.selectOptions(screen.getByLabelText('Conflict policy'), 'duplicate')
+      await userEvent.click(screen.getByRole('button', {name: 'Import'}))
+      const rep = await screen.findByTestId('import-report')
+      expect(be.state.calls).toContainEqual(['data.importInventory', '/home/me/aws.json', 'duplicate', {user: 'ubuntu', address: 'private', group: 'prod-fleet', include_stopped: true}])
+      expect(rep).toHaveTextContent('read as AWS EC2 (aws ec2 describe-instances)')
+      expect(rep).toHaveTextContent('Added 3 hosts, 1 groups')
+      expect(rep).toHaveTextContent('Skipped: web-1')
+      expect(rep).toHaveTextContent('1 instance that is not running was skipped')
+    })
+
+    it('chooses the file with Browse, uses the defaults when nothing else is set, and shows what went wrong', async () => {
+      const be = await open()
+      await userEvent.click(screen.getAllByRole('button', {name: 'Browse…'})[0])
+      await waitFor(() => expect((screen.getByLabelText('Inventory path') as HTMLInputElement).value).not.toBe(''))
+      await userEvent.click(screen.getByRole('button', {name: 'Import'}))
+      await screen.findByTestId('import-report')
+      expect(be.state.calls.find(c => c[0] === 'data.importInventory')![3]).toEqual({user: '', address: 'public', group: '', include_stopped: false})
+      be.data.importInventory = async () => { throw 'no host was found in this CSV listing' }
+      await userEvent.click(screen.getByRole('button', {name: 'Import'}))
+      expect(await screen.findByRole('alert')).toHaveTextContent('no host was found')
+    })
+
+    it('forgets the report of the other source when the source changes', async () => {
+      await open()
+      await userEvent.type(screen.getByLabelText('Inventory path'), '/x.json')
+      await userEvent.click(screen.getByRole('button', {name: 'Import'}))
+      await screen.findByTestId('import-report')
+      await userEvent.click(screen.getByRole('button', {name: 'SSH config'}))
+      expect(screen.queryByTestId('import-report')).toBeNull()
+    })
+  })
+
   it('warns before exporting private keys', async () => {
     const be = makeFake()
     render(<Providers be={be}><DataPanel onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)

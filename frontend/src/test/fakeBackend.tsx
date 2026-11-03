@@ -293,6 +293,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       status: async () => ({configured: true, repo_url: 'git@example.com:me/sync.git', folder: '', last_sync: '0001-01-01T00:00:00Z', syncing: false}),
     },
     data: {
+      importInventory: async (p, c, o) => { rec('data.importInventory', p, c, o); return {format: 'AWS EC2 (aws ec2 describe-instances)', hosts_added: 3, groups_added: 1, forwards_added: 0, keys_imported: 0, skipped: ['web-1'], warnings: ['1 instance that is not running was skipped']} },
       importSSHConfig: async (p, c) => { rec('data.import', p, c); return {hosts_added: 2, groups_added: 1, forwards_added: 0, keys_imported: 1, skipped: ['dup'], warnings: ['ProxyCommand ignored']} },
       exportSSHConfig: async (d, k) => { rec('data.exportSSH', d, k); return {files: ['a'], key_files: k ? ['k'] : [], warnings: []} },
       exportPlainJSON: async p => { rec('data.exportJSON', p) },
