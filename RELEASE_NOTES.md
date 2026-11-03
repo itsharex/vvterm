@@ -1,8 +1,15 @@
 <p align="center"><img src="docs/brand/logo-mark-256.png" alt="Vutty" width="88"></p>
 
-# Vutty 1.4.0
+# Vutty 1.4.1
 
 Release date: 2026-11-03 · Platform: macOS (arm64 build verified) · Status: beta. Read [Known issues](#known-issues) first.
+
+## What's new in 1.4.1
+
+A release about downloading; the app itself is the same as 1.4.0.
+
+- **Download links that never change.** Every release now also carries each file without the version in its name (`vutty-macos.dmg`, `vutty-macos.zip`, `vutty-windows-amd64.exe`, `vutty-linux-amd64.tar.gz`), listed in `SHA256SUMS` like the others, so `https://github.com/vunguyenvu35/vutty/releases/latest/download/vutty-macos.dmg` is always the newest version. The README uses them. The files with the version in their name are still there (the app that updates itself looks its file up by that name).
+- A copy of 1.4.0 can update itself to this version from inside the app (macOS, Apple silicon): *Help → About → Check for updates → Install and restart*.
 
 ## What's new in 1.4.0
 
