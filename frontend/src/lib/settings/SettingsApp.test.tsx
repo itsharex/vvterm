@@ -1,4 +1,4 @@
-import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react'
+import {act, cleanup, fireEvent, render, screen, waitFor, within} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import SettingsApp from './SettingsApp'
 import {makeFake, Providers} from '../../test/fakeBackend'
@@ -9,6 +9,9 @@ function setup(settings = {}) {
   render(<Providers be={be}><SettingsApp /></Providers>)
   return be
 }
+
+// the window remembers what it read last (localStorage): each test starts as a first opening
+beforeEach(() => localStorage.clear())
 
 describe('SettingsApp (the Settings window process)', () => {
   it('fills its own native window: no floating chrome, no dots, no drag', async () => {
@@ -80,6 +83,24 @@ describe('SettingsApp (the Settings window process)', () => {
     await act(async () => { answer({exists: true, unlocked: true, keychain_enabled: false, auto_lock_minutes: 15}) })
     expect(await within(win).findByLabelText('Scrollback lines')).toHaveValue(10000)
     expect(within(win).getByRole('tab', {name: /^Terminal/})).toHaveAttribute('aria-selected', 'true') // the tab chosen meanwhile stays
+  })
+
+  it('opens at once with the values it read last time, and replaces them when the main process answers', async () => {
+    setup({zoom: 130})
+    await waitFor(() => expect(screen.getByLabelText('Zoom level')).toHaveTextContent('130%')) // first opening: read and remembered
+    cleanup()
+    const be = makeFake()
+    be.state.settings.zoom = 90
+    let answer: (v: any) => void = () => {}
+    be.vault.status = () => new Promise(r => { answer = r })
+    render(<Providers be={be}><SettingsApp /></Providers>)
+    const win = screen.getByRole('dialog', {name: 'Settings'})
+    expect(within(win).getByLabelText('Zoom level')).toHaveTextContent('130%') // no "Loading…", and not the defaults
+    expect(within(win).queryByText('Loading…')).toBeNull()
+    await userEvent.click(within(win).getByRole('switch', {name: 'Reduce motion'}))
+    expect(be.state.calls.some(c => c[0] === 'settings.save')).toBe(false) // remembered values are never saved over the real ones
+    await act(async () => { answer({exists: true, unlocked: true, keychain_enabled: false, auto_lock_minutes: 15}) })
+    await waitFor(() => expect(within(win).getByLabelText('Zoom level')).toHaveTextContent('90%'))
   })
 
   it('stays on its loading page, and nothing breaks, when the main window is gone', async () => {

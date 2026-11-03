@@ -16,9 +16,14 @@ import type {CursorStyle, Settings, ThemeMode, VaultStatus} from '../types'
 import {DONATE_NETWORKS, KOFI, SHOW_CRYPTO_DONATE} from '../donate'
 
 // what is not on the first page is loaded when it is first needed, so the window opens and answers clicks at once
-const SupportPanel = lazy(() => import('../panels/SupportPanel').then(m => ({default: m.SupportPanel})))
-const SyncPanel = lazy(() => import('../panels/SyncPanel').then(m => ({default: m.SyncPanel})))
-const AssistantSettings = lazy(() => import('./AssistantSettings').then(m => ({default: m.AssistantSettings})))
+const loadSupport = () => import('../panels/SupportPanel').then(m => ({default: m.SupportPanel}))
+const loadSync = () => import('../panels/SyncPanel').then(m => ({default: m.SyncPanel}))
+const loadAssistant = () => import('./AssistantSettings').then(m => ({default: m.AssistantSettings}))
+const SupportPanel = lazy(loadSupport)
+const SyncPanel = lazy(loadSync)
+const AssistantSettings = lazy(loadAssistant)
+// the pages are fetched right after the window opens, so a tab opens at once instead of flashing "Loading…"
+const preload = () => { void loadSupport(); void loadSync(); void loadAssistant() }
 const Loading = () => <div className="muted" role="status">Loading…</div>
 
 /** what this computer calls the place that keeps the vault key for quick unlock */
@@ -71,6 +76,8 @@ interface Props {
   native?: boolean
   /** false while the saved settings are still being fetched (the window is already up): the menu works, the pages wait */
   ready?: boolean
+  /** true while the values shown are the ones remembered from last time: they show, but nothing is saved over the real ones yet */
+  stale?: boolean
 }
 
 /**
@@ -80,7 +87,7 @@ interface Props {
  * title bar to move it and the bottom-right corner to resize. Wails v2 can only create one OS window, so
  * this is an in-app window layer rather than a second native window. Changes apply immediately.
  */
-export function SettingsWindow({settings: s, appearance, vault, onSettings, onVault, onChanged, onClose, native = false, ready = true}: Props) {
+export function SettingsWindow({settings: s, appearance, vault, onSettings, onVault, onChanged, onClose, native = false, ready = true, stale = false}: Props) {
   const be = useBackend()
   const toast = useToast()
   const confirm = useConfirm()
@@ -112,6 +119,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
       toast.info(u.available ? `Version ${u.latest} is available` : 'You are on the latest version')
     } catch (e) { toast.error(errMsg(e)) } finally { setChecking(false) }
   }
+  useEffect(() => { const t = setTimeout(preload, 150); return () => clearTimeout(t) }, [])
   useEffect(() => { void be.system.info().then(i => setVersion(i.version)).catch(() => {}) }, [be])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -154,9 +162,9 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
     if (!ready) return
     setScroll(String(s.scrollback)); setAuto(String(vault.auto_lock_minutes)); setHint(vault.hint ?? ''); setName(s.account_name); setEmail(s.account_email)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready])
+  }, [ready, stale])
   const update = async (patch: Partial<Settings>) => {
-    if (!ready) return // never save the placeholder values over the real ones
+    if (!ready || stale) return // never save the placeholder or remembered values over the real ones
     try { onSettings(await be.settings.save({...s, ...patch})) } catch (e) { toast.error(errMsg(e)) }
   }
   const guard = async (fn: () => Promise<void>, ok: string) => {
