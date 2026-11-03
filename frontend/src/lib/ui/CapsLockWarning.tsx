@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react'
 import {IconCapsLock} from './Icons'
+import {useT} from '../i18n'
 
 interface Spot {top: number; right: number; height: number}
 
@@ -9,6 +10,7 @@ interface Spot {top: number; right: number; height: number}
  * instance at the root is enough: it follows whichever password field has the focus.
  */
 export function CapsLockWarning() {
+  const t = useT()
   const [spot, setSpot] = useState<Spot | null>(null)
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export function CapsLockWarning() {
   if (!spot) return null
   return (
     <span className="caps-warning" role="status" style={{top: spot.top + (spot.height - 24) / 2, right: spot.right + 10}}>
-      <IconCapsLock size={13} /> Caps Lock is on
+      <IconCapsLock size={13} /> {t('Caps Lock is on')}
     </span>
   )
 }

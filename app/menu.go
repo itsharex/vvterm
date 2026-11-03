@@ -117,6 +117,8 @@ type MenuHooks struct {
 	Emit             func(action string)
 	OpenURL          func(url string)
 	ToggleFullScreen func()
+	// Lang is the language of the labels (en|vi|ja|zh); anything else is English.
+	Lang string
 }
 
 // BuildMenu makes the application menu bar: the system's own App, Edit and Window menus, and File, View and
@@ -129,7 +131,7 @@ func BuildMenu(h MenuHooks) *menu.Menu {
 				acc = Accelerator(c)
 			}
 		}
-		return menu.Text(label, acc, func(*menu.CallbackData) { h.Emit(action) })
+		return menu.Text(tr(h.Lang, label), acc, func(*menu.CallbackData) { h.Emit(action) })
 	}
 	file := menu.NewMenu()
 	file.Append(act("New Connection…", ActNewTab, nil))
@@ -169,7 +171,7 @@ func BuildMenu(h MenuHooks) *menu.Menu {
 		view.Append(act(p.label, ActPagePrefix+p.id, nil))
 	}
 	view.Append(menu.Separator())
-	view.Append(menu.Text("Enter Full Screen", keys.Combo("f", keys.ControlKey, keys.CmdOrCtrlKey), func(*menu.CallbackData) { h.ToggleFullScreen() }))
+	view.Append(menu.Text(tr(h.Lang, "Enter Full Screen"), keys.Combo("f", keys.ControlKey, keys.CmdOrCtrlKey), func(*menu.CallbackData) { h.ToggleFullScreen() }))
 
 	help := menu.NewMenu()
 	help.Append(act("About Vutty", ActAbout, nil))
@@ -177,17 +179,17 @@ func BuildMenu(h MenuHooks) *menu.Menu {
 	help.Append(menu.Separator())
 	for _, l := range HelpLinks {
 		url := l.URL
-		help.Append(menu.Text(l.Label, nil, func(*menu.CallbackData) { h.OpenURL(url) }))
+		help.Append(menu.Text(tr(h.Lang, l.Label), nil, func(*menu.CallbackData) { h.OpenURL(url) }))
 	}
 	help.Append(menu.Separator())
 	help.Append(act("Support Vutty…", ActSupport, nil))
 
 	return menu.NewMenuFromItems(
 		menu.AppMenu(),
-		menu.SubMenu("File", file),
+		menu.SubMenu(tr(h.Lang, "File"), file),
 		menu.EditMenu(),
-		menu.SubMenu("View", view),
+		menu.SubMenu(tr(h.Lang, "View"), view),
 		menu.WindowMenu(),
-		menu.SubMenu("Help", help),
+		menu.SubMenu(tr(h.Lang, "Help"), help),
 	)
 }

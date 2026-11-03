@@ -201,11 +201,15 @@ func (w *TerminalWindow) Shutdown(context.Context) {
 }
 
 // Menu is the app's menu bar, doing its items in this window.
-func (w *TerminalWindow) Menu() *menu.Menu { return w.menuWith(nil) }
+func (w *TerminalWindow) Menu() *menu.Menu {
+	w.System.SetMenuLang(systemMenuLang()) // the page tells the language of the setting when it is up
+	return w.menuWith(nil, w.System.MenuLang())
+}
 
-func (w *TerminalWindow) menuWith(shortcuts map[string]string) *menu.Menu {
+func (w *TerminalWindow) menuWith(shortcuts map[string]string, lang string) *menu.Menu {
 	return BuildMenu(MenuHooks{
 		Shortcuts: shortcuts,
+		Lang:      lang,
 		Emit: func(action string) {
 			if w.ctx != nil {
 				runtime.EventsEmit(w.ctx, MenuEvent, action)

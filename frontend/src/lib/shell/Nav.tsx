@@ -1,5 +1,6 @@
 import {ReactNode, useEffect, useState} from 'react'
 import {formatCombo} from '../shortcuts/shortcuts'
+import {useT} from '../i18n'
 import {Brand} from '../ui/Brand'
 import {IconBraces, IconClock, IconData, IconFingerprint, IconForward, IconGear, IconKey, IconLock, IconServer} from '../ui/Icons'
 
@@ -42,23 +43,24 @@ function Item(p: {icon: ReactNode; label: string; active?: boolean; combo?: stri
 
 /** Left navigation. Pages switch the main area; Import/Export, Sync and Settings open panels. */
 export function Nav(p: Props) {
+  const t = useT()
   const k = p.shortcuts ?? {}
   const iconsOnly = useIconsOnly()
   return (
-    <nav className="nav" aria-label="Main">
+    <nav className="nav" aria-label={t('Main')}>
       <div className="nav-brand"><Brand /></div>
       <div className="nav-group">
-        <Item icon={<IconServer />} label="Hosts" iconsOnly={iconsOnly} combo={k.go_hosts} active={p.page === 'hosts'} onClick={() => p.onPage('hosts')} />
-        <Item icon={<IconKey />} label="Keychain" iconsOnly={iconsOnly} combo={k.go_keychain} active={p.page === 'keychain'} onClick={() => p.onPage('keychain')} />
-        <Item icon={<IconForward />} label="Port Forwarding" iconsOnly={iconsOnly} combo={k.go_forwards} active={p.page === 'forwards'} onClick={() => p.onPage('forwards')} />
-        <Item icon={<IconBraces />} label="Snippets" iconsOnly={iconsOnly} combo={k.go_snippets} active={p.page === 'snippets'} onClick={() => p.onPage('snippets')} />
-        <Item icon={<IconFingerprint />} label="Known Hosts" iconsOnly={iconsOnly} combo={k.go_knownhosts} active={p.page === 'knownhosts'} onClick={() => p.onPage('knownhosts')} />
-        <Item icon={<IconClock />} label="Logs" iconsOnly={iconsOnly} combo={k.go_logs} active={p.page === 'logs'} onClick={() => p.onPage('logs')} />
+        <Item icon={<IconServer />} label={t('Hosts')} iconsOnly={iconsOnly} combo={k.go_hosts} active={p.page === 'hosts'} onClick={() => p.onPage('hosts')} />
+        <Item icon={<IconKey />} label={t('Keychain')} iconsOnly={iconsOnly} combo={k.go_keychain} active={p.page === 'keychain'} onClick={() => p.onPage('keychain')} />
+        <Item icon={<IconForward />} label={t('Port Forwarding')} iconsOnly={iconsOnly} combo={k.go_forwards} active={p.page === 'forwards'} onClick={() => p.onPage('forwards')} />
+        <Item icon={<IconBraces />} label={t('Snippets')} iconsOnly={iconsOnly} combo={k.go_snippets} active={p.page === 'snippets'} onClick={() => p.onPage('snippets')} />
+        <Item icon={<IconFingerprint />} label={t('Known Hosts')} iconsOnly={iconsOnly} combo={k.go_knownhosts} active={p.page === 'knownhosts'} onClick={() => p.onPage('knownhosts')} />
+        <Item icon={<IconClock />} label={t('Logs')} iconsOnly={iconsOnly} combo={k.go_logs} active={p.page === 'logs'} onClick={() => p.onPage('logs')} />
       </div>
       <div className="nav-group bottom">
-        <Item icon={<IconData />} label="Import / Export" iconsOnly={iconsOnly} onClick={p.onData} />
-        <Item icon={<IconGear />} label="Settings" iconsOnly={iconsOnly} combo={k.open_settings} active={!!p.settingsOpen} onClick={p.onSettings} />
-        <Item icon={<IconLock />} label="Lock vault" iconsOnly={iconsOnly} combo={k.lock_vault} onClick={p.onLock} />
+        <Item icon={<IconData />} label={t('Import / Export')} iconsOnly={iconsOnly} onClick={p.onData} />
+        <Item icon={<IconGear />} label={t('Settings')} iconsOnly={iconsOnly} combo={k.open_settings} active={!!p.settingsOpen} onClick={p.onSettings} />
+        <Item icon={<IconLock />} label={t('Lock vault')} iconsOnly={iconsOnly} combo={k.lock_vault} onClick={p.onLock} />
       </div>
     </nav>
   )

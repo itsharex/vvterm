@@ -11,6 +11,7 @@ import {ProtocolScreen, type Protocol} from './ProtocolScreen'
 import type {Group, Host, Settings} from '../types'
 import {resolveTerminalTheme} from './themes'
 import type {Appearance} from '../settings/appearance'
+import {useT} from '../i18n'
 
 interface Props {
   tabs: Tab[]
@@ -52,6 +53,7 @@ interface Props {
 
 /** Recursive split-pane tree per tab. Every tab stays mounted so its sessions keep running. */
 export function Workspace(p: Props) {
+  const t = useT()
   // a tab dragged over a pane shows where the split would go
   const [dropAt, setDropAt] = useState<{pane: string; side: DropSide} | null>(null)
   const termTheme = resolveTerminalTheme(p.settings.terminal_theme, p.appearance).theme
@@ -64,8 +66,8 @@ export function Workspace(p: Props) {
   const hostOf = (hostId: string) => p.hosts?.find(h => h.id === (hostId.startsWith('telnet:') ? hostId.slice('telnet:'.length) : hostId))
   /** the name and the small print of a pane, for its header */
   const describe = (hostId: string): {label: string; detail: string; os?: string} => {
-    if (hostId === 'local') return {label: 'This computer', detail: 'local shell'}
-    if (hostId.startsWith('serial:')) return {label: hostId.slice('serial:'.length).split('@')[0].replace(/^\/dev\//, ''), detail: 'serial'}
+    if (hostId === 'local') return {label: t('This computer'), detail: t('local shell')}
+    if (hostId.startsWith('serial:')) return {label: hostId.slice('serial:'.length).split('@')[0].replace(/^\/dev\//, ''), detail: t('serial')}
     const h = hostOf(hostId)
     if (!h) return {label: hostId, detail: ''}
     if (hostId.startsWith('telnet:')) return {label: h.label, detail: ['telnet', h.username].filter(Boolean).join(', '), os: h.os}
@@ -74,8 +76,8 @@ export function Workspace(p: Props) {
   /** "SSH host:port", "Telnet host:port", "this computer" */
   const connectLine = (hostId: string) => {
     const h = hostOf(hostId)
-    if (hostId === 'local') return 'local shell'
-    if (!h) return hostId.startsWith('serial:') ? 'serial' : ''
+    if (hostId === 'local') return t('local shell')
+    if (!h) return hostId.startsWith('serial:') ? t('serial') : ''
     return hostId.startsWith('telnet:') ? `Telnet ${h.hostname}:${h.telnet_port || 23}` : `SSH ${h.hostname}:${h.port}`
   }
   const hint = (id: string) => (p.shortcuts[id] ? ' (' + formatCombo(p.shortcuts[id]) + ')' : '')
@@ -135,7 +137,7 @@ export function Workspace(p: Props) {
           cursorStyle={p.settings.cursor_style} cursorBlink={p.settings.cursor_blink} scrollback={p.settings.scrollback}
           onTyped={tab.broadcast ? data => all.forEach(l => { if (l.id !== n.id) writeToPane(l.id, data) }) : undefined}
           onFocus={() => p.onFocusPane(tab.id, n.id)} onExit={() => p.onPaneExit(tab.id, n.id)} />
-        {many && <div className="pane-head" role="toolbar" aria-label={'Pane ' + d.label}
+        {many && <div className="pane-head" role="toolbar" aria-label={t('Pane {label}', {label: d.label})}
           // the header is the handle: drag it onto a side of another pane to move the pane there, onto the tab bar to make it a tab
           draggable={!!p.onMovePane && isTerminalTab(tab)}
           onDragStart={e => { setDraggingPane({tabId: tab.id, paneId: n.id}); e.dataTransfer.setData(PANE_DRAG, n.id); e.dataTransfer.effectAllowed = 'move' }}
@@ -147,16 +149,16 @@ export function Workspace(p: Props) {
             {d.detail && <span className="pane-detail">{d.detail}</span>}
           </span>
           <span className="spacer" />
-          <button className={'pane-btn' + (tab.broadcast ? ' on' : '')} aria-pressed={!!tab.broadcast} aria-label="Broadcast input"
-            title={'Type in every pane of this tab at once' + hint('broadcast_input')} onClick={() => p.onToggleBroadcast?.(tab.id)}>
-            <IconBroadcast size={14} /> Broadcast
+          <button className={'pane-btn' + (tab.broadcast ? ' on' : '')} aria-pressed={!!tab.broadcast} aria-label={t('Broadcast input')}
+            title={t('Type in every pane of this tab at once') + hint('broadcast_input')} onClick={() => p.onToggleBroadcast?.(tab.id)}>
+            <IconBroadcast size={14} /> {t('Broadcast')}
           </button>
-          {p.onPopPane && <button className="pane-btn icon" aria-label="Move pane to its own tab" title="Move this pane out of the split, into a tab of its own" onClick={() => p.onPopPane!(tab.id, n.id)}><IconPopOut size={14} /></button>}
-          <button className="pane-btn icon" aria-label={zoomed ? 'Show all panes' : 'Maximize pane'} aria-pressed={zoomed}
-            title={zoomed ? 'Show all panes' : 'Show only this pane'} onClick={() => p.onToggleZoom?.(tab.id, n.id)}>
+          {p.onPopPane && <button className="pane-btn icon" aria-label={t('Move pane to its own tab')} title={t('Move this pane out of the split, into a tab of its own')} onClick={() => p.onPopPane!(tab.id, n.id)}><IconPopOut size={14} /></button>}
+          <button className="pane-btn icon" aria-label={zoomed ? t('Show all panes') : t('Maximize pane')} aria-pressed={zoomed}
+            title={zoomed ? t('Show all panes') : t('Show only this pane')} onClick={() => p.onToggleZoom?.(tab.id, n.id)}>
             {zoomed ? <IconMinimizePane size={14} /> : <IconMaximizePane size={14} />}
           </button>
-          <button className="pane-btn icon close" aria-label="Close pane" title="Close pane" onClick={() => p.onClosePane(tab.id, n.id)}><IconClose size={14} /></button>
+          <button className="pane-btn icon close" aria-label={t('Close pane')} title={t('Close pane')} onClick={() => p.onClosePane(tab.id, n.id)}><IconClose size={14} /></button>
         </div>}
       </div>
     )
@@ -165,20 +167,20 @@ export function Workspace(p: Props) {
   // One flat list: the panes of every tab, the dividers, and the other kinds of tab as layers. A pane that moves to
   // another place in the layout, or to another tab, keeps its key and parent, so it is not rebuilt and its session lives on.
   const items: JSX.Element[] = []
-  for (const t of p.tabs) {
-    const active = t.id === p.activeTab
-    const layer = (node: JSX.Element) => items.push(<div key={'layer-' + t.id} className="pane-layer" style={{display: active ? 'block' : 'none'}}>{node}</div>)
-    if (t.kind === 'new') {
-      layer(<NewTabScreen hosts={p.hosts ?? []} groups={p.groups ?? []} tabs={p.tabs} onOpen={h => p.onOpenFromNewTab?.(t.id, h)} onSelectTab={id => p.onSelectTab?.(id)} onLocal={p.onLocalFromNewTab ? () => p.onLocalFromNewTab!(t.id) : undefined} />)
-    } else if (t.choose && hostOf(leaves(t.root)[0].hostId)) {
-      layer(<ProtocolScreen host={hostOf(leaves(t.root)[0].hostId)!} onContinue={proto => p.onProtocol?.(t.id, proto)} onClose={() => p.onCloseTab?.(t.id)} />)
-    } else if (t.kind === 'sftp') {
-      layer(<SftpBrowser hostId={leaves(t.root)[0].hostId} hostLabel={t.sftpLabel ?? ''} nonce={t.sftpNonce ?? 0} hosts={p.hosts} visible={active} />)
+  for (const tb of p.tabs) {
+    const active = tb.id === p.activeTab
+    const layer = (node: JSX.Element) => items.push(<div key={'layer-' + tb.id} className="pane-layer" style={{display: active ? 'block' : 'none'}}>{node}</div>)
+    if (tb.kind === 'new') {
+      layer(<NewTabScreen hosts={p.hosts ?? []} groups={p.groups ?? []} tabs={p.tabs} onOpen={h => p.onOpenFromNewTab?.(tb.id, h)} onSelectTab={id => p.onSelectTab?.(id)} onLocal={p.onLocalFromNewTab ? () => p.onLocalFromNewTab!(tb.id) : undefined} />)
+    } else if (tb.choose && hostOf(leaves(tb.root)[0].hostId)) {
+      layer(<ProtocolScreen host={hostOf(leaves(tb.root)[0].hostId)!} onContinue={proto => p.onProtocol?.(tb.id, proto)} onClose={() => p.onCloseTab?.(tb.id)} />)
+    } else if (tb.kind === 'sftp') {
+      layer(<SftpBrowser hostId={leaves(tb.root)[0].hostId} hostLabel={tb.sftpLabel ?? ''} nonce={tb.sftpNonce ?? 0} hosts={p.hosts} visible={active} />)
     } else {
-      const {panes, dividers} = paneRects(t.root)
-      for (const l of leaves(t.root)) items.push(pane(t, l, panes.get(l.id)!, active))
-      if (!t.zoomPane) dividers.forEach((dv, k) => items.push(
-        <div key={'div-' + t.id + '-' + k} className={'divider-abs ' + dv.dir} aria-hidden="true"
+      const {panes, dividers} = paneRects(tb.root)
+      for (const l of leaves(tb.root)) items.push(pane(tb, l, panes.get(l.id)!, active))
+      if (!tb.zoomPane) dividers.forEach((dv, k) => items.push(
+        <div key={'div-' + tb.id + '-' + k} className={'divider-abs ' + dv.dir} aria-hidden="true"
           style={{left: dv.x + '%', top: dv.y + '%', width: dv.dir === 'row' ? undefined : dv.w + '%', height: dv.dir === 'col' ? undefined : dv.h + '%', display: active ? undefined : 'none'}} />))
     }
   }

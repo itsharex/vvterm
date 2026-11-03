@@ -1,4 +1,5 @@
 import {DragEvent, FormEvent, MouseEvent as ReactMouseEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import {useT, type TFn} from '../i18n'
 import {errMsg} from '../util'
 import {useConfirm} from '../ui/Confirm'
 import {IconArrowUp, IconChevron, IconClose, IconPlus, IconEye, IconEyeOff, IconFile, IconFolder, IconHome, IconRefresh, IconSearch} from '../ui/Icons'
@@ -8,7 +9,8 @@ import {byName, SortMenu, usePref, type SortOption} from '../ui/ListTools'
 import type {RemoteEntry} from '../types'
 
 type Sort = 'name' | 'name-desc' | 'size' | 'modified'
-const SORTS: SortOption<Sort>[] = [{value: 'name', label: 'Name A–Z'}, {value: 'name-desc', label: 'Name Z–A'}, {value: 'size', label: 'Size (largest first)'}, {value: 'modified', label: 'Modified (newest first)'}]
+const SORT_IDS: Sort[] = ['name', 'name-desc', 'size', 'modified']
+const sortOptions = (t: TFn): SortOption<Sort>[] => [{value: 'name', label: t('Name A–Z')}, {value: 'name-desc', label: t('Name Z–A')}, {value: 'size', label: t('Size (largest first)')}, {value: 'modified', label: t('Modified (newest first)')}]
 
 /** What a pane needs from a file system: the Local pane backs it with this computer, the Remote pane with SFTP. */
 export interface PaneFs {
@@ -60,14 +62,16 @@ interface Props {
   lead?: ReactNode
 }
 
-const label = (s: Side) => (s === 'local' ? 'Local' : 'Remote')
+const label = (t: TFn, s: Side) => (s === 'local' ? t('Local') : t('Remote'))
 
 /**
  * One side of the SFTP screen: folder navigation, a table (name, date, size, kind), several selected rows at
  * once (Cmd/Ctrl-click, Shift-click, Cmd/Ctrl+A), new folder / rename / delete, and drag and drop of the
  * selection to the other side. It knows nothing about SSH.
  */
-export function FilePane({side, title, icon, fs, startDir, reloadKey, showHiddenDefault, actions, onState, onDropEntry, onCopyOut, onClose, onAdd, lead, copyLabel = 'Copy to target directory'}: Props) {
+export function FilePane({side, title, icon, fs, startDir, reloadKey, showHiddenDefault, actions, onState, onDropEntry, onCopyOut, onClose, onAdd, lead, copyLabel}: Props) {
+  const t = useT()
+  const SORTS = sortOptions(t)
   const confirm = useConfirm()
   const alive = useRef(true)
   const cwdRef = useRef('')
@@ -83,7 +87,7 @@ export function FilePane({side, title, icon, fs, startDir, reloadKey, showHidden
   const [menu, setMenu] = useState<{x: number; y: number; right?: boolean} | null>(null)
   const [filtering, setFiltering] = useState(false)
   const [filter, setFilter] = useState('')
-  const [sort, setSort] = usePref<Sort>('vutty.sftp.sort', SORTS.map(o => o.value), 'name')
+  const [sort, setSort] = usePref<Sort>('vutty.sftp.sort', SORT_IDS, 'name')
   const [perms, setPerms] = useState<RemoteEntry | null>(null)
   const [naming, setNaming] = useState<{mode: 'mkdir' | 'rename'; value: string; err: string} | null>(null)
 
@@ -131,9 +135,9 @@ export function FilePane({side, title, icon, fs, startDir, reloadKey, showHidden
   }
 
   const remove = (list: RemoteEntry[]) => guard(async () => {
-    const what = list.length > 1 ? `these ${list.length} items (folders with everything in them)`
-      : list[0].is_dir ? `the folder "${list[0].name}" and everything in it` : `"${list[0].name}"`
-    if (!(await confirm(`Delete ${what}? This cannot be undone.`, {confirmLabel: 'Delete', danger: true}))) return
+    const question = list.length > 1 ? t('Delete these {n} items (folders with everything in them)? This cannot be undone.', {n: list.length})
+      : list[0].is_dir ? t('Delete the folder "{name}" and everything in it? This cannot be undone.', {name: list[0].name}) : t('Delete "{name}"? This cannot be undone.', {name: list[0].name})
+    if (!(await confirm(question, {confirmLabel: t('Delete'), danger: true}))) return
     try {
       for (const e of list) await fs!.remove(e.path, e.is_dir)
     } finally {
@@ -227,72 +231,72 @@ export function FilePane({side, title, icon, fs, startDir, reloadKey, showHidden
   }
 
   return (
-    <section className={'fpane' + (over ? ' drop-target' : '')} aria-label={label(side)}>
+    <section className={'fpane' + (over ? ' drop-target' : '')} aria-label={label(t, side)}>
       <div className={'fpane-head' + (filtering ? ' filtering' : '')}>
         {lead ?? <>
           <span className="fpane-icon">{icon}</span>
           <b className="fpane-title">{title}</b>
-          {onClose && <button className="icon ghost fpane-x" aria-label="Change host" title="Disconnect and pick another host" onClick={onClose}><IconClose size={13} /></button>}
-          {onAdd && <button className="icon ghost fpane-x" aria-label="Add host" title="Connect to another host" onClick={onAdd}><IconPlus size={14} /></button>}
+          {onClose && <button className="icon ghost fpane-x" aria-label={t('Change host')} title={t('Disconnect and pick another host')} onClick={onClose}><IconClose size={13} /></button>}
+          {onAdd && <button className="icon ghost fpane-x" aria-label={t('Add host')} title={t('Connect to another host')} onClick={onAdd}><IconPlus size={14} /></button>}
         </>}
         <span className="spacer" />
         {actions}
-        {filtering && <input className="fpane-filter" aria-label={`${label(side)} filter`} autoFocus placeholder="Filter" value={filter} onChange={e => setFilter(e.target.value)}
+        {filtering && <input className="fpane-filter" aria-label={t('{side} filter', {side: label(t, side)})} autoFocus placeholder={t('Filter')} value={filter} onChange={e => setFilter(e.target.value)}
           onKeyDown={ev => { if (ev.key === 'Escape') { setFilter(''); setFiltering(false) } }} />}
         <SortMenu value={sort} options={SORTS} onChange={setSort} />
-        <button aria-label="Filter" aria-pressed={filtering} className={filtering ? 'on' : ''} onClick={() => { setFiltering(f => !f); setFilter('') }}><IconSearch size={15} /> Filter</button>
-        <button aria-label="Actions" aria-haspopup="menu" aria-expanded={!!menu?.right} disabled={!ready} onMouseDown={ev => ev.stopPropagation()} onClick={toggleActions}>Actions <IconChevron size={12} /></button>
-        <button className="icon" aria-label={hidden ? 'Hide hidden files' : 'Show hidden files'} aria-pressed={hidden} title={hidden ? 'Hide hidden files' : 'Show hidden files'} onClick={() => setHidden(h => !h)}>
+        <button aria-label={t('Filter')} aria-pressed={filtering} className={filtering ? 'on' : ''} onClick={() => { setFiltering(f => !f); setFilter('') }}><IconSearch size={15} /> {t('Filter')}</button>
+        <button aria-label={t('Actions')} aria-haspopup="menu" aria-expanded={!!menu?.right} disabled={!ready} onMouseDown={ev => ev.stopPropagation()} onClick={toggleActions}>{t('Actions')} <IconChevron size={12} /></button>
+        <button className="icon" aria-label={hidden ? t('Hide hidden files') : t('Show hidden files')} aria-pressed={hidden} title={hidden ? t('Hide hidden files') : t('Show hidden files')} onClick={() => setHidden(h => !h)}>
           {hidden ? <IconEye size={16} /> : <IconEyeOff size={16} />}
         </button>
       </div>
 
       <div className="sftp-bar">
-        <button className="icon" aria-label="Up one folder" disabled={!ready || cwd === '/'} onClick={() => load(parentOf(cwd))}><IconArrowUp size={16} /></button>
-        <button className="icon" aria-label="Home folder" disabled={!ready} onClick={() => load(startDir)} title="Home"><IconHome size={16} /></button>
-        <button className="icon" aria-label="Refresh" disabled={!ready} onClick={() => load(cwd)}><IconRefresh size={16} /></button>
+        <button className="icon" aria-label={t('Up one folder')} disabled={!ready || cwd === '/'} onClick={() => load(parentOf(cwd))}><IconArrowUp size={16} /></button>
+        <button className="icon" aria-label={t('Home folder')} disabled={!ready} onClick={() => load(startDir)} title={t('Home')}><IconHome size={16} /></button>
+        <button className="icon" aria-label={t('Refresh')} disabled={!ready} onClick={() => load(cwd)}><IconRefresh size={16} /></button>
         <form className="sftp-path" onSubmit={goPath}>
-          <input aria-label={`${label(side)} path`} value={pathText} onChange={e => setPathText(e.target.value)} disabled={!ready} spellCheck={false} />
+          <input aria-label={t('{side} path', {side: label(t, side)})} value={pathText} onChange={e => setPathText(e.target.value)} disabled={!ready} spellCheck={false} />
         </form>
       </div>
 
-      <nav className="sftp-crumbs" aria-label={`${label(side)} folder path`}>
+      <nav className="sftp-crumbs" aria-label={t('{side} folder path', {side: label(t, side)})}>
         {ready && breadcrumbs(cwd).map((c, i, all) => (
           <span key={c.path}>
             {i > 0 && <IconChevron size={12} />}
             {i === all.length - 1 ? <b>{c.name}</b> : <button className="link" onClick={() => load(c.path)}>{c.name}</button>}
           </span>
         ))}
-        {chosen.length > 1 && <span className="sel-count" role="status">{chosen.length} selected</span>}
+        {chosen.length > 1 && <span className="sel-count" role="status">{t('{n} selected', {n: chosen.length})}</span>}
       </nav>
 
       {naming && (
         <form className="sftp-name" onSubmit={submitName}>
-          <input aria-label="Name" autoFocus value={naming.value} placeholder={naming.mode === 'mkdir' ? 'New folder name' : 'New name'}
+          <input aria-label={t('Name')} autoFocus value={naming.value} placeholder={naming.mode === 'mkdir' ? t('New folder name') : t('New name')}
             onChange={e => setNaming({...naming, value: e.target.value, err: ''})} />
-          <button className="primary" type="submit">{naming.mode === 'mkdir' ? 'Create' : 'Rename'}</button>
-          <button type="button" onClick={() => setNaming(null)}>Cancel</button>
+          <button className="primary" type="submit">{naming.mode === 'mkdir' ? t('Create') : t('Rename')}</button>
+          <button type="button" onClick={() => setNaming(null)}>{t('Cancel')}</button>
           {naming.err && <span className="error" role="alert">{naming.err}</span>}
         </form>
       )}
 
-      <div className="sftp-table" role="table" aria-label={`${label(side)} files`} aria-multiselectable="true" aria-busy={loading}
+      <div className="sftp-table" role="table" aria-label={t('{side} files', {side: label(t, side)})} aria-multiselectable="true" aria-busy={loading}
         onDragOver={dragOver} onDragLeave={() => setOver(false)} onDrop={drop} onContextMenu={ev => openMenu(ev, null)}
         onKeyDown={ev => { if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'a') { ev.preventDefault(); selectAll() } }}>
         <div className="sftp-row head" role="row">
-          <span role="columnheader">Name</span><span role="columnheader">Date Modified</span><span role="columnheader">Size</span><span role="columnheader">Kind</span>
+          <span role="columnheader">{t('Name')}</span><span role="columnheader">{t('Date Modified')}</span><span role="columnheader">{t('Size')}</span><span role="columnheader">{t('Kind')}</span>
         </div>
         {shown.map(e => (
           <div key={e.path} role="row" tabIndex={0} draggable aria-selected={selected.includes(e.path)} className={'sftp-row' + (selected.includes(e.path) ? ' selected' : '')}
             onClick={ev => pick(e, ev)} onDragStart={ev => dragStart(ev, e)} onContextMenu={ev => openMenu(ev, e)}
             onDoubleClick={() => e.is_dir && load(e.path)} onKeyDown={ev => ev.key === 'Enter' && e.is_dir && load(e.path)}>
-            <span role="cell" className="name">{e.is_dir ? <IconFolder size={16} /> : <IconFile size={16} />}<span>{e.name}</span>{e.is_link && <small className="muted"> → link</small>}</span>
+            <span role="cell" className="name">{e.is_dir ? <IconFolder size={16} /> : <IconFile size={16} />}<span>{e.name}</span>{e.is_link && <small className="muted"> {t('→ link')}</small>}</span>
             <span role="cell" className="muted">{formatDate(e.mod_time)}</span>
             <span role="cell" className="muted">{e.is_dir ? '--' : formatBytes(e.size)}</span>
             <span role="cell" className="muted">{kindOf(e)}</span>
           </div>
         ))}
-        {ready && !loading && shown.length === 0 && !error && <div className="empty-hint">This folder is empty.</div>}
+        {ready && !loading && shown.length === 0 && !error && <div className="empty-hint">{t('This folder is empty.')}</div>}
       </div>
       {error && <div className="sftp-error error" role="alert">{error}</div>}
       {menu && (() => {
@@ -301,20 +305,20 @@ export function FilePane({side, title, icon, fs, startDir, reloadKey, showHidden
         const entry = one ? targets[0] : null
         const none = targets.length === 0
         return (
-          <div className="ctx-menu" role="menu" aria-label={menu.right ? 'Actions' : none ? 'Folder menu' : 'File menu'} style={menu.right ? {right: menu.x, top: menu.y} : {left: menu.x, top: menu.y}}
+          <div className="ctx-menu" role="menu" aria-label={menu.right ? t('Actions') : none ? t('Folder menu') : t('File menu')} style={menu.right ? {right: menu.x, top: menu.y} : {left: menu.x, top: menu.y}}
             onMouseDown={ev => ev.stopPropagation()} onContextMenu={ev => ev.preventDefault()}>
-            <button role="menuitem" disabled={!entry || (!entry.is_dir && !fs?.open)} onClick={() => act(() => openEntry(entry!))}>Open</button>
-            <button role="menuitem" disabled={!entry || entry.is_dir || !fs?.openWith} onClick={() => act(() => fs!.openWith!(entry!))}>Open with…</button>
-            {fs?.edit && <button role="menuitem" disabled={!entry || entry.is_dir} onClick={() => act(() => fs.edit!(entry!))}>Edit and save back</button>}
-            <button role="menuitem" disabled={none || !onCopyOut} onClick={() => { setMenu(null); onCopyOut?.(targets.map(x => ({path: x.path, name: x.name, is_dir: x.is_dir}))) }}>{copyLabel}</button>
-            <button role="menuitem" disabled={!entry} onClick={() => { setMenu(null); setNaming({mode: 'rename', value: entry!.name, err: ''}) }}>Rename</button>
-            <button role="menuitem" className="danger-item" disabled={none} onClick={() => { setMenu(null); void remove(targets) }}>Delete</button>
-            <button role="menuitem" onClick={() => act(() => load(cwd))}>Refresh</button>
-            <button role="menuitem" onClick={() => { setMenu(null); setNaming({mode: 'mkdir', value: '', err: ''}) }}>New Folder</button>
-            <button role="menuitem" onClick={() => { setMenu(null); setHidden(h => !h) }}>{hidden ? 'Hide Hidden Files' : 'Show Hidden Files'}</button>
-            <button role="menuitem" disabled={!entry || !fs?.chmod} onClick={() => { setMenu(null); setPerms(entry) }}>Edit Permissions</button>
-            <button role="menuitem" disabled={shown.length === 0} onClick={() => { setMenu(null); selectAll() }}>Select All</button>
-            <button role="menuitem" className="danger-item" disabled={!onClose} onClick={() => { setMenu(null); onClose?.() }}>Close</button>
+            <button role="menuitem" disabled={!entry || (!entry.is_dir && !fs?.open)} onClick={() => act(() => openEntry(entry!))}>{t('Open')}</button>
+            <button role="menuitem" disabled={!entry || entry.is_dir || !fs?.openWith} onClick={() => act(() => fs!.openWith!(entry!))}>{t('Open with…')}</button>
+            {fs?.edit && <button role="menuitem" disabled={!entry || entry.is_dir} onClick={() => act(() => fs.edit!(entry!))}>{t('Edit and save back')}</button>}
+            <button role="menuitem" disabled={none || !onCopyOut} onClick={() => { setMenu(null); onCopyOut?.(targets.map(x => ({path: x.path, name: x.name, is_dir: x.is_dir}))) }}>{copyLabel ?? t('Copy to target directory')}</button>
+            <button role="menuitem" disabled={!entry} onClick={() => { setMenu(null); setNaming({mode: 'rename', value: entry!.name, err: ''}) }}>{t('Rename')}</button>
+            <button role="menuitem" className="danger-item" disabled={none} onClick={() => { setMenu(null); void remove(targets) }}>{t('Delete')}</button>
+            <button role="menuitem" onClick={() => act(() => load(cwd))}>{t('Refresh')}</button>
+            <button role="menuitem" onClick={() => { setMenu(null); setNaming({mode: 'mkdir', value: '', err: ''}) }}>{t('New Folder')}</button>
+            <button role="menuitem" onClick={() => { setMenu(null); setHidden(h => !h) }}>{hidden ? t('Hide Hidden Files') : t('Show Hidden Files')}</button>
+            <button role="menuitem" disabled={!entry || !fs?.chmod} onClick={() => { setMenu(null); setPerms(entry) }}>{t('Edit Permissions')}</button>
+            <button role="menuitem" disabled={shown.length === 0} onClick={() => { setMenu(null); selectAll() }}>{t('Select All')}</button>
+            <button role="menuitem" className="danger-item" disabled={!onClose} onClick={() => { setMenu(null); onClose?.() }}>{t('Close')}</button>
           </div>
         )
       })()}

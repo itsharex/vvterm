@@ -1,5 +1,6 @@
 import {completion, createPrefixTracker, suggest, type Sources, type Suggestion} from './suggest'
 import {matches} from '../shortcuts/shortcuts'
+import {t} from '../i18n'
 
 /** The menu item "Show Suggestions" asks the focused pane to open or close its list with this window event. */
 export const SUGGEST_POPUP = 'vutty:suggest-popup'
@@ -41,7 +42,7 @@ const AUTO_ROWS = 6
 /** a line this long is a paste, not a command being typed: nothing is suggested for it (and nothing is looked through) */
 const MAX_PREFIX = 400
 
-const SOURCE_NAME = {typed: 'typed', snippet: 'snippet', host: 'host'} as const
+const sourceName = (s: 'typed' | 'snippet' | 'host') => (s === 'typed' ? t('typed') : s === 'snippet' ? t('snippet') : t('host'))
 
 /**
  * Command suggestions drawn over a terminal as a list under the cursor while something typed matches (↑ ↓ choose a row, Enter
@@ -54,7 +55,7 @@ export function createSuggester(o: SuggesterOptions) {
   const pop = document.createElement('div')
   pop.className = 'suggest-pop'
   pop.setAttribute('role', 'listbox')
-  pop.setAttribute('aria-label', 'Command suggestions')
+  pop.setAttribute('aria-label', t('Command suggestions'))
   pop.hidden = true
   // a click on the list must not take the keyboard away from the terminal
   pop.addEventListener('mousedown', e => e.preventDefault())
@@ -203,7 +204,7 @@ export function createSuggester(o: SuggesterOptions) {
         text.textContent = s.text
         const badge = document.createElement('span')
         badge.className = 'suggest-src'
-        badge.textContent = s.label ? `${SOURCE_NAME[s.source]} · ${s.label}` : SOURCE_NAME[s.source]
+        badge.textContent = s.label ? `${sourceName(s.source)} · ${s.label}` : sourceName(s.source)
         row.append(text, badge)
         row.addEventListener('click', () => { accept(s); o.term.element?.querySelector('textarea')?.focus() })
         return row

@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react'
+import {useT, useTn} from '../i18n'
 import {Field, SidePanel, Section} from '../ui/Modal'
 import {resolveTerminalTheme} from '../terminal/themes'
 import {ThemePicker} from '../terminal/ThemePicker'
@@ -38,6 +39,8 @@ let testSeq = 0
  * saving anything; Connect saves and opens a terminal.
  */
 export function HostForm({host, isNew, groups, defaultGroupId, hosts, identities, onClose, onSaved, onConnect, onDraft}: Props) {
+  const t = useT()
+  const tn = useTn()
   const be = useBackend()
   const [appSetting, setAppSetting] = useState('auto')
   const [appTheme, setAppTheme] = useState<Settings['theme']>('dark')
@@ -83,11 +86,11 @@ export function HostForm({host, isNew, groups, defaultGroupId, hosts, identities
   /** Validates the form; returns the host to save, or null after showing the problem. */
   const draft = (): Partial<Host> | null => {
     const port = Number(f.port)
-    if (!f.hostname.trim()) { setErr('Hostname is required'); return null }
-    if (/\s/.test(f.hostname) || /\s/.test(f.username)) { setErr('Hostname and username cannot contain spaces'); return null }
-    if (!Number.isInteger(port) || port < 1 || port > 65535) { setErr('Port must be between 1 and 65535'); return null }
+    if (!f.hostname.trim()) { setErr(t('Hostname is required')); return null }
+    if (/\s/.test(f.hostname) || /\s/.test(f.username)) { setErr(t('Hostname and username cannot contain spaces')); return null }
+    if (!Number.isInteger(port) || port < 1 || port > 65535) { setErr(t('Port must be between 1 and 65535')); return null }
     const telnet = !f.telnet_on ? 0 : f.telnet_port.trim() === '' ? 23 : Number(f.telnet_port)
-    if (f.telnet_on && (!Number.isInteger(telnet) || telnet < 1 || telnet > 65535)) { setErr('Telnet port must be between 1 and 65535'); return null }
+    if (f.telnet_on && (!Number.isInteger(telnet) || telnet < 1 || telnet > 65535)) { setErr(t('Telnet port must be between 1 and 65535')); return null }
     setErr('')
     return {
       ...(existing ? host : {}),
@@ -167,136 +170,137 @@ export function HostForm({host, isNew, groups, defaultGroupId, hosts, identities
   }
 
   return (
-    <SidePanel title={existing ? `Edit ${host!.label}` : 'New host'} onClose={onClose}
+    <SidePanel title={existing ? t('Edit {name}', {name: host!.label}) : t('New host')} onClose={onClose}
       footer={
         <>
-          <button onClick={runTest} disabled={test.state === 'running' || busy}>{test.state === 'running' ? 'Testing…' : 'Test connection'}</button>
+          <button onClick={runTest} disabled={test.state === 'running' || busy}>{test.state === 'running' ? t('Testing…') : t('Test connection')}</button>
           <span className="spacer" />
-          <button onClick={save} disabled={busy}>Save</button>
-          {onConnect && <button className="primary" onClick={connect} disabled={busy}>Connect</button>}
+          <button onClick={save} disabled={busy}>{t('Save')}</button>
+          {onConnect && <button className="primary" onClick={connect} disabled={busy}>{t('Connect')}</button>}
         </>
       }>
-      <Section title="Address">
+      <Section title={t('Address')}>
         <div className="addr-row">
           <span className="tile env-none"><IconServer size={20} /></span>
-          <input aria-label="Hostname" value={f.hostname} onChange={set('hostname')} placeholder="IP or Hostname" autoFocus />
+          <input aria-label={t('Hostname')} value={f.hostname} onChange={set('hostname')} placeholder={t('IP or Hostname')} autoFocus />
         </div>
       </Section>
 
-      <Section title="General">
-        <Field label="Label"><input aria-label="Label" value={f.label} onChange={set('label')} placeholder="Defaults to the address" /></Field>
-        <Field label="Parent group">
-          <Select label="Group" value={f.group_id} onChange={v => setF(x => ({...x, group_id: v}))}
-            options={[{value: '', label: 'None'}, ...groups.map(g => ({value: g.id, label: g.name}))]} />
+      <Section title={t('General')}>
+        <Field label={t('Label')}><input aria-label={t('Label')} value={f.label} onChange={set('label')} placeholder={t('Defaults to the address')} /></Field>
+        <Field label={t('Parent group')}>
+          <Select label={t('Group')} value={f.group_id} onChange={v => setF(x => ({...x, group_id: v}))}
+            options={[{value: '', label: t('None')}, ...groups.map(g => ({value: g.id, label: g.name}))]} />
         </Field>
-        <Field label="Environment (colour)">
-          <Select label="Environment" value={f.env} onChange={v => setF(x => ({...x, env: v as typeof f.env}))}
-            options={[{value: '', label: 'None'}, {value: 'dev', label: 'dev', hint: 'development'}, {value: 'staging', label: 'staging', hint: 'pre-production'}, {value: 'prod', label: 'prod', hint: 'production: shown in red'}]} />
+        <Field label={t('Environment (colour)')}>
+          <Select label={t('Environment')} value={f.env} onChange={v => setF(x => ({...x, env: v as typeof f.env}))}
+            options={[{value: '', label: t('None')}, {value: 'dev', label: 'dev', hint: t('development')}, {value: 'staging', label: 'staging', hint: t('pre-production')}, {value: 'prod', label: 'prod', hint: t('production: shown in red')}]} />
         </Field>
-        <Field label="Tags"><input aria-label="Tags" value={f.tags} onChange={set('tags')} placeholder="Comma separated" /></Field>
+        <Field label={t('Tags')}><input aria-label={t('Tags')} value={f.tags} onChange={set('tags')} placeholder={t('Comma separated')} /></Field>
       </Section>
 
       <Section>
-        <div className="inline-field"><span>SSH on</span><input aria-label="Port" className="port" value={f.port} onChange={set('port')} /><span>port</span></div>
+        <div className="inline-field"><span>{t('SSH on')}</span><input aria-label={t('Port')} className="port" value={f.port} onChange={set('port')} /><span>{t('port')}</span></div>
       </Section>
 
       {!f.telnet_on ? (
-        <button type="button" className="add-wide" onClick={() => setF(x => ({...x, telnet_on: true, telnet_port: x.telnet_port || '23'}))}><IconPlus size={17} /> Add Telnet</button>
+        <button type="button" className="add-wide" onClick={() => setF(x => ({...x, telnet_on: true, telnet_port: x.telnet_port || '23'}))}><IconPlus size={17} /> {t('Add Telnet')}</button>
       ) : (
         <Section>
-          <div className="inline-field"><span>Telnet on</span><input aria-label="Telnet port" className="port" placeholder="23" value={f.telnet_port} onChange={set('telnet_port')} inputMode="numeric" /><span>port</span>
-            <button type="button" className="link remove-telnet" onClick={() => setF(x => ({...x, telnet_on: false, telnet_port: '', telnet_username: '', telnet_password: ''}))}>Remove</button></div>
-          <div className="muted telnet-warning" role="note">Telnet is not encrypted: everything you type, the password included, crosses the network in clear text. Use it only on a network you trust, for devices that offer nothing else.</div>
-          <h4 className="card-sub">Credentials</h4>
-          <input aria-label="Telnet username" value={f.telnet_username} onChange={set('telnet_username')} placeholder="Username" autoComplete="off" />
+          <div className="inline-field"><span>{t('Telnet on')}</span><input aria-label={t('Telnet port')} className="port" placeholder="23" value={f.telnet_port} onChange={set('telnet_port')} inputMode="numeric" /><span>{t('port')}</span>
+            <button type="button" className="link remove-telnet" onClick={() => setF(x => ({...x, telnet_on: false, telnet_port: '', telnet_username: '', telnet_password: ''}))}>{t('Remove')}</button></div>
+          <div className="muted telnet-warning" role="note">{t('Telnet is not encrypted: everything you type, the password included, crosses the network in clear text. Use it only on a network you trust, for devices that offer nothing else.')}</div>
+          <h4 className="card-sub">{t('Credentials')}</h4>
+          <input aria-label={t('Telnet username')} value={f.telnet_username} onChange={set('telnet_username')} placeholder={t('Username')} autoComplete="off" />
           <div className="pw-row">
-            <input aria-label="Telnet password" type={showTelnetPw ? 'text' : 'password'} value={f.telnet_password} onChange={set('telnet_password')} autoComplete="new-password"
-              placeholder={existing && host?.telnet_enabled ? 'Saved in the vault (type to replace)' : 'Password'} />
-            <button type="button" className="eye" aria-label={showTelnetPw ? 'Hide Telnet password' : 'Show Telnet password'} aria-pressed={showTelnetPw} onClick={() => setShowTelnetPw(v => !v)}>{showTelnetPw ? <IconEyeOff size={17} /> : <IconEye size={17} />}</button>
+            <input aria-label={t('Telnet password')} type={showTelnetPw ? 'text' : 'password'} value={f.telnet_password} onChange={set('telnet_password')} autoComplete="new-password"
+              placeholder={existing && host?.telnet_enabled ? t('Saved in the vault (type to replace)') : t('Password')} />
+            <button type="button" className="eye" aria-label={showTelnetPw ? t('Hide Telnet password') : t('Show Telnet password')} aria-pressed={showTelnetPw} onClick={() => setShowTelnetPw(v => !v)}>{showTelnetPw ? <IconEyeOff size={17} /> : <IconEye size={17} />}</button>
           </div>
-          <Select label="Telnet encoding" value={f.telnet_encoding} onChange={v => setF(x => ({...x, telnet_encoding: v}))}
-            options={[{value: 'utf-8', label: 'UTF-8'}, {value: 'iso-8859-1', label: 'ISO-8859-1', hint: 'Latin-1, older devices'}]} />
+          <Select label={t('Telnet encoding')} value={f.telnet_encoding} onChange={v => setF(x => ({...x, telnet_encoding: v}))}
+            options={[{value: 'utf-8', label: 'UTF-8'}, {value: 'iso-8859-1', label: 'ISO-8859-1', hint: t('Latin-1, older devices')}]} />
         </Section>
       )}
 
-      <Section title="Credentials">
-        <Field label="Username"><input aria-label="Username" value={f.username} onChange={set('username')} placeholder="Username" autoComplete="off" /></Field>
-        <Field label="Password"><div className="pw-row">
-          <input aria-label="Password" type={showPw ? 'text' : 'password'} value={f.password} onChange={set('password')} autoComplete="new-password"
-            disabled={!!f.identity_id} placeholder={f.identity_id ? 'Using the selected identity' : existing && host?.identity_id ? 'Saved in the vault (type to replace)' : 'Password'} />
-          <button type="button" className="eye" aria-label={showPw ? 'Hide password' : 'Show password'} title={showPw ? 'Hide password' : 'Show password'} aria-pressed={showPw} onClick={() => setShowPw(v => !v)}>{showPw ? <IconEyeOff size={17} /> : <IconEye size={17} />}</button>
+      <Section title={t('Credentials')}>
+        <Field label={t('Username')}><input aria-label={t('Username')} value={f.username} onChange={set('username')} placeholder={t('Username')} autoComplete="off" /></Field>
+        <Field label={t('Password')}><div className="pw-row">
+          <input aria-label={t('Password')} type={showPw ? 'text' : 'password'} value={f.password} onChange={set('password')} autoComplete="new-password"
+            disabled={!!f.identity_id} placeholder={f.identity_id ? t('Using the selected identity') : existing && host?.identity_id ? t('Saved in the vault (type to replace)') : t('Password')} />
+          <button type="button" className="eye" aria-label={showPw ? t('Hide password') : t('Show password')} title={showPw ? t('Hide password') : t('Show password')} aria-pressed={showPw} onClick={() => setShowPw(v => !v)}>{showPw ? <IconEyeOff size={17} /> : <IconEye size={17} />}</button>
         </div></Field>
-        <Field label="Key or saved identity">
-          <Select label="Identity" value={f.identity_id} onChange={v => setF(x => ({...x, identity_id: v}))}
-            options={[{value: '', label: 'None', hint: 'use the password above or ssh-agent'}, ...identities.map(i => ({value: i.id, label: i.name, hint: i.auth_type === 'key' ? 'SSH key' : i.auth_type === 'password' ? 'saved password' : 'ssh-agent'}))]} />
+        <Field label={t('Key or saved identity')}>
+          <Select label={t('Identity')} value={f.identity_id} onChange={v => setF(x => ({...x, identity_id: v}))}
+            options={[{value: '', label: t('None'), hint: t('use the password above or ssh-agent')}, ...identities.map(i => ({value: i.id, label: i.name, hint: i.auth_type === 'key' ? t('SSH key') : i.auth_type === 'password' ? t('saved password') : 'ssh-agent'}))]} />
         </Field>
-        {f.password && <div className="muted">The password is stored encrypted in the vault, never in the host list.</div>}
+        {f.password && <div className="muted">{t('The password is stored encrypted in the vault, never in the host list.')}</div>}
       </Section>
 
-      <Section title="Terminal theme">
+      <Section title={t('Terminal theme')}>
         <ThemePicker value={f.terminal_theme} onChange={v => setF(x => ({...x, terminal_theme: v}))} inherited={resolveTerminalTheme(appSetting, appearance)} />
       </Section>
 
-      <Section title="AI assistant">
-        <Field label="Assistant on this host">
-          <Select label="AI assistant on this host" value={f.ai_policy} onChange={v => setF(x => ({...x, ai_policy: v as AiPolicy}))}
-            options={[{value: '', label: `Default (${f.env === 'prod' ? 'off' : 'on'})`}, {value: 'off', label: 'Off'}, {value: 'ask', label: 'Ask first, in the chat'}, {value: 'on', label: 'On'}]} />
+      <Section title={t('AI assistant')}>
+        <Field label={t('Assistant on this host')}>
+          <Select label={t('AI assistant on this host')} value={f.ai_policy} onChange={v => setF(x => ({...x, ai_policy: v as AiPolicy}))}
+            options={[{value: '', label: f.env === 'prod' ? t('Default (off)') : t('Default (on)')}, {value: 'off', label: t('Off')}, {value: 'ask', label: t('Ask first, in the chat')}, {value: 'on', label: t('On')}]} />
         </Field>
-        <div className="muted">When on, the text of the terminal can be sent, with secrets hidden, to the AI tool you chose in Settings. The assistant asks you, in the chat, before anything that could change something. Production hosts are off by default and never run commands for the assistant.</div>
+        <div className="muted">{t('When on, the text of the terminal can be sent, with secrets hidden, to the AI tool you chose in Settings. The assistant asks you, in the chat, before anything that could change something. Production hosts are off by default and never run commands for the assistant.')}</div>
       </Section>
 
-      <Section title="Options">
-        <Field label="Host chaining (jump host)">
-          <Select label="Jump host" value={f.jump_host_id} onChange={v => setF(x => ({...x, jump_host_id: v}))}
-            options={[{value: '', label: 'Direct connection'}, ...hosts.filter(h => h.id !== host?.id).map(h => ({value: h.id, label: `Via ${h.label}`, hint: h.hostname}))]} />
+      <Section title={t('Options')}>
+        <Field label={t('Host chaining (jump host)')}>
+          <Select label={t('Jump host')} value={f.jump_host_id} onChange={v => setF(x => ({...x, jump_host_id: v}))}
+            options={[{value: '', label: t('Direct connection')}, ...hosts.filter(h => h.id !== host?.id).map(h => ({value: h.id, label: t('Via {name}', {name: h.label}), hint: h.hostname}))]} />
         </Field>
         <div className="setting-row">
           <div>
-            <b>Forward my keys to this host</b>
-            <div className="muted">Lets this server use your ssh-agent (or, with no agent running, this host's saved key) to sign in to other machines while you are connected, like <code>ssh -A</code>. Nothing is copied to the server, but anyone with root there can use your keys until you disconnect.</div>
+            <b>{t('Forward my keys to this host')}</b>
+            <div className="muted">{t('Lets this server use your ssh-agent (or, with no agent running, this host\'s saved key) to sign in to other machines while you are connected, like ssh -A. Nothing is copied to the server, but anyone with root there can use your keys until you disconnect.')}</div>
           </div>
-          <Switch label="Forward my keys to this host" checked={f.forward_agent} onChange={v => setF(x => ({...x, forward_agent: v}))} />
+          <Switch label={t('Forward my keys to this host')} checked={f.forward_agent} onChange={v => setF(x => ({...x, forward_agent: v}))} />
         </div>
         {f.forward_agent && (
-          <div className="dx-warn" role="note"><IconWarn size={15} /> <span>{f.env === 'prod' ? 'This is a production host. ' : ''}Turn this on only for a server you trust. If it is only a stop on the way to other servers, a jump host does the same without exposing your keys.</span></div>
+          <div className="dx-warn" role="note"><IconWarn size={15} /> <span>{f.env === 'prod' ? t('This is a production host.') + ' ' : ''}{t('Turn this on only for a server you trust. If it is only a stop on the way to other servers, a jump host does the same without exposing your keys.')}</span></div>
         )}
-        <div className="inline-field"><span>Keepalive</span><input aria-label="Keepalive" className="port" value={f.keepalive_sec} onChange={set('keepalive_sec')} /><span>seconds</span></div>
+        <div className="inline-field"><span>{t('Keepalive')}</span><input aria-label={t('Keepalive')} className="port" value={f.keepalive_sec} onChange={set('keepalive_sec')} /><span>{t('seconds')}</span></div>
       </Section>
 
       <AuthPrompt inline challenge={auth?.c ?? null} promptKey={auth?.key ?? ''} onDone={() => setAuth(null)} onError={setErr} />
 
       {prompt && (
-        <div className="notice" role="alertdialog" aria-label="Host key confirmation">
-          <b>Unknown host key for {prompt.p.host}</b>
+        <div className="notice" role="alertdialog" aria-label={t('Host key confirmation')}>
+          <b>{t('Unknown host key for {host}', {host: prompt.p.host})}</b>
           <div className="fp" data-testid="fingerprint">{prompt.p.fingerprint}</div>
           <div className="row">
-            <button className="primary" onClick={() => answer(true)}>Trust and continue</button>
-            <button onClick={() => answer(false)}>Cancel</button>
+            <button className="primary" onClick={() => answer(true)}>{t('Trust and continue')}</button>
+            <button onClick={() => answer(false)}>{t('Cancel')}</button>
           </div>
         </div>
       )}
 
       {test.state === 'done' && (
         <div className={'test-result ' + (test.result.ok ? 'ok' : 'bad')} role="status" data-testid="test-result">
-          <b className="result-title">{test.result.ok ? <IconCheckCircle size={16} /> : <IconXCircle size={16} />} {test.result.ok ? 'Connection successful' : 'Connection failed'}</b>
+          <b className="result-title">{test.result.ok ? <IconCheckCircle size={16} /> : <IconXCircle size={16} />} {test.result.ok ? t('Connection successful') : t('Connection failed')}</b>
           <div>{test.result.message}</div>
-          {test.result.ok && <div className="muted">{test.result.server_version} · {test.result.latency_ms} ms{test.result.hops > 1 ? ` · ${test.result.hops} hops` : ''}</div>}
+          {test.result.ok && <div className="muted">{test.result.server_version} · {test.result.latency_ms} ms{test.result.hops > 1 ? ' · ' + tn(test.result.hops, '{n} hop', '{n} hops') : ''}</div>}
         </div>
       )}
-      {test.state === 'failed' && <div className="test-result bad" role="status"><b className="result-title"><IconXCircle size={16} /> Cannot test</b><div>{test.message}</div></div>}
+      {test.state === 'failed' && <div className="test-result bad" role="status"><b className="result-title"><IconXCircle size={16} /> {t('Cannot test')}</b><div>{test.message}</div></div>}
       {err && <div className="error" role="alert">{err}</div>}
     </SidePanel>
   )
 }
 
 export function GroupForm({group, groups, defaultParentId, onClose, onSaved}: {group?: Group; groups: Group[]; /** the group open on the hosts page: a new group is created inside it */ defaultParentId?: string; onClose(): void; onSaved(): void}) {
+  const t = useT()
   const be = useBackend()
   const [name, setName] = useState(group?.name ?? '')
   const [parent, setParent] = useState(group?.parent_id || (group ? '' : defaultParentId ?? ''))
   const [color, setColor] = useState(group?.color ?? '')
   const [err, setErr] = useState('')
   const save = async () => {
-    if (!name.trim()) return setErr('Name is required')
+    if (!name.trim()) return setErr(t('Name is required'))
     try {
       await be.hosts.saveGroup({...(group ?? {}), name: name.trim(), parent_id: parent, color})
       onSaved()
@@ -305,15 +309,15 @@ export function GroupForm({group, groups, defaultParentId, onClose, onSaved}: {g
     }
   }
   return (
-    <SidePanel title={group ? 'Edit group' : 'New group'} onClose={onClose}
-      footer={<><button onClick={onClose}>Cancel</button><button className="primary" onClick={save}>Save</button></>}>
-      <Section title="General">
-        <input aria-label="Group name" value={name} onChange={e => setName(e.target.value)} placeholder="Group name" autoFocus />
-        <Field label="Parent group">
-          <Select label="Parent group" value={parent} onChange={setParent}
-            options={[{value: '', label: 'Top level'}, ...groups.filter(g => g.id !== group?.id).map(g => ({value: g.id, label: g.name}))]} />
+    <SidePanel title={group ? t('Edit group') : t('New group')} onClose={onClose}
+      footer={<><button onClick={onClose}>{t('Cancel')}</button><button className="primary" onClick={save}>{t('Save')}</button></>}>
+      <Section title={t('General')}>
+        <input aria-label={t('Group name')} value={name} onChange={e => setName(e.target.value)} placeholder={t('Group name')} autoFocus />
+        <Field label={t('Parent group')}>
+          <Select label={t('Parent group')} value={parent} onChange={setParent}
+            options={[{value: '', label: t('Top level')}, ...groups.filter(g => g.id !== group?.id).map(g => ({value: g.id, label: g.name}))]} />
         </Field>
-        <div className="inline-field"><span>Colour</span><input aria-label="Color" type="color" className="color" value={color || '#3a82f7'} onChange={e => setColor(e.target.value)} /></div>
+        <div className="inline-field"><span>{t('Colour')}</span><input aria-label={t('Color')} type="color" className="color" value={color || '#3a82f7'} onChange={e => setColor(e.target.value)} /></div>
       </Section>
       {err && <div className="error" role="alert">{err}</div>}
     </SidePanel>

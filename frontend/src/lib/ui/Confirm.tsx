@@ -1,4 +1,5 @@
 import {createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState} from 'react'
+import {useT} from '../i18n'
 
 interface Options {
   confirmLabel?: string
@@ -22,6 +23,7 @@ export const useConfirm = () => useContext(Ctx)
 
 /** An in-app confirmation dialog: Enter confirms, Esc or a click outside cancels. */
 export function ConfirmProvider({children}: {children: ReactNode}) {
+  const t = useT()
   const [req, setReq] = useState<Request | null>(null)
   const current = useRef<Request | null>(null)
   current.current = req
@@ -29,8 +31,8 @@ export function ConfirmProvider({children}: {children: ReactNode}) {
 
   const ask = useCallback<Ask>((message, options = {}) => new Promise<boolean>(resolve => {
     current.current?.resolve(false) // a newer question replaces an unanswered one
-    setReq({message, confirmLabel: options.confirmLabel ?? 'OK', danger: !!options.danger, resolve})
-  }), [])
+    setReq({message, confirmLabel: options.confirmLabel ?? t('OK'), danger: !!options.danger, resolve})
+  }), [t])
 
   const answer = useCallback((value: boolean) => {
     current.current?.resolve(value)
@@ -55,10 +57,10 @@ export function ConfirmProvider({children}: {children: ReactNode}) {
       {children}
       {req && (
         <div className="modal-back confirm-back" role="presentation" onMouseDown={e => e.target === e.currentTarget && answer(false)}>
-          <div className="modal confirm" role="alertdialog" aria-modal="true" aria-label="Confirm" aria-describedby="confirm-msg">
+          <div className="modal confirm" role="alertdialog" aria-modal="true" aria-label={t('Confirm')} aria-describedby="confirm-msg">
             <div className="modal-body"><p id="confirm-msg" className="confirm-msg">{req.message}</p></div>
             <div className="modal-foot">
-              <button onClick={() => answer(false)}>Cancel</button>
+              <button onClick={() => answer(false)}>{t('Cancel')}</button>
               <button ref={okRef} className={req.danger ? 'danger' : 'primary'} onClick={() => answer(true)}>{req.confirmLabel}</button>
             </div>
           </div>

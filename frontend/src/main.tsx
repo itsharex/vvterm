@@ -2,6 +2,7 @@ import {lazy, Suspense} from 'react'
 import {createRoot} from 'react-dom/client'
 import SettingsApp from './lib/settings/SettingsApp'
 import {BackendContext, bridgeBackend, inSettingsWindow, inTerminalWindow, installWindowBridge, wailsBackend, windowTarget} from './lib/backend'
+import {LanguageRoot} from './lib/i18n/store'
 import {ToastProvider} from './lib/ui/Toast'
 import {ConfirmProvider} from './lib/ui/Confirm'
 import {CapsLockWarning} from './lib/ui/CapsLockWarning'
@@ -30,12 +31,14 @@ async function boot() {
   // No StrictMode: it double-mounts effects in dev, which would open two SSH sessions per pane.
   createRoot(document.getElementById('root')!).render(
     <BackendContext.Provider value={settingsWindow ? bridgeBackend() : wailsBackend()}>
-      <ToastProvider>
-        <ConfirmProvider>
-          {settingsWindow ? <SettingsApp /> : <Suspense fallback={<div className="gate" />}><App initial={initial} /></Suspense>}
-          <CapsLockWarning />
-        </ConfirmProvider>
-      </ToastProvider>
+      <LanguageRoot>
+        <ToastProvider>
+          <ConfirmProvider>
+            {settingsWindow ? <SettingsApp /> : <Suspense fallback={<div className="gate" />}><App initial={initial} /></Suspense>}
+            <CapsLockWarning />
+          </ConfirmProvider>
+        </ToastProvider>
+      </LanguageRoot>
     </BackendContext.Provider>,
   )
 }

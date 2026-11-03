@@ -8,6 +8,7 @@ import {buildTree, countHosts, countOpen, filterTree, type GroupNode} from '../h
 import {isTerminalTab, leaves, type Tab} from '../layout'
 import type {Group, Host, Settings, Snippet} from '../types'
 import type {Appearance} from '../settings/appearance'
+import {useT, type TFn} from '../i18n'
 
 export type SidebarTab = 'hosts' | 'snippets' | 'history' | 'files' | 'themes' | 'assistant'
 
@@ -55,13 +56,13 @@ interface Props {
   onWidth?(w: number): void
 }
 
-const TABS: {id: SidebarTab; label: string; icon: JSX.Element}[] = [
-  {id: 'hosts', label: 'Hosts', icon: <IconRocket size={17} />},
-  {id: 'snippets', label: 'Snippets', icon: <IconBraces size={17} />},
-  {id: 'history', label: 'History', icon: <IconClock size={17} />},
-  {id: 'files', label: 'Files (SFTP)', icon: <IconFolder size={17} />},
-  {id: 'themes', label: 'Themes and font', icon: <IconPalette size={17} />},
-  {id: 'assistant', label: 'AI assistant', icon: <IconSparkle size={17} />},
+const sideTabs = (t: TFn): {id: SidebarTab; label: string; icon: JSX.Element}[] => [
+  {id: 'hosts', label: t('Hosts'), icon: <IconRocket size={17} />},
+  {id: 'snippets', label: t('Snippets'), icon: <IconBraces size={17} />},
+  {id: 'history', label: t('History'), icon: <IconClock size={17} />},
+  {id: 'files', label: t('Files (SFTP)'), icon: <IconFolder size={17} />},
+  {id: 'themes', label: t('Themes and font'), icon: <IconPalette size={17} />},
+  {id: 'assistant', label: t('AI assistant'), icon: <IconSparkle size={17} />},
 ]
 
 /** A tiny terminal drawn in a theme's own colours. */
@@ -80,6 +81,7 @@ export function ThemeThumb({colors}: {colors: {bg: string; fg: string; green: st
  * before, the files on the server, and the colours and font of the terminal.
  */
 export function TerminalSidebar(p: Props) {
+  const t = useT()
   const [width, setWidth] = useState(p.width ?? SIDE_DEFAULT)
   const [dragging, setDragging] = useState(false)
   const drag = useRef<{x: number; w: number} | null>(null)
@@ -95,9 +97,9 @@ export function TerminalSidebar(p: Props) {
     commit(w)
   }
   return (
-    <aside className={'term-side' + (dragging ? ' resizing' : '')} style={{width}} aria-label="Terminal sidebar">
-      <div role="separator" aria-orientation="vertical" aria-label="Resize sidebar" aria-valuemin={SIDE_MIN} aria-valuemax={SIDE_MAX} aria-valuenow={width} tabIndex={0}
-        className="side-resizer" title="Drag to resize; double-click to reset"
+    <aside className={'term-side' + (dragging ? ' resizing' : '')} style={{width}} aria-label={t('Terminal sidebar')}>
+      <div role="separator" aria-orientation="vertical" aria-label={t('Resize sidebar')} aria-valuemin={SIDE_MIN} aria-valuemax={SIDE_MAX} aria-valuenow={width} tabIndex={0}
+        className="side-resizer" title={t('Drag to resize; double-click to reset')}
         onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture?.(e.pointerId); drag.current = {x: e.clientX, w: width}; setDragging(true) }}
         onPointerMove={move} onPointerUp={end} onPointerCancel={end}
         onDoubleClick={() => commit(SIDE_DEFAULT)}
@@ -107,10 +109,10 @@ export function TerminalSidebar(p: Props) {
           else if (e.key === 'ArrowRight') { e.preventDefault(); commit(width - step) }
           else if (e.key === 'Home') { e.preventDefault(); commit(SIDE_DEFAULT) }
         }} />
-      <div className="side-tabs" role="toolbar" aria-label="Sidebar sections">
-        {TABS.map(t => (
-          <button key={t.id} aria-pressed={p.tab === t.id} aria-label={t.label} title={t.label}
-            className={p.tab === t.id ? 'on' : ''} onClick={() => p.onTab(t.id)}>{t.icon}</button>
+      <div className="side-tabs" role="toolbar" aria-label={t('Sidebar sections')}>
+        {sideTabs(t).map(x => (
+          <button key={x.id} aria-pressed={p.tab === x.id} aria-label={x.label} title={x.label}
+            className={p.tab === x.id ? 'on' : ''} onClick={() => p.onTab(x.id)}>{x.icon}</button>
         ))}
       </div>
       <div className="side-body">
@@ -126,10 +128,11 @@ export function TerminalSidebar(p: Props) {
 }
 
 function SearchBox({value, onChange, label}: {value: string; onChange(v: string): void; label: string}) {
+  const t = useT()
   return (
     <label className="side-search">
       <IconSearch size={15} />
-      <input aria-label={label} placeholder="Search" value={value} onChange={e => onChange(e.target.value)} />
+      <input aria-label={label} placeholder={t('Search')} value={value} onChange={e => onChange(e.target.value)} />
     </label>
   )
 }
@@ -160,6 +163,7 @@ interface HostsTabProps {
  * unfolds the groups that lead to a match.
  */
 function HostsTab({hosts, groups, tabs, activeTab, onConnect, onSelectTab, onCloseTab}: HostsTabProps) {
+  const t = useT()
   const [q, setQ] = useState('')
   const [folded, setFolded] = useState(loadFolded)
   const searching = q.trim() !== ''
@@ -175,21 +179,21 @@ function HostsTab({hosts, groups, tabs, activeTab, onConnect, onSelectTab, onClo
     const mine = open.get(h.id)
     if (fresh || !mine?.length) return onConnect?.(h)
     // already open: go to it; when this is one of several, go to the next
-    const i = mine.findIndex(t => t.id === activeTab)
+    const i = mine.findIndex(x => x.id === activeTab)
     onSelectTab?.(mine[(i + 1) % mine.length].id)
   }
   const hostRow = (h: Host, depth: number) => {
     const mine = open.get(h.id) ?? []
     return (
-      <button key={h.id} role="treeitem" aria-level={depth + 1} className={'side-item tree-host' + (mine.some(t => t.id === activeTab) ? ' on' : '')}
+      <button key={h.id} role="treeitem" aria-level={depth + 1} className={'side-item tree-host' + (mine.some(x => x.id === activeTab) ? ' on' : '')}
         style={{paddingLeft: 10 + depth * 14}} onClick={e => pick(h, e.altKey || e.shiftKey)}
-        title={mine.length ? `Switch to ${h.label} (Alt-click: new tab)` : `Open ${h.label} in a new tab`}>
+        title={mine.length ? t('Switch to {name} (Alt-click: new tab)', {name: h.label}) : t('Open {name} in a new tab', {name: h.label})}>
         <span className="tree-lead">
           <IconServer size={15} />
           {h.env && <i className={'env-pip env-' + h.env} aria-label={h.env} />}
         </span>
         <span className="side-main"><b>{h.label}</b><small>{h.username ? h.username + '@' : ''}{h.hostname}</small></span>
-        {mine.length > 0 && <span className="tree-live" aria-label={`${mine.length} open`}>{mine.length > 1 ? mine.length : ''}</span>}
+        {mine.length > 0 && <span className="tree-live" aria-label={t('{n} open', {n: mine.length})}>{mine.length > 1 ? mine.length : ''}</span>}
       </button>
     )
   }
@@ -212,38 +216,39 @@ function HostsTab({hosts, groups, tabs, activeTab, onConnect, onSelectTab, onClo
     )
   }
   const active = tabs.filter(isTerminalTab)
-  const hostOf = (t: Tab) => hosts.find(h => h.id === leaves(t.root)[0]?.hostId.replace(/^telnet:/, ''))
+  const hostOf = (x: Tab) => hosts.find(h => h.id === leaves(x.root)[0]?.hostId.replace(/^telnet:/, ''))
   const empty = tree.roots.length === 0 && tree.ungrouped.length === 0
   return (
     <>
-      <SearchBox value={q} onChange={setQ} label="Search hosts in the sidebar" />
+      <SearchBox value={q} onChange={setQ} label={t('Search hosts in the sidebar')} />
       {active.length > 0 && !searching && (
-        <div className="side-list tree-active" role="list" aria-label="Active sessions">
-          <h4 className="side-sub">Active <small>{active.length}</small></h4>
-          {active.map(t => {
-            const h = hostOf(t)
+        <div className="side-list tree-active" role="list" aria-label={t('Active sessions')}>
+          <h4 className="side-sub">{t('Active')} <small>{active.length}</small></h4>
+          {active.map(x => {
+            const h = hostOf(x)
             return (
-              <div key={t.id} role="listitem" className={'side-item tree-session' + (t.id === activeTab ? ' on' : '')}>
-                <button className="tree-session-main" aria-label={'Switch to ' + t.title} aria-current={t.id === activeTab} onClick={() => onSelectTab?.(t.id)}>
+              <div key={x.id} role="listitem" className={'side-item tree-session' + (x.id === activeTab ? ' on' : '')}>
+                <button className="tree-session-main" aria-label={t('Switch to {name}', {name: x.title})} aria-current={x.id === activeTab} onClick={() => onSelectTab?.(x.id)}>
                   <span className="tree-lead"><IconServer size={15} />{h?.env && <i className={'env-pip env-' + h.env} aria-label={h.env} />}</span>
-                  <span className="side-main"><b>{t.title}</b>{h && <small>{h.hostname}</small>}</span>
+                  <span className="side-main"><b>{x.title}</b>{h && <small>{h.hostname}</small>}</span>
                 </button>
-                {onCloseTab && <button className="icon ghost" aria-label={'End session ' + t.title} onClick={() => onCloseTab(t.id)}><IconClose size={13} /></button>}
+                {onCloseTab && <button className="icon ghost" aria-label={t('End session {name}', {name: x.title})} onClick={() => onCloseTab(x.id)}><IconClose size={13} /></button>}
               </div>
             )
           })}
         </div>
       )}
-      <div className="side-list" role="tree" aria-label="Hosts">
+      <div className="side-list" role="tree" aria-label={t('Hosts')}>
         {tree.roots.map(n => groupRow(n, 0))}
         {tree.ungrouped.map(h => hostRow(h, 0))}
-        {empty && <div className="side-empty">{hosts.length ? 'No hosts match.' : 'No hosts yet.'}</div>}
+        {empty && <div className="side-empty">{hosts.length ? t('No hosts match.') : t('No hosts yet.')}</div>}
       </div>
     </>
   )
 }
 
 function SnippetsTab({snippets, onInsert, onSnippet, onNew}: {snippets: Snippet[]; onInsert(text: string, run: boolean): void; onSnippet?(s: Snippet, run: boolean): void; onNew?(): void}) {
+  const t = useT()
   const insert = (s: Snippet, run: boolean) => (onSnippet ? onSnippet(s, run) : onInsert(s.script, run))
   const [q, setQ] = useState('')
   const [searching, setSearching] = useState(false)
@@ -253,11 +258,11 @@ function SnippetsTab({snippets, onInsert, onSnippet, onNew}: {snippets: Snippet[
     <>
       <div className="side-bar">
         {searching
-          ? <SearchBox value={q} onChange={setQ} label="Search snippets in the sidebar" />
-          : <button className="side-new" onClick={onNew}><IconBraces size={14} /> New Snippet</button>}
-        <button className="icon ghost" aria-label={searching ? 'Close search' : 'Search snippets'} onClick={() => { setSearching(!searching); setQ('') }}><IconSearch size={16} /></button>
+          ? <SearchBox value={q} onChange={setQ} label={t('Search snippets in the sidebar')} />
+          : <button className="side-new" onClick={onNew}><IconBraces size={14} /> {t('New Snippet')}</button>}
+        <button className="icon ghost" aria-label={searching ? t('Close search') : t('Search snippets')} onClick={() => { setSearching(!searching); setQ('') }}><IconSearch size={16} /></button>
       </div>
-      <div className="side-list" role="list" aria-label="Snippets">
+      <div className="side-list" role="list" aria-label={t('Snippets')}>
         {shown.map(s => {
           const full = open === s.id
           return (
@@ -267,15 +272,15 @@ function SnippetsTab({snippets, onInsert, onSnippet, onNew}: {snippets: Snippet[
                   <IconBraces size={13} /> <span>{s.label}</span>
                 </button>
                 {full && <>
-                  <button className="side-act" aria-label={'Run ' + s.label} onClick={() => insert(s, true)}>Run</button>
-                  <button className="side-act" aria-label={'Paste ' + s.label} onClick={() => insert(s, false)}>Paste</button>
+                  <button className="side-act" aria-label={t('Run {name}', {name: s.label})} onClick={() => insert(s, true)}>{t('Run')}</button>
+                  <button className="side-act" aria-label={t('Paste {name}', {name: s.label})} onClick={() => insert(s, false)}>{t('Paste')}</button>
                 </>}
               </div>
               {full ? <pre className="side-snippet-code">{s.script}</pre> : <code className="side-snippet-peek" onClick={() => setOpen(s.id)}>{s.script.replace(/\s+/g, ' ')}</code>}
             </div>
           )
         })}
-        {shown.length === 0 && <div className="side-empty">{snippets.length ? 'No snippets match.' : 'No snippets yet.'}</div>}
+        {shown.length === 0 && <div className="side-empty">{snippets.length ? t('No snippets match.') : t('No snippets yet.')}</div>}
       </div>
     </>
   )
@@ -283,6 +288,7 @@ function SnippetsTab({snippets, onInsert, onSnippet, onNew}: {snippets: Snippet[
 
 /** The commands typed at the host of the focused pane: another host has its own list. */
 function HistoryTab({hostId, onInsert}: {hostId: string; onInsert(text: string, run: boolean): void}) {
+  const t = useT()
   const [q, setQ] = useState('')
   const [items, setItems] = useState(() => getHistory(hostId))
   useEffect(() => {
@@ -293,23 +299,24 @@ function HistoryTab({hostId, onInsert}: {hostId: string; onInsert(text: string, 
   return (
     <>
       <div className="side-bar">
-        <SearchBox value={q} onChange={setQ} label="Search history" />
-        <button className="icon ghost danger" aria-label="Clear history" title="Clear history" disabled={items.length === 0} onClick={() => clearHistory(hostId)}><IconTrash size={15} /></button>
+        <SearchBox value={q} onChange={setQ} label={t('Search history')} />
+        <button className="icon ghost danger" aria-label={t('Clear history')} title={t('Clear history')} disabled={items.length === 0} onClick={() => clearHistory(hostId)}><IconTrash size={15} /></button>
       </div>
-      <div className="side-list" role="list" aria-label="History">
+      <div className="side-list" role="list" aria-label={t('History')}>
         {shown.map(c => (
           <button key={c} className="side-item" onClick={() => onInsert(c, false)} onDoubleClick={() => onInsert(c, true)}
-            title="Click to type it, double-click to run it">
+            title={t('Click to type it, double-click to run it')}>
             <span className="side-main"><span className="side-cmd">{c}</span></span>
           </button>
         ))}
-        {shown.length === 0 && <div className="side-empty">{items.length ? 'Nothing matches.' : 'Commands you type on this host will show up here.'}</div>}
+        {shown.length === 0 && <div className="side-empty">{items.length ? t('Nothing matches.') : t('Commands you type on this host will show up here.')}</div>}
       </div>
     </>
   )
 }
 
 function ThemesTab({settings, appearance, onSettings}: {settings: Settings; appearance: Appearance; onSettings?(patch: Partial<Settings>): void}) {
+  const t = useT()
   const [fontOpen, setFontOpen] = useState(true)
   const size = settings.font_size || 14
   const setSize = (n: number) => onSettings?.({font_size: Math.max(FONT_MIN, Math.min(FONT_MAX, n))})
@@ -318,27 +325,27 @@ function ThemesTab({settings, appearance, onSettings}: {settings: Settings; appe
   return (
     <>
       <button className={'side-fold' + (fontOpen ? ' open' : '')} aria-expanded={fontOpen} onClick={() => setFontOpen(!fontOpen)}>
-        Font {fontOpen ? <IconChevronDown size={16} /> : <IconChevron size={16} />}
+        {t('Font')} {fontOpen ? <IconChevronDown size={16} /> : <IconChevron size={16} />}
       </button>
       {fontOpen && (
         <div className="side-font">
-          <input aria-label="Font family" list="term-fonts" value={settings.font_family} spellCheck={false}
+          <input aria-label={t('Font family')} list="term-fonts" value={settings.font_family} spellCheck={false}
             onChange={e => onSettings?.({font_family: e.target.value})} />
           <datalist id="term-fonts">{FONTS.map(f => <option key={f} value={f} />)}</datalist>
           <div className="side-size">
-            <span>Text Size</span>
-            <button aria-label="Smaller text" disabled={size <= FONT_MIN} onClick={() => setSize(size - 1)}><IconMinus size={15} /></button>
-            <output aria-label="Text size">{size}</output>
-            <button aria-label="Larger text" disabled={size >= FONT_MAX} onClick={() => setSize(size + 1)}><IconPlus size={15} /></button>
+            <span>{t('Text Size')}</span>
+            <button aria-label={t('Smaller text')} disabled={size <= FONT_MIN} onClick={() => setSize(size - 1)}><IconMinus size={15} /></button>
+            <output aria-label={t('Text size')}>{size}</output>
+            <button aria-label={t('Larger text')} disabled={size >= FONT_MAX} onClick={() => setSize(size + 1)}><IconPlus size={15} /></button>
           </div>
         </div>
       )}
-      <h4 className="side-sub">Themes</h4>
-      <div className="side-list" role="listbox" aria-label="Themes">
-        <ThemeRow id="auto" name="Match app theme" note="follows light / dark" on={current === 'auto'} colors={app} onPick={() => onSettings?.({terminal_theme: 'auto'})} />
-        {TERMINAL_THEMES.map(t => (
-          <ThemeRow key={t.id} id={t.id} name={t.name} note={t.dark ? 'dark' : 'light'} on={current === t.id} colors={t.theme}
-            onPick={() => onSettings?.({terminal_theme: t.id})} />
+      <h4 className="side-sub">{t('Themes')}</h4>
+      <div className="side-list" role="listbox" aria-label={t('Themes')}>
+        <ThemeRow id="auto" name={t('Match app theme')} note={t('follows light / dark')} on={current === 'auto'} colors={app} onPick={() => onSettings?.({terminal_theme: 'auto'})} />
+        {TERMINAL_THEMES.map(x => (
+          <ThemeRow key={x.id} id={x.id} name={x.name} note={x.dark ? t('dark') : t('light')} on={current === x.id} colors={x.theme}
+            onPick={() => onSettings?.({terminal_theme: x.id})} />
         ))}
       </div>
     </>

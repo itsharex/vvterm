@@ -5,6 +5,9 @@ import {KeychainPage, KeyMode} from './lib/vault/KeychainPage'
 import {KeyPanel} from './lib/vault/KeyPanel'
 import {SerialPanel, portName} from './lib/hosts/SerialPanel'
 import {HostList, QuickConnect} from './lib/hosts/HostList'
+import {groupContents} from './lib/hosts/tree'
+import {setLanguageSetting} from './lib/i18n/store'
+import {useT, useTn} from './lib/i18n'
 import {GroupForm, HostForm} from './lib/hosts/HostForm'
 import {Workspace} from './lib/terminal/Workspace'
 import {ForwardPanel} from './lib/panels/ForwardPanel'
@@ -61,6 +64,8 @@ export default function App({initial}: {/** an app window opened for this place 
   const be = useBackend()
   const toast = useToast()
   const confirm = useConfirm()
+  const t = useT()
+  const tn = useTn()
   const [vault, setVault] = useState<VaultStatus | null>(null)
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const saving = useRef<Promise<unknown>>(Promise.resolve())
@@ -215,6 +220,7 @@ export default function App({initial}: {/** an app window opened for this place 
 
   // interface zoom and reduced motion
   useEffect(() => { document.documentElement.style.setProperty('zoom', String((settings.zoom || 100) / 100)) }, [settings.zoom])
+  useEffect(() => { setLanguageSetting(settings.language) }, [settings.language])
   useEffect(() => { document.documentElement.dataset.motion = settings.reduce_motion ? 'reduced' : 'full' }, [settings.reduce_motion])
 
   // a side panel belongs to the page it was opened on: leaving the home view closes it
@@ -245,7 +251,7 @@ export default function App({initial}: {/** an app window opened for this place 
   }
   const aboutOnly = dialog?.k === 'about' ? <AboutPanel onClose={() => setDialog(null)} checkNow={dialog.check} />
     : dialog?.k === 'support' ? <SupportPanel onClose={() => setDialog(null)} /> : null
-  if (!vault) return <div className="gate"><DragBar /><div className="muted">Loading…</div>{aboutOnly}</div>
+  if (!vault) return <div className="gate"><DragBar /><div className="muted">{t('Loading…')}</div>{aboutOnly}</div>
   if (!vault.unlocked) {
     return <><UnlockScreen status={vault} autoBiometric={settings.biometric_on_open} onDone={() => { void refreshVault() }} />{aboutOnly}</>
   }
@@ -266,8 +272,8 @@ export default function App({initial}: {/** an app window opened for this place 
     const match = l.username ? same.find(h => h.username === l.username) : same[0]
     const target = `${l.username ? l.username + '@' : ''}${l.hostname}${l.port !== 22 ? ':' + l.port : ''}`
     if (match) {
-      if (await confirm(`A link wants to open ${match.label} (${target}). Connect?`, {confirmLabel: 'Connect'})) connect(match)
-    } else if (await confirm(`A link points to ${target}, which is not one of your hosts. Add it as a new host? Nothing connects until you press Connect.`, {confirmLabel: 'Add host'})) {
+      if (await confirm(t('A link wants to open {name} ({target}). Connect?', {name: match.label, target}), {confirmLabel: t('Connect')})) connect(match)
+    } else if (await confirm(t('A link points to {target}, which is not one of your hosts. Add it as a new host? Nothing connects until you press Connect.', {target}), {confirmLabel: t('Add host')})) {
       goHome('hosts')
       setDialog({k: 'host', prefill: {username: l.username, hostname: l.hostname, port: l.port}})
     }
@@ -275,7 +281,7 @@ export default function App({initial}: {/** an app window opened for this place 
   // a host card dropped on a group card
   const moveHost = (h: Host, groupId: string) => {
     be.hosts.saveHost({...h, group_id: groupId})
-      .then(() => { void refreshData(); toast.info(groupId ? 'Moved ' + h.label + ' to ' + (groups.find(g => g.id === groupId)?.name ?? 'the group') : 'Moved ' + h.label + ' out of its group') })
+      .then(() => { void refreshData(); toast.info(groupId ? t('Moved {name} to {group}', {name: h.label, group: groups.find(g => g.id === groupId)?.name ?? t('the group')}) : t('Moved {name} out of its group', {name: h.label})) })
       .catch(e => toast.error(errMsg(e)))
   }
   // the answer of a tab that asked which protocol to use: the same tab goes on with it
@@ -347,7 +353,7 @@ export default function App({initial}: {/** an app window opened for this place 
   const closeTab = async (id: string) => {
     const closing = tabs.find(t => t.id === id)
     if (closing?.pinned) return // the SFTP tab stays
-    if (settings.confirm_tab_close && closing && !(await confirm(`Close "${closing.title}"? Its connection will end.`, {confirmLabel: 'Close tab', danger: true}))) return
+    if (settings.confirm_tab_close && closing && !(await confirm(t('Close "{title}"? Its connection will end.', {title: closing.title}), {confirmLabel: t('Close tab'), danger: true}))) return
     setTabs(ts => ts.filter(t => t.id !== id))
     if (id === active) {
       const rest = tabs.filter(t => t.id !== id)
@@ -369,14 +375,14 @@ export default function App({initial}: {/** an app window opened for this place 
     const src = tabs.find(t => t.id === id)
     const leaf = src && leaves(src.root).find(l => l.id === src.activePane)
     if (!src || !leaf) return
-    be.system.openWindow(leaf.hostId, src.title).catch(() => toast.error('New windows are not available here.'))
+    be.system.openWindow(leaf.hostId, src.title).catch(() => toast.error(t('New windows are not available here.')))
   }
   const broadcastTab = (id: string) => setTabs(ts => ts.map(t => (t.id === id ? toggleBroadcast(t) : t)))
   const zoomPane = (id: string, pane: string) => setTabs(ts => ts.map(t => (t.id === id ? toggleZoom(t, pane) : t)))
   const focusPane = (tabId: string, paneId: string) => setTabs(ts => ts.map(t => (t.id === tabId && hasPane(t, paneId) ? {...t, activePane: paneId} : t)))
   // the × on a pane of a split tab: ask first like closing a tab, then end just that pane's session
   const closePaneAsk = async (tabId: string, paneId: string) => {
-    if (settings.confirm_tab_close && !(await confirm('Close this pane? Its connection will end.', {confirmLabel: 'Close pane', danger: true}))) return
+    if (settings.confirm_tab_close && !(await confirm(t('Close this pane? Its connection will end.'), {confirmLabel: t('Close pane'), danger: true}))) return
     paneExit(tabId, paneId)
   }
   const paneExit = (tabId: string, paneId: string) => {
@@ -399,22 +405,22 @@ export default function App({initial}: {/** an app window opened for this place 
   const okOnProd = async (tab: Parameters<typeof prodHostOf>[0], text: string, run: boolean, what: string): Promise<boolean> => {
     const h = prodHostOf(tab)
     if (!h || !(run || /[\r\n]/.test(text.replace(/[\r\n]+$/, '')))) return true
-    return confirm(`${what} on the PRODUCTION host ${h.label}? ${run ? 'It runs at once.' : 'Its lines run as soon as they are typed.'}`, {confirmLabel: run ? 'Run' : 'Paste', danger: true})
+    return confirm(run ? t('{what} on the PRODUCTION host {host}? It runs at once.', {what, host: h.label}) : t('{what} on the PRODUCTION host {host}? Its lines run as soon as they are typed.', {what, host: h.label}), {confirmLabel: run ? t('Run') : t('Paste'), danger: true})
   }
   /** types text into the focused pane (the sidebar's snippets and history); `run` presses Enter too */
   const insertIntoTerminal = async (text: string, run: boolean) => {
     const tab = tabs.find(t => t.id === (tabs.some(x => x.id === active) ? active : lastTerm))
-    if (!tab || !isTerminalTab(tab)) return toast.error('Open a terminal first.')
-    if (!(await okOnProd(tab, text, run, run ? 'Run this command' : 'Paste this text'))) return
+    if (!tab || !isTerminalTab(tab)) return toast.error(t('Open a terminal first.'))
+    if (!(await okOnProd(tab, text, run, run ? t('Run this command') : t('Paste this text')))) return
     writeToPane(tab.activePane, toTerminalInput(text, run)) // a terminal that is still connecting takes nothing: no message for that
   }
   const sendSnippet = async (s: Snippet, script: string, execute: boolean) => {
     const tab = tabs.find(t => t.id === (tabs.some(x => x.id === active) ? active : lastTerm))
-    if (!tab) return toast.error('Open a terminal first: the snippet is typed into the focused pane.')
-    if (isTerminalTab(tab) && !(await okOnProd(tab, script, execute, `${execute ? 'Run' : 'Paste'} “${s.label}”`))) return
+    if (!tab) return toast.error(t('Open a terminal first: the snippet is typed into the focused pane.'))
+    if (isTerminalTab(tab) && !(await okOnProd(tab, script, execute, execute ? t('Run “{name}”', {name: s.label}) : t('Paste “{name}”', {name: s.label})))) return
     if (!writeToPane(tab.activePane, toTerminalInput(script, execute))) return // still connecting: nothing to say about it
     setActive(tab.id)
-    toast.info(execute ? `Ran “${s.label}”` : `Pasted “${s.label}”`)
+    toast.info(execute ? t('Ran “{name}”', {name: s.label}) : t('Pasted “{name}”', {name: s.label}))
   }
   // a snippet with blanks ({{name}}) is asked about first, then typed with the answers in it
   const runSnippet = (s: Snippet, execute: boolean) => {
@@ -422,7 +428,7 @@ export default function App({initial}: {/** an app window opened for this place 
     sendSnippet(s, s.script, execute)
   }
   const delSnippet = async (s: Snippet) => {
-    if (!(await confirm(`Delete snippet "${s.label}"?`, {confirmLabel: 'Delete', danger: true}))) return
+    if (!(await confirm(t('Delete snippet "{name}"?', {name: s.label}), {confirmLabel: t('Delete'), danger: true}))) return
     try { await be.snippets.remove(s.id); await refreshData() } catch (e) { toast.error(errMsg(e)) }
   }
   /** Changing page discards an open panel (New host, New group, New snippet, forwards…). */
@@ -432,11 +438,17 @@ export default function App({initial}: {/** an app window opened for this place 
   const goHome = (p?: Page) => { setActive('home'); if (p) changePage(p) }
 
   const delHost = async (h: Host) => {
-    if (!(await confirm(`Delete host "${h.label}"?`, {confirmLabel: 'Delete', danger: true}))) return
+    if (!(await confirm(t('Delete host "{name}"?', {name: h.label}), {confirmLabel: t('Delete'), danger: true}))) return
     try { await be.hosts.deleteHost(h.id); await refreshData() } catch (e) { toast.error(errMsg(e)) }
   }
   const delGroup = async (g: Group) => {
-    if (!(await confirm(`Delete group "${g.name}"? Its hosts move to the parent group.`, {confirmLabel: 'Delete', danger: true}))) return
+    const inside = groupContents(groups, hosts, g.id)
+    const nh = inside.hosts.length
+    const hostsText = nh ? tn(nh, '{n} host', '{n} hosts') : ''
+    const groupsText = inside.groups ? tn(inside.groups, '{n} group below it', '{n} groups below it') : ''
+    const what = hostsText && groupsText ? t('{a} and {b}', {a: hostsText, b: groupsText}) : hostsText || groupsText
+    const msg = what ? t('Delete group "{name}" with {what}? The hosts are deleted too, with their port forwards. This cannot be undone.', {name: g.name, what}) : t('Delete group "{name}"? It is empty.', {name: g.name})
+    if (!(await confirm(msg, {confirmLabel: t('Delete'), danger: true}))) return
     try { await be.hosts.deleteGroup(g.id); await refreshData() } catch (e) { toast.error(errMsg(e)) }
   }
 
@@ -488,7 +500,7 @@ export default function App({initial}: {/** an app window opened for this place 
     close_pane: () => { if (activeTabObj && inTerminalTab && !onHome) void closePaneAsk(activeTabObj.id, activeTabObj.activePane) },
     broadcast_input: () => { if (activeTabObj && inTerminalTab && !onHome) broadcastTab(activeTabObj.id) },
     ai_next_model: () => { window.dispatchEvent(new Event(AI_NEXT_MODEL)) },
-    toggle_suggest: () => { const on = !settings.suggest; saveSettings({suggest: on}); toast.info(on ? 'Command suggestions on' : 'Command suggestions off') },
+    toggle_suggest: () => { const on = !settings.suggest; saveSettings({suggest: on}); toast.info(on ? t('Command suggestions on') : t('Command suggestions off')) },
     split_right: () => { if (inTerminalTab) split('row') },
     split_down: () => { if (inTerminalTab) split('col') },
     zoom_in: () => zoomBy(10),
@@ -529,11 +541,11 @@ export default function App({initial}: {/** an app window opened for this place 
               <HostList resetKey={hostsReset} onGroupChange={setOpenGroupId} groups={groups} hosts={hosts} onMoveHost={moveHost} draft={dialog?.k === 'host' && !dialog.host?.id ? draft : undefined}
                 toolbar={<>
                   <span className="split-wrap">
-                    <button className="split-btn" aria-label="New host" onClick={() => setDialog({k: 'host'})}><IconPlus size={14} /> New host</button>
+                    <button className="split-btn" aria-label={t('New host')} onClick={() => setDialog({k: 'host'})}><IconPlus size={14} /> {t('New host')}</button>
                     <AddMenu onGroup={() => setDialog({k: 'group'})} onImport={() => setDialog({k: 'data'})} />
                   </span>
-                  <button className="ghost-btn" aria-label="Terminal" title="A terminal on this computer" onClick={() => openDevice('local', 'Local')}><IconTerminal size={14} /> Terminal</button>
-                  <button className="ghost-btn" aria-label="Serial" title="Connect to a serial port" onClick={() => setDialog({k: 'serial'})}><IconSerial size={14} /> Serial</button>
+                  <button className="ghost-btn" aria-label={t('Terminal')} title={t('A terminal on this computer')} onClick={() => openDevice('local', 'Local')}><IconTerminal size={14} /> {t('Terminal')}</button>
+                  <button className="ghost-btn" aria-label={t('Serial')} title={t('Connect to a serial port')} onClick={() => setDialog({k: 'serial'})}><IconSerial size={14} /> {t('Serial')}</button>
                 </>}
                 onConnect={connect} onEdit={h => setDialog({k: 'host', host: h})} onDelete={delHost}
                 onForwards={h => { goHome('forwards'); setFwDraft({label: '', type: 'local'}); setDialog({k: 'forward', hostId: h.id}) }} onTelnet={h => openDevice(`telnet:${h.id}`, `${h.label} (Telnet)`)} onEditGroup={g => setDialog({k: 'group', group: g})}
@@ -584,7 +596,7 @@ export default function App({initial}: {/** an app window opened for this place 
           onVault={() => void refreshVault()} onChanged={() => void refreshData()} onClose={() => setSettingsOpen(false)} />
       )}
       {fill && (
-        <FillVariables title={`${fill.execute ? 'Run' : 'Paste'} “${fill.snippet.label}”`} variables={parseVariables(fill.snippet.script)} verb={fill.execute ? 'Run' : 'Paste'}
+        <FillVariables title={fill.execute ? t('Run “{name}”', {name: fill.snippet.label}) : t('Paste “{name}”', {name: fill.snippet.label})} variables={parseVariables(fill.snippet.script)} verb={fill.execute ? t('Run') : t('Paste')}
           onClose={() => setFill(null)}
           onAsWritten={() => { const f = fill; setFill(null); sendSnippet(f.snippet, f.snippet.script, f.execute) }}
           onSubmit={values => { const f = fill; setFill(null); sendSnippet(f.snippet, fillVariables(f.snippet.script, values), f.execute) }} />

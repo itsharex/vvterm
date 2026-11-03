@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
 import {useBackend} from '../backend'
+import {useT} from '../i18n'
 import {useToast} from '../ui/Toast'
 import {useConfirm} from '../ui/Confirm'
 import {errMsg} from '../util'
@@ -7,7 +8,7 @@ import {IconClose, IconDownload, IconFolder, IconPlus} from '../ui/Icons'
 import {OsIcon} from '../ui/OsIcon'
 import {DragPayload, FilePane, Item, PaneFs, PaneState} from './FilePane'
 import {RemoteHost, RemotePane} from './RemotePane'
-import {LOCAL_HOST_ID, localPaneFs} from './localFs'
+import {hostLabel as displayHost, LOCAL_HOST_ID, localPaneFs} from './localFs'
 import {QueuePanel} from './QueuePanel'
 import {SyncDialog} from './SyncDialog'
 import {queueTransfer, replaceQuestion, summarize, useQueues, verbOf} from './transfer'
@@ -31,12 +32,13 @@ export const CLOSE_HOST_TAB = 'vutty:sftp-close-host'
 
 export function SftpBrowser({hostId = '', hostLabel = '', nonce = 0, hosts: given, visible = true}: {hostId?: string; hostLabel?: string; nonce?: number; /** this screen is the one showing (only that one answers the Close tab shortcut) */ visible?: boolean; /** the app's current hosts (kept up to date by the app); without it they are loaded once */ hosts?: Host[]}) {
   const be = useBackend()
+  const t = useT()
   const toast = useToast()
   const confirm = useConfirm()
   // the hosts open on the right, as tabs in the pane header; every one keeps its own connection, folder and selection
   const [tabs, setTabs] = useState<RemoteTab[]>(() => (hostId ? [{key: nextTabKey(), host: {id: hostId, label: hostLabel || hostId}}] : []))
   const [activeKey, setActiveKey] = useState(() => tabs[0]?.key ?? '')
-  const active = tabs.find(t => t.key === activeKey) ?? null
+  const active = tabs.find(tab => tab.key === activeKey) ?? null
   const host = active?.host ?? null
   const [loaded, setLoaded] = useState<Host[]>([])
   const hosts = given ?? loaded
@@ -68,8 +70,8 @@ export function SftpBrowser({hostId = '', hostLabel = '', nonce = 0, hosts: give
     setActiveKey(key)
   }
   const closeTab = (key: string) => {
-    const at = tabs.findIndex(t => t.key === key)
-    const rest = tabs.filter(t => t.key !== key)
+    const at = tabs.findIndex(tab => tab.key === key)
+    const rest = tabs.filter(tab => tab.key !== key)
     setTabs(rest)
     if (key === activeKey) setActiveKey(rest[Math.max(0, at - 1)]?.key ?? '')
     callbacks.current.delete(key)
@@ -103,9 +105,9 @@ export function SftpBrowser({hostId = '', hostLabel = '', nonce = 0, hosts: give
   const finished = useCallback((_sid: string, j: QueueJob) => {
     const toRemote = j.direction === 'upload' || j.direction === 'sync-up'
     if (j.state === 'done') toast.info(summarize(verbOf(j.direction), j))
-    else if (j.state === 'failed') toast.error(`${j.name}: ${j.error || 'the transfer failed'}`)
+    else if (j.state === 'failed') toast.error(`${j.name}: ${j.error || t('the transfer failed')}`)
     if (j.state === 'canceled' || j.state === 'done' || j.state === 'failed') { if (toRemote) setRemoteKey(k => k + 1); else setLocalKey(k => k + 1) }
-  }, [toast])
+  }, [toast, t])
   const queues = useQueues(Object.values(sids), finished)
   const jobs = queues[sid] ?? []
   const queueActions = {
@@ -123,17 +125,17 @@ export function SftpBrowser({hostId = '', hostLabel = '', nonce = 0, hosts: give
 
   /** Queues everything given; files that already exist are asked about once. */
   const move = async (direction: 'upload' | 'download', items: Item[]) => {
-    if (!sid && !viaLocal) return setError('Connect to a host first')
+    if (!sid && !viaLocal) return setError(t('Connect to a host first'))
     const toRemote = direction === 'upload'
     const destDir = toRemote ? remote.cwd : local.cwd
-    if (!destDir) return setError('Open a folder on the receiving side first')
+    if (!destDir) return setError(t('Open a folder on the receiving side first'))
     if (items.length === 0) return
     setError('')
     try {
       if (viaLocal) {
         const sources = items.map(i => i.path)
         const clash = await be.local.conflicts(sources, destDir)
-        const overwrite = clash.length > 0 && (await confirm(replaceQuestion({skipped: clash}, destDir), {confirmLabel: 'Replace', danger: true}))
+        const overwrite = clash.length > 0 && (await confirm(replaceQuestion({skipped: clash}, destDir), {confirmLabel: t('Replace'), danger: true}))
         const r = await be.local.copy(sources, destDir, overwrite)
         toast.info(summarize('Copied', r))
         if (toRemote) setRemoteKey(k => k + 1); else setLocalKey(k => k + 1)
@@ -150,30 +152,33 @@ export function SftpBrowser({hostId = '', hostLabel = '', nonce = 0, hosts: give
   const onDropToLocal = useCallback((p: DragPayload) => { void move('download', p.items) }, [sid, local.cwd, viaLocal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const canDown = (!!sid || viaLocal) && remote.selected.length > 0
-  const count = (n: number) => (n > 1 ? ` ${n}` : '')
+  const nSel = remote.selected.length
+  const downText = viaLocal
+    ? (nSel > 1 ? t('Copy {n} to the left folder', {n: nSel}) : t('Copy to the left folder'))
+    : (nSel > 1 ? t('Download {n} to local folder', {n: nSel}) : t('Download to local folder'))
 
   return (
-    <div className="sftp" data-testid="sftp" aria-label={host ? `SFTP ${host.label}` : 'SFTP'}>
+    <div className="sftp" data-testid="sftp" aria-label={host ? `SFTP ${displayHost(host)}` : 'SFTP'}>
       <div className="sftp-panes">
-        <FilePane side="local" title="Local" icon={<IconFolder size={16} />} fs={localHome ? fs : null} startDir={localHome} reloadKey={localKey} showHiddenDefault={false}
-          onState={setLocal} onDropEntry={onDropToLocal} onCopyOut={sid || viaLocal ? items => void move('upload', items) : undefined} copyLabel={viaLocal ? 'Copy to right' : 'Upload'} />
+        <FilePane side="local" title={t('Local')} icon={<IconFolder size={16} />} fs={localHome ? fs : null} startDir={localHome} reloadKey={localKey} showHiddenDefault={false}
+          onState={setLocal} onDropEntry={onDropToLocal} onCopyOut={sid || viaLocal ? items => void move('upload', items) : undefined} copyLabel={viaLocal ? t('Copy to right') : t('Upload')} />
         <div className="rpanes">
-          {tabs.map(t => {
-            const cb = cbFor(t.key)
+          {tabs.map(tab => {
+            const cb = cbFor(tab.key)
             return (
-              <RemotePane key={t.key} host={t.host} hosts={hosts} hidden={t.key !== activeKey} onNewTab={addTab} onHost={() => closeTab(t.key)} reloadKey={remoteKey}
+              <RemotePane key={tab.key} host={tab.host} hosts={hosts} hidden={tab.key !== activeKey} onNewTab={addTab} onHost={() => closeTab(tab.key)} reloadKey={remoteKey}
                 onState={cb.onState} onDropEntry={onDropToRemote} onSession={cb.onSession} onCopyOut={items => void move('download', items)}
                 tabsLead={add => (
-                  <div className="rtabs" role="tablist" aria-label="Remote hosts">
+                  <div className="rtabs" role="tablist" aria-label={t('Remote hosts')}>
                     {tabs.map(x => (
                       <div key={x.key} role="tab" aria-selected={x.key === activeKey} className={'rtab' + (x.key === activeKey ? ' on' : '')} onClick={() => setActiveKey(x.key)}>
                         {x.host.id === LOCAL_HOST_ID ? <IconFolder size={15} /> : <OsIcon os={hosts.find(h => h.id === x.host.id)?.os} size={15} />}
-                        <span className="rtab-name">{x.host.label}</span>
-                        <button className="icon ghost fpane-x" aria-label={tabs.length === 1 ? 'Change host' : `Close ${x.host.label}`} title={tabs.length === 1 ? 'Disconnect and pick another host' : 'Close this host'}
+                        <span className="rtab-name">{displayHost(x.host)}</span>
+                        <button className="icon ghost fpane-x" aria-label={tabs.length === 1 ? t('Change host') : t('Close {name}', {name: displayHost(x.host)})} title={tabs.length === 1 ? t('Disconnect and pick another host') : t('Close this host')}
                           onClick={e => { e.stopPropagation(); closeTab(x.key) }}><IconClose size={13} /></button>
                       </div>
                     ))}
-                    <button className="icon ghost fpane-x" aria-label="Add host" title="Connect to another host" onClick={add}><IconPlus size={14} /></button>
+                    <button className="icon ghost fpane-x" aria-label={t('Add host')} title={t('Connect to another host')} onClick={add}><IconPlus size={14} /></button>
                   </div>
                 )} />
             )
@@ -185,8 +190,8 @@ export function SftpBrowser({hostId = '', hostLabel = '', nonce = 0, hosts: give
         </div>
       </div>
       <div className="sftp-foot">
-        <button disabled={!canDown} onClick={() => void move('download', remote.selected)} aria-label={viaLocal ? 'Copy selected to left' : 'Download selected'}><IconDownload size={15} /> {viaLocal ? 'Copy' : 'Download'}{count(remote.selected.length)} to {viaLocal ? 'the left folder' : 'local folder'}</button>
-        <button disabled={!sid || !local.cwd || !remote.cwd} onClick={() => setSyncing(true)} aria-label="Sync folders">Sync folders…</button>
+        <button disabled={!canDown} onClick={() => void move('download', remote.selected)} aria-label={viaLocal ? t('Copy selected to left') : t('Download selected')}><IconDownload size={15} /> {downText}</button>
+        <button disabled={!sid || !local.cwd || !remote.cwd} onClick={() => setSyncing(true)} aria-label={t('Sync folders')}>{t('Sync folders…')}</button>
         {error && <div className="error" role="alert">{error}</div>}
       </div>
       <QueuePanel jobs={jobs} actions={queueActions} open={queueOpen} onToggle={() => setQueueOpen(o => !o)} />

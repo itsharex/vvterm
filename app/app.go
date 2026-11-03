@@ -211,11 +211,22 @@ func (a *App) Shutdown(ctx context.Context) {
 }
 
 // Menu is the application menu bar, wired to this window.
-func (a *App) Menu() *menu.Menu { return a.menuWith(nil) }
+func (a *App) Menu() *menu.Menu {
+	saved := ""
+	if a.Services != nil && a.Settings != nil {
+		saved = a.Settings.Get().Language
+	}
+	lang := ResolveMenuLang(saved) // the page tells the resolved language when it is up
+	if a.System != nil {
+		a.System.SetMenuLang(lang)
+	}
+	return a.menuWith(nil, lang)
+}
 
-func (a *App) menuWith(shortcuts map[string]string) *menu.Menu {
+func (a *App) menuWith(shortcuts map[string]string, lang string) *menu.Menu {
 	return BuildMenu(MenuHooks{
 		Shortcuts: shortcuts,
+		Lang:      lang,
 		Emit: func(action string) {
 			if a.ctx != nil {
 				runtime.EventsEmit(a.ctx, MenuEvent, action)

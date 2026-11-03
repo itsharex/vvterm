@@ -56,3 +56,13 @@ export function filterTree(tree: Tree, query: string): Tree {
 export function countOpen(n: GroupNode, open: ReadonlyMap<string, unknown>): number {
   return n.hosts.filter(h => open.has(h.id)).length + n.children.reduce((s, c) => s + countOpen(c, open), 0)
 }
+
+/** What deleting a group takes with it: the group, the groups below it and the hosts in any of them. */
+export function groupContents(groups: Group[], hosts: Host[], id: string): {groups: number; hosts: Host[]} {
+  const gone = new Set([id])
+  for (let grew = true; grew;) {
+    grew = false
+    for (const g of groups) if (g.parent_id && gone.has(g.parent_id) && !gone.has(g.id)) { gone.add(g.id); grew = true }
+  }
+  return {groups: gone.size - 1, hosts: hosts.filter(h => h.group_id && gone.has(h.group_id))}
+}

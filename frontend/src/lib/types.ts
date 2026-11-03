@@ -90,6 +90,8 @@ export interface CacheReport {
 
 export interface Settings {
   theme: ThemeMode
+  /** language of the interface: auto follows the system */
+  language?: 'auto' | 'en' | 'vi' | 'ja' | 'zh'
   terminal_theme: string // 'auto' follows the app theme, otherwise a catalogue id
   font_size: number
   font_family: string

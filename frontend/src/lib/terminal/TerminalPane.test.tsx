@@ -15,7 +15,8 @@ vi.mock('@xterm/xterm', () => ({
     open() {}
     focus() {}
     dispose() { (this as any).disposed = true }
-    write(b: Uint8Array) { this.written.push(b) }
+    parsedCbs: Array<(() => void) | undefined> = []
+    write(b: Uint8Array, cb?: () => void) { this.written.push(b); this.parsedCbs.push(cb) }
     onData(cb: any) { this.dataCb = cb }
     onResize() {}
     attachCustomKeyEventHandler(h: any) { this.keyHandler = h }
@@ -52,6 +53,20 @@ async function mount() {
 
 describe('TerminalPane', () => {
   beforeEach(() => { created.length = 0 })
+
+  it('tells the backend how much xterm has parsed (flow control): a running total, in batches, never before it is parsed', async () => {
+    const {be, sid, term} = await mount()
+    const acks = () => be.state.calls.filter(c => c[0] === 'session.ack').map(c => c.slice(1))
+    act(() => be.emit(`term:data:${sid}`, btoa('x'.repeat(10))))
+    await new Promise(r => setTimeout(r, 60))
+    expect(acks()).toEqual([]) // written but not parsed yet: nothing is reported
+    act(() => term.parsedCbs[0]())
+    await waitFor(() => expect(acks()).toEqual([[sid, 10]])) // a small rest is reported after a moment
+    const big = 'y'.repeat(200 * 1024)
+    act(() => be.emit(`term:data:${sid}`, btoa(big)))
+    act(() => term.parsedCbs[1]())
+    expect(acks()).toEqual([[sid, 10], [sid, 10 + big.length]]) // 128 KB or more: at once, as a total
+  })
 
   it('opens a session, attaches after subscribing, and renders output bytes', async () => {
     const {be, sid, term} = await mount()

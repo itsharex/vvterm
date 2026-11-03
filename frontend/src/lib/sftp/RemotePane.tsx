@@ -1,18 +1,25 @@
 import {ReactNode, useEffect, useMemo, useRef, useState} from 'react'
 import {useBackend} from '../backend'
+import {useT} from '../i18n'
 import {errMsg} from '../util'
 import {useConfirm} from '../ui/Confirm'
 import {useToast} from '../ui/Toast'
 import {IconFolder} from '../ui/Icons'
 import {OsIcon} from '../ui/OsIcon'
 import {joinPath} from './format'
-import {LOCAL_HOST, LOCAL_HOST_ID, localPaneFs} from './localFs'
+import {hostLabel, LOCAL_HOST, LOCAL_HOST_ID, localPaneFs} from './localFs'
 import {FilePane, PaneFs, PaneState, DragPayload, Item} from './FilePane'
 import {AuthPrompt} from '../ui/AuthPrompt'
 import type {AuthChallenge, EditEvent, Host, HostKeyPrompt} from '../types'
 
 export interface RemoteHost {id: string; label: string}
 let seq = 0
+const HOST_MARK = '\u0001'
+/** Puts the host name, in bold, where the translated sentence has its mark. */
+export function authenticity(text: string, host: string): ReactNode {
+  const [a, b = ''] = text.split(HOST_MARK)
+  return <>{a}<b>{host}</b>{b}</>
+}
 
 interface Props {
   host: RemoteHost | null
@@ -39,6 +46,7 @@ interface Props {
  */
 export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, reloadKey, onState, onDropEntry, onSession, onCopyOut}: Props) {
   const be = useBackend()
+  const t = useT()
   const confirm = useConfirm()
   const toast = useToast()
   const sid = useRef('')
@@ -85,13 +93,13 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
         sid.current = info.sid
         offs.push(be.on(`sftp:edit:${info.sid}`, (ev: EditEvent) => {
           const name = ev.remote.slice(ev.remote.lastIndexOf('/') + 1)
-          if (ev.state === 'uploaded') toast.info(`Saved ${name} to the server`)
-          else if (ev.state === 'error') toast.error(`${name}: ${ev.message || 'could not be saved to the server'}`)
-          else void confirm(`${name} changed on the server since you opened it. Overwrite with your version?`, {confirmLabel: 'Overwrite', danger: true})
+          if (ev.state === 'uploaded') toast.info(t('Saved {name} to the server', {name}))
+          else if (ev.state === 'error') toast.error(`${name}: ${ev.message || t('could not be saved to the server')}`)
+          else void confirm(t('{name} changed on the server since you opened it. Overwrite with your version?', {name}), {confirmLabel: t('Overwrite'), danger: true})
             .then(yes => (yes ? be.sftp.editPush(info.sid, ev.remote, true) : undefined))
             .catch(e => toast.error(`${name}: ${errMsg(e)}`))
         }))
-        offs.push(be.on(`sftp:closed:${info.sid}`, () => { setState('closed'); setClosedReason('The connection was lost.'); sid.current = ''; setFs(null); onSession('') }))
+        offs.push(be.on(`sftp:closed:${info.sid}`, () => { setState('closed'); setClosedReason(t('The connection was lost.')); sid.current = ''; setFs(null); onSession('') }))
         setPrompt(null)
         setAuth(null)
         const s = info.sid
@@ -105,11 +113,11 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
           open: async e => {
             const dir = await be.local.tempDir()
             const res = await be.sftp.downloadAll(s, [e.path], dir, true)
-            if (res.files < 1) throw new Error('Could not download the file')
+            if (res.files < 1) throw new Error(t('Could not download the file'))
             await be.system.openPath(joinPath(dir, e.name))
           },
           openWith: async e => {
-            const app = await be.system.pickFile('Open with…')
+            const app = await be.system.pickFile(t('Open with…'))
             if (!app) return
             const dir = await be.local.tempDir()
             await be.sftp.downloadAll(s, [e.path], dir, true)
@@ -119,7 +127,7 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
           edit: async e => {
             const dir = await be.local.tempDir()
             const res = await be.sftp.downloadAll(s, [e.path], dir, true)
-            if (res.files < 1) throw new Error('Could not download the file')
+            if (res.files < 1) throw new Error(t('Could not download the file'))
             const local = joinPath(dir, e.name)
             await be.system.openPath(local)
             await be.sftp.editStart(s, e.path, local)
@@ -153,40 +161,40 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
   }
 
   const matching = useMemo(() => hosts.filter(h => (h.label + ' ' + h.hostname).toLowerCase().includes(filter.trim().toLowerCase())), [hosts, filter])
-  const showLocal = ('this computer local ' + LOCAL_HOST.label).includes(filter.trim().toLowerCase())
+  const showLocal = ('this computer local ' + hostLabel(LOCAL_HOST)).includes(filter.trim().toLowerCase())
   const choose = (r: RemoteHost) => { setPicking(false); setFilter(''); if (host && onNewTab) onNewTab(r); else onHost(r) }
 
   const picker = (
     <div className="host-picker">
-      <h3>Select host</h3>
-      <input aria-label="Filter hosts" autoFocus placeholder="Search hosts" value={filter} onChange={e => setFilter(e.target.value)} />
+      <h3>{t('Select host')}</h3>
+      <input aria-label={t('Filter hosts')} autoFocus placeholder={t('Search hosts')} value={filter} onChange={e => setFilter(e.target.value)} />
       <div className="host-picker-list">
         {showLocal && (
-          <button aria-label="Open This computer" onClick={() => choose(LOCAL_HOST)}>
-            <IconFolder size={18} /><span>{LOCAL_HOST.label}</span><small className="muted">Browse and copy files on this computer</small>
+          <button aria-label={t('Open This computer')} onClick={() => choose(LOCAL_HOST)}>
+            <IconFolder size={18} /><span>{hostLabel(LOCAL_HOST)}</span><small className="muted">{t('Browse and copy files on this computer')}</small>
           </button>
         )}
         {matching.map(h => (
-          <button key={h.id} aria-label={`Connect to ${h.label}`} onClick={() => choose({id: h.id, label: h.label})}>
+          <button key={h.id} aria-label={t('Connect to {name}', {name: h.label})} onClick={() => choose({id: h.id, label: h.label})}>
             <OsIcon os={h.os} size={18} /><span>{h.label}</span><small className="muted">{h.username ? h.username + '@' : ''}{h.hostname}</small>
           </button>
         ))}
-        {matching.length === 0 && (hosts.length ? !showLocal && <div className="muted">No host matches.</div> : <div className="muted">No saved hosts yet. Add one in Hosts first.</div>)}
+        {matching.length === 0 && (hosts.length ? !showLocal && <div className="muted">{t('No host matches.')}</div> : <div className="muted">{t('No saved hosts yet. Add one in Hosts first.')}</div>)}
       </div>
-      <button onClick={() => { setPicking(false); setFilter('') }}>Cancel</button>
+      <button onClick={() => { setPicking(false); setFilter('') }}>{t('Cancel')}</button>
     </div>
   )
 
   if (!host) {
     return (
-      <section className="fpane" aria-label="Remote">
+      <section className="fpane" aria-label={t('Remote')}>
         <div className="fpane-empty">
           {!picking ? (
             <>
               <span className="fpane-empty-icon"><IconFolder size={28} /></span>
-              <h3>Connect to host</h3>
-              <p className="muted">Start by connecting to a saved host to manage your files with SFTP.</p>
-              <button className="primary" onClick={() => setPicking(true)}>Select host</button>
+              <h3>{t('Connect to host')}</h3>
+              <p className="muted">{t('Start by connecting to a saved host to manage your files with SFTP.')}</p>
+              <button className="primary" onClick={() => setPicking(true)}>{t('Select host')}</button>
             </>
           ) : picker}
         </div>
@@ -196,27 +204,27 @@ export function RemotePane({host, hosts, onHost, onNewTab, tabsLead, hidden, rel
 
   return (
     <div className="rpane" style={hidden ? {display: 'none'} : undefined}>
-      <FilePane side="remote" title={host.label} icon={isLocal ? <IconFolder size={16} /> : <OsIcon os={hosts.find(x => x.id === host.id)?.os} size={16} />} fs={fs} startDir={home} reloadKey={reloadKey} showHiddenDefault={!isLocal}
-        onState={onState} onDropEntry={onDropEntry} onCopyOut={onCopyOut} copyLabel={isLocal ? 'Copy to Local' : 'Download'} onClose={() => onHost(null)} onAdd={() => setPicking(true)} lead={tabsLead?.(() => setPicking(true))} />
-      {picking && <div className="overlay" role="dialog" aria-label="Select host"><div className="card">{picker}</div></div>}
-      {state === 'connecting' && !prompt && !auth && <div className="banner info">Connecting to {host.label}…</div>}
+      <FilePane side="remote" title={hostLabel(host)} icon={isLocal ? <IconFolder size={16} /> : <OsIcon os={hosts.find(x => x.id === host.id)?.os} size={16} />} fs={fs} startDir={home} reloadKey={reloadKey} showHiddenDefault={!isLocal}
+        onState={onState} onDropEntry={onDropEntry} onCopyOut={onCopyOut} copyLabel={isLocal ? t('Copy to Local') : t('Download')} onClose={() => onHost(null)} onAdd={() => setPicking(true)} lead={tabsLead?.(() => setPicking(true))} />
+      {picking && <div className="overlay" role="dialog" aria-label={t('Select host')}><div className="card">{picker}</div></div>}
+      {state === 'connecting' && !prompt && !auth && <div className="banner info">{t('Connecting to {name}…', {name: hostLabel(host)})}</div>}
       <AuthPrompt challenge={auth?.c ?? null} promptKey={auth?.key ?? ''} onDone={() => setAuth(null)} onError={setClosedReason} />
       {state === 'closed' && (
         <div className="banner" role="alert">
-          <span>{closedReason || 'Disconnected.'}</span>
-          <button className="on-banner" onClick={() => setAttempt(a => a + 1)}>Reconnect</button>
+          <span>{closedReason || t('Disconnected.')}</span>
+          <button className="on-banner" onClick={() => setAttempt(a => a + 1)}>{t('Reconnect')}</button>
         </div>
       )}
       {prompt && (
-        <div className="overlay" role="alertdialog" aria-label="Host key confirmation">
+        <div className="overlay" role="alertdialog" aria-label={t('Host key confirmation')}>
           <div className="card">
-            <h3 style={{marginTop: 0}}>Unknown host key</h3>
-            <div>The authenticity of <b>{prompt.p.host}</b> can't be established.</div>
-            <div className="muted">{prompt.p.key_type} fingerprint</div>
+            <h3 style={{marginTop: 0}}>{t('Unknown host key')}</h3>
+            <div>{authenticity(t("The authenticity of {host} can't be established.", {host: HOST_MARK}), prompt.p.host)}</div>
+            <div className="muted">{t('{type} fingerprint', {type: prompt.p.key_type})}</div>
             <div className="fp" data-testid="fingerprint">{prompt.p.fingerprint}</div>
             <div className="row">
-              <button className="primary" onClick={() => answer(true)}>Trust and connect</button>
-              <button onClick={() => answer(false)}>Cancel</button>
+              <button className="primary" onClick={() => answer(true)}>{t('Trust and connect')}</button>
+              <button onClick={() => answer(false)}>{t('Cancel')}</button>
             </div>
           </div>
         </div>

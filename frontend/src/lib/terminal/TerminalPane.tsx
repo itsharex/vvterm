@@ -17,6 +17,10 @@ import {IconArrowDown, IconArrowUp} from '../ui/Icons'
 import {AuthPrompt} from '../ui/AuthPrompt'
 import {useConfirm} from '../ui/Confirm'
 import type {AuthChallenge, ClosedInfo, HostKeyPrompt} from '../types'
+import {useT} from '../i18n'
+
+/** how many parsed bytes are reported to the backend at once (flow control); a smaller rest is reported after 20 ms */
+const ACK_EVERY = 128 * 1024
 
 interface Props {
   hostId: string
@@ -130,6 +134,7 @@ export function imeColours(el: HTMLElement | null, theme: {foreground?: string; 
 
 /** One SSH session rendered with xterm.js. Keystrokes go to Go, output arrives as batched events. */
 export function TerminalPane(p: Props) {
+  const t = useT()
   const be = useBackend()
   const host = useRef<HTMLDivElement>(null)
   const term = useRef<Terminal>()
@@ -168,8 +173,8 @@ export function TerminalPane(p: Props) {
     if (!guarded.current || !/[\r\n]/.test(text)) return true
     const lines = text.replace(/[\r\n]+$/, '').split(/\r\n|\r|\n/).length
     return confirmRef.current(
-      lines === 1 ? 'Paste a line that ends with Enter into a PRODUCTION terminal? It runs at once.' : `Paste ${lines} lines into a PRODUCTION terminal? Each line runs as soon as it arrives.`,
-      {confirmLabel: 'Paste', danger: true})
+      lines === 1 ? t('Paste a line that ends with Enter into a PRODUCTION terminal? It runs at once.') : t('Paste {lines} lines into a PRODUCTION terminal? Each line runs as soon as it arrives.', {lines}),
+      {confirmLabel: t('Paste'), danger: true})
   }
   const focusedRef = useRef(p.focused && p.visible)
   focusedRef.current = p.focused && p.visible
@@ -214,19 +219,19 @@ export function TerminalPane(p: Props) {
   }
 
   useEffect(() => {
-    const t = new Terminal({
+    const tm = new Terminal({
       fontSize: p.fontSize, fontFamily: p.fontFamily, cursorBlink: p.cursorBlink, cursorStyle: p.cursorStyle, cursorInactiveStyle: 'bar', cursorWidth: 2,
       scrollback: p.scrollback, allowProposedApi: true, theme: p.termTheme,
     })
     const f = new FitAddon()
     const s = new SearchAddon()
-    t.loadAddon(f)
-    t.loadAddon(s)
-    t.loadAddon(new WebLinksAddon())
-    term.current = t
+    tm.loadAddon(f)
+    tm.loadAddon(s)
+    tm.loadAddon(new WebLinksAddon())
+    term.current = tm
     fit.current = f
     search.current = s
-    t.open(host.current!)
+    tm.open(host.current!)
     // a paste made by the browser itself (Cmd+V) is asked about too, before xterm sees it
     const pasteEl = host.current!
     const onPasteCapture = (e: ClipboardEvent) => {
@@ -234,11 +239,11 @@ export function TerminalPane(p: Props) {
       if (!guarded.current || !/[\r\n]/.test(text)) return
       e.preventDefault()
       e.stopPropagation()
-      void okToPaste(text).then(ok => { if (ok && stateRef.current === 'ready') t.paste(text) })
+      void okToPaste(text).then(ok => { if (ok && stateRef.current === 'ready') tm.paste(text) })
     }
     pasteEl.addEventListener('paste', onPasteCapture, true)
     imeColours(host.current, p.termTheme)
-    const unfollowIme = followReplacements(t as unknown as ComposingTerm)
+    const unfollowIme = followReplacements(tm as unknown as ComposingTerm)
     try { f.fit() } catch { /* hidden */ }
 
     // Command suggestions: the sources are the commands typed here, the snippets and (when asked) the host's history
@@ -251,17 +256,17 @@ export function TerminalPane(p: Props) {
     window.addEventListener(SUGGEST_POPUP, popupFromMenu)
     if (host.current?.parentElement) {
       suggester = createSuggester({
-        term: t as unknown as SuggestTerm, container: host.current.parentElement, send: d => sendKeys(d),
+        term: tm as unknown as SuggestTerm, container: host.current.parentElement, send: d => sendKeys(d),
         sources: () => ({typed: getHistory(p.hostId), snippets, host: hostCmds.current}),
         enabled: () => suggestOn.current, ready: () => stateRef.current === 'ready', popupCombo: () => suggestCombo.current, onCommand: line => recordCommand(p.hostId, line),
       })
     }
 
     // Colouring of finished lines, a moment after output stops arriving
-    const hl = createHighlighter(t as unknown as HighlightTerm)
+    const hl = createHighlighter(tm as unknown as HighlightTerm)
     highlighter.current = hl
     let hlTimer = 0
-    const hlSub = (t as unknown as {onWriteParsed?(cb: () => void): {dispose(): void}}).onWriteParsed?.(() => {
+    const hlSub = (tm as unknown as {onWriteParsed?(cb: () => void): {dispose(): void}}).onWriteParsed?.(() => {
       window.clearTimeout(hlTimer)
       hlTimer = window.setTimeout(() => hl.scan(), 60)
       suggester?.refresh()
@@ -294,12 +299,12 @@ export function TerminalPane(p: Props) {
       setClosed(null)
       setStage('connecting')
       setSt('connecting')
-      void be.session.reconnect(sid.current, t.cols, t.rows).catch(e => {
+      void be.session.reconnect(sid.current, tm.cols, tm.rows).catch(e => {
         setClosed({reason: errMsg(e), clean: false})
         setSt('closed')
       })
     }
-    t.onData(raw => {
+    tm.onData(raw => {
       const d = composedInput(raw)
       if (stateRef.current === 'ready') {
         suggester?.feed(d)
@@ -309,17 +314,17 @@ export function TerminalPane(p: Props) {
         retry.current()
       }
     })
-    const unregSelection = p.paneId ? registerSelection(p.paneId, () => t.getSelection()) : () => {}
+    const unregSelection = p.paneId ? registerSelection(p.paneId, () => tm.getSelection()) : () => {}
     const unregister = p.paneId ? registerPane(p.paneId, text => {
       if (stateRef.current !== 'ready') return false
       sendKeys(text)
       suggester?.feed(text)
       return true
     }) : () => {}
-    t.onResize(({cols, rows}) => {
+    tm.onResize(({cols, rows}) => {
       if (sid.current && cols > 0 && rows > 0) void be.session.resize(sid.current, cols, rows).catch(() => {})
     })
-    t.attachCustomKeyEventHandler(e => {
+    tm.attachCustomKeyEventHandler(e => {
       if (e.type !== 'keydown') return true
       if (suggester?.handleKey(e)) return false
       if (matches(e, searchCombo.current)) {
@@ -327,7 +332,7 @@ export function TerminalPane(p: Props) {
         return false
       }
       if (matches(e, copyCombo.current)) {
-        const sel = t.getSelection()
+        const sel = tm.getSelection()
         if (!sel) return true // nothing selected: the key goes to the shell (Ctrl+C is the interrupt)
         copyText(sel)
         e.preventDefault()
@@ -342,23 +347,40 @@ export function TerminalPane(p: Props) {
       return true
     })
 
-    const cursorSub = (t as unknown as {onCursorMove?(cb: () => void): {dispose(): void}}).onCursorMove?.(() => suggester?.refresh())
+    const cursorSub = (tm as unknown as {onCursorMove?(cb: () => void): {dispose(): void}}).onCursorMove?.(() => suggester?.refresh())
 
     // copy on select: once the selection stops changing
     let selTimer = 0
-    const selSub = (t as unknown as {onSelectionChange?(cb: () => void): {dispose(): void}}).onSelectionChange?.(() => {
+    const selSub = (tm as unknown as {onSelectionChange?(cb: () => void): {dispose(): void}}).onSelectionChange?.(() => {
       window.clearTimeout(selTimer)
-      selTimer = window.setTimeout(() => { if (copyOnSelect.current) copyText(t.getSelection()) }, 150)
+      selTimer = window.setTimeout(() => { if (copyOnSelect.current) copyText(tm.getSelection()) }, 150)
     })
 
     ;(async () => {
       try {
-        const id = await be.session.open(p.hostId, t.cols || 80, t.rows || 24)
+        const id = await be.session.open(p.hostId, tm.cols || 80, tm.rows || 24)
         if (disposed) { void be.session.close(id).catch(() => {}); return }
         sid.current = id
         if (p.paneId) setPaneSession(p.paneId, id)
+        // Flow control: tell the backend how much xterm has parsed, so that it stops reading the connection while a lot is
+        // waiting (a program that writes faster than the terminal can draw would otherwise freeze the window). The total
+        // only grows, so reports that arrive late or twice do no harm; they are batched to one call per 128 KB or 20 ms.
+        let parsed = 0, reported = 0, ackTimer = 0
+        const report = () => {
+          window.clearTimeout(ackTimer)
+          ackTimer = 0
+          if (disposed || parsed === reported) return
+          reported = parsed
+          void be.session.ack(id, parsed).catch(() => {})
+        }
+        offs.push(() => window.clearTimeout(ackTimer))
         offs.push(be.on(`term:data:${id}`, (b64: string) => {
-          t.write(b64ToBytes(b64))
+          const bytes = b64ToBytes(b64)
+          tm.write(bytes, () => {
+            parsed += bytes.length
+            if (parsed - reported >= ACK_EVERY) report()
+            else if (!ackTimer) ackTimer = window.setTimeout(report, 20)
+          })
           // output can only come from a live shell: do not keep the connecting screen up until the ready event
           if (stateRef.current === 'connecting') setSt('ready')
         }))
@@ -402,22 +424,22 @@ export function TerminalPane(p: Props) {
       ro.disconnect()
       offs.forEach(o => o())
       if (sid.current) void be.session.close(sid.current).catch(() => {})
-      t.dispose()
+      tm.dispose()
     }
     // the session lives as long as the pane; appearance changes are applied below
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [be, p.hostId])
 
   useEffect(() => {
-    const t = term.current
-    if (!t) return
-    t.options.fontSize = p.fontSize
-    t.options.fontFamily = p.fontFamily
-    t.options.theme = p.termTheme
+    const tm = term.current
+    if (!tm) return
+    tm.options.fontSize = p.fontSize
+    tm.options.fontFamily = p.fontFamily
+    tm.options.theme = p.termTheme
     imeColours(host.current, p.termTheme)
-    t.options.cursorStyle = p.cursorStyle
-    t.options.cursorBlink = p.cursorBlink
-    t.options.scrollback = p.scrollback
+    tm.options.cursorStyle = p.cursorStyle
+    tm.options.cursorBlink = p.cursorBlink
+    tm.options.scrollback = p.scrollback
     try { fit.current?.fit() } catch { /* hidden */ }
   }, [p.fontSize, p.fontFamily, p.termTheme, p.cursorStyle, p.cursorBlink, p.scrollback])
 
@@ -468,63 +490,64 @@ export function TerminalPane(p: Props) {
     setPrompt(null)
   }
 
+  const authenticity = t("The authenticity of {host} can't be established.", {host: '\u0001'}).split('\u0001')
   return (
     <div className={'pane' + (p.focused ? ' focused' : '') + (p.prod ? ' prod' : '')} onMouseDown={p.onFocus} onContextMenu={onContextMenu} data-testid="pane" style={{background: p.termTheme.background}}>
       <div ref={host} style={{height: '100%', background: p.termTheme.background}} />
-      {p.prod && <div className="prod-badge" title="This host is marked production" aria-label="Production host">PROD</div>}
+      {p.prod && <div className="prod-badge" title={t('This host is marked production')} aria-label={t('Production host')}>PROD</div>}
       {menu && (
-        <div className="ctx-menu" role="menu" aria-label="Terminal" style={{left: menu.x, top: menu.y}} onMouseDown={e => e.stopPropagation()} onContextMenu={e => e.preventDefault()}>
-          <button role="menuitem" disabled={!hasSelection} onClick={() => { copyText(term.current?.getSelection() ?? ''); setMenu(null); term.current?.focus() }}>Copy</button>
-          <button role="menuitem" onClick={() => { void pasteClipboard(); setMenu(null); term.current?.focus() }}>Paste</button>
-          <button role="menuitem" onClick={() => { term.current?.selectAll(); setMenu(null) }}>Select all</button>
-          <button role="menuitem" onClick={() => { term.current?.clear(); setMenu(null); term.current?.focus() }}>Clear</button>
+        <div className="ctx-menu" role="menu" aria-label={t('Terminal')} style={{left: menu.x, top: menu.y}} onMouseDown={e => e.stopPropagation()} onContextMenu={e => e.preventDefault()}>
+          <button role="menuitem" disabled={!hasSelection} onClick={() => { copyText(term.current?.getSelection() ?? ''); setMenu(null); term.current?.focus() }}>{t('Copy')}</button>
+          <button role="menuitem" onClick={() => { void pasteClipboard(); setMenu(null); term.current?.focus() }}>{t('Paste')}</button>
+          <button role="menuitem" onClick={() => { term.current?.selectAll(); setMenu(null) }}>{t('Select all')}</button>
+          <button role="menuitem" onClick={() => { term.current?.clear(); setMenu(null); term.current?.focus() }}>{t('Clear')}</button>
         </div>
       )}
       {showSearch && (
         <div className="searchbar">
-          <input autoFocus aria-label="Search terminal" value={needle} placeholder="Find…"
+          <input autoFocus aria-label={t('Search terminal')} value={needle} placeholder={t('Find…')}
             onChange={e => { setNeedle(e.target.value); search.current?.findNext(e.target.value, {incremental: true}) }}
             onKeyDown={e => {
               if (e.key === 'Enter') e.shiftKey ? search.current?.findPrevious(needle) : search.current?.findNext(needle)
               if (e.key === 'Escape') { setShowSearch(false); term.current?.focus() }
             }} />
-          <button className="icon" aria-label="Previous match" onClick={() => search.current?.findPrevious(needle)}><IconArrowUp size={15} /></button>
-          <button className="icon" aria-label="Next match" onClick={() => search.current?.findNext(needle)}><IconArrowDown size={15} /></button>
+          <button className="icon" aria-label={t('Previous match')} onClick={() => search.current?.findPrevious(needle)}><IconArrowUp size={15} /></button>
+          <button className="icon" aria-label={t('Next match')} onClick={() => search.current?.findNext(needle)}><IconArrowDown size={15} /></button>
         </div>
       )}
       {p.connect && !prompt && (state === 'connecting' || (state === 'ready' && !lineDone) || (state === 'closed' && closed && !everReady.current)) ? (
-        <div className="connect-over" role={state === 'closed' ? undefined : 'status'} aria-label={state === 'closed' ? 'Connection failed' : 'Connecting'} style={{background: p.termTheme.background}}
+        <div className="connect-over" role={state === 'closed' ? undefined : 'status'} aria-label={state === 'closed' ? t('Connection failed') : t('Connecting')} style={{background: p.termTheme.background}}
           // a click on the screen must not take the keyboard away from the terminal under it
           onMouseDown={e => { if (!(e.target as HTMLElement).closest('button')) e.preventDefault() }}>
           <ConnectScreen label={p.connect.label} os={p.connect.os} subtitle={p.connect.subtitle} step={state === 'closed' ? 'failed' : 'connecting'}
             target={lineTarget} rate={lineRate} onFull={() => setLineDone(true)}
-            headerAction={p.onShowLogs ? <button onClick={p.onShowLogs}>Show logs</button> : undefined}
+            headerAction={p.onShowLogs ? <button onClick={p.onShowLogs}>{t('Show logs')}</button> : undefined}
             footer={state === 'closed'
-              ? <>{p.onCloseTab ? <button onClick={p.onCloseTab}>Close</button> : <span />}<button className="primary" onClick={() => retry.current()}>Retry</button></>
-              : p.onCloseTab ? <button onClick={p.onCloseTab}>Close</button> : undefined}>
+              ? <>{p.onCloseTab ? <button onClick={p.onCloseTab}>{t('Close')}</button> : <span />}<button className="primary" onClick={() => retry.current()}>{t('Retry')}</button></>
+              : p.onCloseTab ? <button onClick={p.onCloseTab}>{t('Close')}</button> : undefined}>
             {state === 'closed' && closed
-              ? <div className="connect-error" role="alert">{closed.reason}<small>Press Enter to try again</small></div>
-              : <div className="connect-msg">{stage === 'authenticated' ? 'Opening the shell…' : 'Connecting…'}</div>}
+              ? <div className="connect-error" role="alert">{closed.reason}<small>{t('Press Enter to try again')}</small></div>
+              : <div className="connect-msg">{stage === 'authenticated' ? t('Opening the shell…') : t('Connecting…')}</div>}
           </ConnectScreen>
         </div>
-      ) : (!p.connect && state === 'connecting' && !prompt ? <div className="banner info">Connecting…</div> : null)}
+      ) : (!p.connect && state === 'connecting' && !prompt ? <div className="banner info">{t('Connecting…')}</div> : null)}
       {state === 'closed' && closed && !(!everReady.current && p.connect) && (
         <div className="banner" role="alert">
           <span>{closed.reason}</span>
-          <b>Press Enter to reconnect</b>
+          <b>{t('Press Enter to reconnect')}</b>
         </div>
       )}
       <AuthPrompt challenge={auth} promptKey={sid.current} onDone={() => setAuth(null)} onError={m => { setClosed({reason: m, clean: false}); setSt('closed') }} />
       {prompt && (
-        <div className="overlay" role="alertdialog" aria-label="Host key confirmation">
+        <div className="overlay" role="alertdialog" aria-label={t('Host key confirmation')}>
           <div className="card">
-            <h3 style={{marginTop: 0}}>Unknown host key</h3>
-            <div>The authenticity of <b>{prompt.host}</b> can't be established.</div>
-            <div className="muted">{prompt.key_type} fingerprint</div>
+            <h3 style={{marginTop: 0}}>{t('Unknown host key')}</h3>
+            <div>{authenticity[0]}<b>{prompt.host}</b>{authenticity[1]}</div>
+            <div className="muted">{t('{type} fingerprint', {type: prompt.key_type})}</div>
             <div className="fp" data-testid="fingerprint">{prompt.fingerprint}</div>
             <div className="row">
-              <button className="primary" onClick={() => trust(true)}>Trust and connect</button>
-              <button onClick={() => trust(false)}>Cancel</button>
+              <button className="primary" onClick={() => trust(true)}>{t('Trust and connect')}</button>
+              <button onClick={() => trust(false)}>{t('Cancel')}</button>
             </div>
           </div>
         </div>

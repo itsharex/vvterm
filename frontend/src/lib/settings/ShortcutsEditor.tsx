@@ -1,6 +1,7 @@
 import {useEffect, useState} from 'react'
-import {ACTIONS, ActionDef, FIXED_SHORTCUTS, capture, comboFromEvent, conflictFor, defaultOf, effective, formatCombo, validateCombo} from '../shortcuts/shortcuts'
+import {ACTIONS, ActionDef, FIXED_SHORTCUTS, capture, comboFromEvent, conflictFor, defaultOf, effective, formatCombo, groupLabel, validateCombo} from '../shortcuts/shortcuts'
 import {KeyCombo} from '../shortcuts/KeyCombo'
+import {useT} from '../i18n'
 
 /** after the first step is pressed, how long to wait for a second one before it is kept as a one-step shortcut */
 export const CHORD_WAIT_MS = 1200
@@ -18,6 +19,7 @@ interface Props {
  * defaults are stored, so a later release can change a default for everyone who never customised it.
  */
 export function ShortcutsEditor({overrides, onChange}: Props) {
+  const t = useT()
   const [recording, setRecording] = useState<string | null>(null)
   /** the first step of a shortcut being recorded, while a second one may still come */
   const [first, setFirst] = useState('')
@@ -56,13 +58,13 @@ export function ShortcutsEditor({overrides, onChange}: Props) {
         const bad = validateCombo(whole)
         if (bad) { setError(bad); return }
         const other = conflictFor(whole, action.id, eff)
-        if (other) { window.clearTimeout(timer); step1 = ''; setFirst(''); setError(`Already used by “${other.label}”. Change that one first.`); return }
+        if (other) { window.clearTimeout(timer); step1 = ''; setFirst(''); setError(t('Already used by “{name}”. Change that one first.', {name: other.label})); return }
         return finish(whole)
       }
       const bad = validateCombo(combo)
       if (bad) { setError(bad); return }
       const other = conflictFor(combo, action.id, eff)
-      if (other) { setError(`Already used by “${other.label}”. Change that one first.`); return }
+      if (other) { setError(t('Already used by “{name}”. Change that one first.', {name: other.label})); return }
       setError('')
       step1 = combo
       setFirst(combo)
@@ -79,13 +81,13 @@ export function ShortcutsEditor({overrides, onChange}: Props) {
   return (
     <section className="card-section shortcuts">
       <div className="setting-row">
-        <h4>Keyboard shortcuts</h4>
-        <button disabled={changed.length === 0} onClick={() => { setRecording(null); setError(''); onChange({}) }}>Reset all</button>
+        <h4>{t('Keyboard shortcuts')}</h4>
+        <button disabled={changed.length === 0} onClick={() => { setRecording(null); setError(''); onChange({}) }}>{t('Reset all')}</button>
       </div>
       {error && <div className="error" role="alert">{error}</div>}
       {groups.map(g => (
         <div key={g} className="sc-group">
-          <div className="sc-title">{g}</div>
+          <div className="sc-title">{groupLabel(g)}</div>
           {ACTIONS.filter(a => a.group === g).map(a => {
             const isRec = recording === a.id
             const custom = overrides[a.id] && overrides[a.id] !== defaultOf(a)
@@ -95,13 +97,13 @@ export function ShortcutsEditor({overrides, onChange}: Props) {
                 <span className="sc-keys">
                   {isRec ? (
                     <span className="key-capture" role="status">
-                      {first ? <>{formatCombo(first)}, then press another key… <small>or wait to keep it as it is</small></> : <>Press the new shortcut… <small>Esc to cancel</small></>}
+                      {first ? <>{t('{keys}, then press another key…', {keys: formatCombo(first)})} <small>{t('or wait to keep it as it is')}</small></> : <>{t('Press the new shortcut…')} <small>{t('Esc to cancel')}</small></>}
                     </span>
                   ) : (
-                    <button className={'key-chip' + (custom ? ' custom' : '')} aria-label={`Change shortcut for ${a.label}, now ${formatCombo(eff[a.id])}`}
+                    <button className={'key-chip' + (custom ? ' custom' : '')} aria-label={t('Change shortcut for {name}, now {keys}', {name: a.label, keys: formatCombo(eff[a.id])})}
                       onClick={() => { setError(''); setFirst(''); setRecording(a.id) }}><KeyCombo combo={eff[a.id]} /></button>
                   )}
-                  {custom && !isRec && <button className="icon ghost" aria-label={`Reset shortcut for ${a.label}`} title={`Default: ${formatCombo(defaultOf(a))}`} onClick={() => { set(a, defaultOf(a)) }}>Reset</button>}
+                  {custom && !isRec && <button className="icon ghost" aria-label={t('Reset shortcut for {name}', {name: a.label})} title={t('Default: {keys}', {keys: formatCombo(defaultOf(a))})} onClick={() => { set(a, defaultOf(a)) }}>{t('Reset')}</button>}
                 </span>
               </div>
             )
@@ -109,7 +111,7 @@ export function ShortcutsEditor({overrides, onChange}: Props) {
         </div>
       ))}
       <div className="sc-group">
-        <div className="sc-title">Fixed</div>
+        <div className="sc-title">{t('Fixed')}</div>
         {FIXED_SHORTCUTS.map(f => (
           <div key={f.label} className="sc-row fixed"><span>{f.label}</span><span className="sc-keys"><kbd>{f.keys}</kbd></span></div>
         ))}

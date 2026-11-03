@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react'
 import {IconSearch, IconSort} from './Icons'
+import {useT} from '../i18n'
 import {ViewMenu, type ViewMode} from '../hosts/ViewMenu'
 
 /** A choice remembered per viewer (a convenience: if storage fails the default is used and nothing breaks). */
@@ -18,6 +19,7 @@ export interface SortOption<T extends string> {value: T; label: string}
 
 /** Sort menu: an icon button that opens a small menu with a check on the current order (like the Grid / List switch). */
 export function SortMenu<T extends string>({value, options, onChange}: {value: T; options: SortOption<T>[]; onChange(v: T): void}) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const wrap = useRef<HTMLSpanElement>(null)
   useEffect(() => {
@@ -31,11 +33,11 @@ export function SortMenu<T extends string>({value, options, onChange}: {value: T
   const current = options.find(o => o.value === value)
   return (
     <span className="add-menu sort-menu" ref={wrap}>
-      <button className="icon" aria-label="Sort" aria-haspopup="menu" aria-expanded={open} title={'Sort: ' + (current?.label ?? '')} onClick={() => setOpen(o => !o)}>
+      <button className="icon" aria-label={t('Sort')} aria-haspopup="menu" aria-expanded={open} title={t('Sort: {label}', {label: current?.label ?? ''})} onClick={() => setOpen(o => !o)}>
         <IconSort size={17} />
       </button>
       {open && (
-        <div className="menu-pop right" role="menu" aria-label="Sort">
+        <div className="menu-pop right" role="menu" aria-label={t('Sort')}>
           {options.map(o => (
             <button key={o.value} role="menuitemradio" aria-checked={value === o.value} onClick={() => { setOpen(false); onChange(o.value) }}>
               <span>{o.label}</span>{value === o.value && <span className="tick" aria-hidden="true">✓</span>}
@@ -63,11 +65,14 @@ interface ToolbarProps<S extends string> {
 
 /** The bar every list page has: search, filters (children), Sort and Grid / List. */
 export function ListToolbar<S extends string>(p: ToolbarProps<S>) {
+  const t = useT()
+  // the callers name what is listed in English: the name is looked up here, one text at a time
+  const search = p.what === 'snippets' ? t('Search snippets') : p.what === 'port forwards' ? t('Search port forwards') : p.what === 'known hosts' ? t('Search known hosts') : p.what === 'keys' ? t('Search keys') : t('Search {what}', {what: p.what})
   return (
     <div className="toolbar list-toolbar">
       <div className="search-box small grow">
         <IconSearch size={14} />
-        <input aria-label={`Search ${p.what}`} placeholder={`Search ${p.what}`} value={p.query} onChange={e => p.onQuery(e.target.value)} />
+        <input aria-label={search} placeholder={search} value={p.query} onChange={e => p.onQuery(e.target.value)} />
       </div>
       {p.children}
       <SortMenu value={p.sort} options={p.sortOptions} onChange={p.onSort} />

@@ -1,7 +1,9 @@
 import {ReactNode, useEffect} from 'react'
 import {IconClose} from './Icons'
+import {useT} from '../i18n'
 
 export function Modal(props: {title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean}) {
+  const t = useT()
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === 'Escape' && props.onClose()
     window.addEventListener('keydown', h)
@@ -12,7 +14,7 @@ export function Modal(props: {title: string; onClose: () => void; children: Reac
       <div className={'modal' + (props.wide ? ' wide' : '')} role="dialog" aria-modal="true" aria-label={props.title}>
         <div className="modal-head">
           <span>{props.title}</span>
-          <button className="ghost icon" aria-label="Close" onClick={props.onClose}><IconClose size={16} /></button>
+          <button className="ghost icon" aria-label={t('Close')} onClick={props.onClose}><IconClose size={16} /></button>
         </div>
         <div className="modal-body">{props.children}</div>
         {props.footer && <div className="modal-foot">{props.footer}</div>}
@@ -35,6 +37,7 @@ export function Field(props: {label: string; children: ReactNode}) {
  * Same contract as Modal: role="dialog", Escape closes.
  */
 export function SidePanel(props: {title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean}) {
+  const t = useT()
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === 'Escape' && props.onClose()
     window.addEventListener('keydown', h)
@@ -44,7 +47,7 @@ export function SidePanel(props: {title: string; onClose: () => void; children: 
     <aside className={'side-panel' + (props.wide ? ' wide' : '')} role="dialog" aria-label={props.title}>
       <div className="side-head">
         <span>{props.title}</span>
-        <button className="ghost icon" aria-label="Close" onClick={props.onClose}><IconClose size={16} /></button>
+        <button className="ghost icon" aria-label={t('Close')} onClick={props.onClose}><IconClose size={16} /></button>
       </div>
       <div className="side-body">{props.children}</div>
       {props.footer && <div className="side-foot">{props.footer}</div>}

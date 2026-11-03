@@ -269,3 +269,30 @@ func TestSessionLogSettingsAreCheckedAndKept(t *testing.T) {
 		t.Fatalf("%+v", got)
 	}
 }
+
+func TestLanguageSettingIsCheckedAndKept(t *testing.T) {
+	h := newHarness(t)
+	s := h.app.Settings
+	if got := s.Get().Language; got != "auto" {
+		t.Fatalf("default language %q, want auto", got)
+	}
+	for _, bad := range []string{"fr", "VI", "vi-VN", "english"} {
+		in := goodSettings()
+		in.Language = bad
+		if _, err := s.Save(in); err == nil {
+			t.Errorf("language %q was accepted", bad)
+		}
+	}
+	for _, ok := range []string{"en", "vi", "ja", "zh", "auto"} {
+		in := goodSettings()
+		in.Language = ok
+		if got, err := s.Save(in); err != nil || got.Language != ok {
+			t.Fatalf("%s: %+v %v", ok, got, err)
+		}
+	}
+	in := goodSettings()
+	in.Language = "" // an older client that does not send it: automatic
+	if got, _ := s.Save(in); got.Language != "auto" {
+		t.Fatalf("empty language became %q", got.Language)
+	}
+}

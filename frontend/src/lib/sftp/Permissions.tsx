@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {useT} from '../i18n'
 import {Modal} from '../ui/Modal'
 
 const WHO = ['Owner', 'Group', 'Others'] as const
@@ -29,6 +30,10 @@ interface Props {
 
 /** Edit Permissions: a grid of read / write / execute for owner, group and others, and the same as an octal number. */
 export function PermissionsDialog({name, mode, onSave, onClose}: Props) {
+  const t = useT()
+  const whoText = {Owner: t('Owner'), Group: t('Group'), Others: t('Others')}
+  const whatText = {Read: t('Read'), Write: t('Write'), Execute: t('Execute')}
+  const whatLower = {Read: t('read'), Write: t('write'), Execute: t('execute')}
   const [m, setM] = useState(parseMode(mode))
   const [text, setText] = useState(parseMode(mode).toString(8).padStart(3, '0'))
   const [err, setErr] = useState('')
@@ -44,22 +49,22 @@ export function PermissionsDialog({name, mode, onSave, onClose}: Props) {
     onClose()
   }
   return (
-    <Modal title={`Permissions of ${name}`} onClose={onClose} footer={<><button onClick={onClose}>Cancel</button><button className="primary" disabled={busy} onClick={save}>Save</button></>}>
-      <table className="perm-grid" aria-label="Permissions">
-        <thead><tr><th />{WHAT.map(w => <th key={w}>{w}</th>)}</tr></thead>
+    <Modal title={t('Permissions of {name}', {name})} onClose={onClose} footer={<><button onClick={onClose}>{t('Cancel')}</button><button className="primary" disabled={busy} onClick={save}>{t('Save')}</button></>}>
+      <table className="perm-grid" aria-label={t('Permissions')}>
+        <thead><tr><th />{WHAT.map(w => <th key={w}>{whatText[w]}</th>)}</tr></thead>
         <tbody>
           {WHO.map((who, wi) => (
             <tr key={who}>
-              <th scope="row">{who}</th>
+              <th scope="row">{whoText[who]}</th>
               {WHAT.map((what, ti) => (
-                <td key={what}><input type="checkbox" aria-label={`${who} ${what.toLowerCase()}`} checked={!!(m & (1 << (8 - (wi * 3 + ti))))} onChange={() => toggle(wi, ti)} /></td>
+                <td key={what}><input type="checkbox" aria-label={t('{who} {what}', {who: whoText[who], what: whatLower[what]})} checked={!!(m & (1 << (8 - (wi * 3 + ti))))} onChange={() => toggle(wi, ti)} /></td>
               ))}
             </tr>
           ))}
         </tbody>
       </table>
       <div className="perm-octal">
-        <label>Octal <input aria-label="Octal permissions" value={text} onChange={e => setOctal(e.target.value)} inputMode="numeric" maxLength={3} /></label>
+        <label>{t('Octal')} <input aria-label={t('Octal permissions')} value={text} onChange={e => setOctal(e.target.value)} inputMode="numeric" maxLength={3} /></label>
         <code>{formatMode(m)}</code>
       </div>
       {err && <div className="error" role="alert">{err}</div>}

@@ -6,6 +6,7 @@ import {OS_INFO, OsIcon} from '../ui/OsIcon'
 import {leaves} from '../layout'
 import {SnippetPicker} from '../snippets/SnippetPicker'
 import type {Host, Snippet} from '../types'
+import {useT} from '../i18n'
 
 interface Props {
   tabs: Tab[]
@@ -46,6 +47,7 @@ interface Props {
 
 /** Title bar with the Vaults (home) tab, one tab per terminal, and split controls. */
 export function TopBar(p: Props) {
+  const t = useT()
   // a tab being dragged, and the tab it is over (with the side the drop would land on)
   const [dragId, setDragId] = useState('')
   const [over, setOver] = useState<{id: string; after: boolean} | null>(null)
@@ -67,17 +69,17 @@ export function TopBar(p: Props) {
     window.addEventListener('blur', off)
     return () => { window.removeEventListener('mousedown', off); window.removeEventListener('keydown', esc, true); window.removeEventListener('blur', off) }
   }, [menu])
-  const menuTab = menu ? p.tabs.find(t => t.id === menu.id) : undefined
+  const menuTab = menu ? p.tabs.find(tb => tb.id === menu.id) : undefined
   const commit = () => {
     if (editing) p.onRename?.(editing.id, editing.value)
     setEditing(null)
   }
-  const current = p.tabs.find(t => t.id === p.active)
+  const current = p.tabs.find(tb => tb.id === p.active)
   /** the icon of a tab: the server type of its host, a plug for a serial port, a terminal for this computer */
-  const tabIcon = (t: Tab) => {
-    if (t.kind === 'sftp') return <IconFolder size={15} />
-    if (t.kind === 'new') return <IconPlus size={15} />
-    const hostId = leaves(t.root)[0]?.hostId ?? ''
+  const tabIcon = (tb: Tab) => {
+    if (tb.kind === 'sftp') return <IconFolder size={15} />
+    if (tb.kind === 'new') return <IconPlus size={15} />
+    const hostId = leaves(tb.root)[0]?.hostId ?? ''
     const id = hostId.startsWith('telnet:') ? hostId.slice('telnet:'.length) : hostId
     const os = p.hosts?.find(h => h.id === id)?.os
     if (os && OS_INFO[os]) return <span className="tab-os" style={{background: OS_INFO[os].color}} data-os={os}><OsIcon os={os} size={12} /></span>
@@ -85,7 +87,7 @@ export function TopBar(p: Props) {
   }
   const inTerminal = !!current && isTerminalTab(current)
   return (
-    <div className={'topbar' + (paneOver ? ' pane-drop' : '')} role="tablist" aria-label="Open tabs" onDoubleClick={e => {
+    <div className={'topbar' + (paneOver ? ' pane-drop' : '')} role="tablist" aria-label={t('Open tabs')} onDoubleClick={e => {
       if (!(e.target as HTMLElement).closest('.tab, button, .top-tools, .snippet-picker, [role="menu"]')) p.onToggleMaximise?.()
     }}
       onDragOver={e => { if (paneDragging() && hasPane(e)) { e.preventDefault(); setPaneOver(true) } }}
@@ -99,70 +101,70 @@ export function TopBar(p: Props) {
       }}>
       <div className="traffic-space" />
       <button role="tab" aria-selected={p.active === 'home'} className={'tab tab-home' + (p.active === 'home' ? ' active' : '')} onClick={p.onHome}>
-        <IconKey size={15} /> <span>Vaults</span>
+        <IconKey size={15} /> <span>{t('Vaults')}</span>
       </button>
-      {p.tabs.map(t => (
-        <div key={t.id} role="tab" aria-selected={t.id === p.active} className={'tab' + (t.pinned ? ' pinned' : '') + (t.id === p.active ? ' active' : '') + (dragId === t.id ? ' dragging' : '') + (paneTab === t.id ? ' drop-into' : '') + (over?.id === t.id && dragId !== t.id ? (over.after ? ' drop-after' : ' drop-before') : '')} onClick={() => p.onSelect(t.id)}
-          draggable={!t.pinned && !!p.onMoveTab && editing?.id !== t.id}
-          onDragStart={e => { setDragId(t.id); setDraggingTab(t.id); e.dataTransfer.setData(TAB_DRAG, t.id); e.dataTransfer.effectAllowed = 'move' }}
+      {p.tabs.map(tb => (
+        <div key={tb.id} role="tab" aria-selected={tb.id === p.active} className={'tab' + (tb.pinned ? ' pinned' : '') + (tb.id === p.active ? ' active' : '') + (dragId === tb.id ? ' dragging' : '') + (paneTab === tb.id ? ' drop-into' : '') + (over?.id === tb.id && dragId !== tb.id ? (over.after ? ' drop-after' : ' drop-before') : '')} onClick={() => p.onSelect(tb.id)}
+          draggable={!tb.pinned && !!p.onMoveTab && editing?.id !== tb.id}
+          onDragStart={e => { setDragId(tb.id); setDraggingTab(tb.id); e.dataTransfer.setData(TAB_DRAG, tb.id); e.dataTransfer.effectAllowed = 'move' }}
           onDragEnd={() => { setDragId(''); setDraggingTab(''); setOver(null) }}
           onDragOver={e => {
             const dp = paneDragging()
-            if (dp && hasPane(e) && p.onPaneToTab && isTerminalTab(t) && dp.tabId !== t.id) { e.preventDefault(); e.stopPropagation(); setPaneOver(false); setPaneTab(t.id); return }
-            if (!dragId || dragId === t.id || !Array.from(e.dataTransfer.types).includes(TAB_DRAG)) return
+            if (dp && hasPane(e) && p.onPaneToTab && isTerminalTab(tb) && dp.tabId !== tb.id) { e.preventDefault(); e.stopPropagation(); setPaneOver(false); setPaneTab(tb.id); return }
+            if (!dragId || dragId === tb.id || !Array.from(e.dataTransfer.types).includes(TAB_DRAG)) return
             e.preventDefault()
             const r = e.currentTarget.getBoundingClientRect()
-            setOver({id: t.id, after: e.clientX > r.left + r.width / 2})
+            setOver({id: tb.id, after: e.clientX > r.left + r.width / 2})
           }}
-          onDragLeave={() => setOver(o => (o?.id === t.id ? null : o))}
+          onDragLeave={() => setOver(o => (o?.id === tb.id ? null : o))}
           onDrop={e => {
             const dp = paneDragging()
-            if (dp && hasPane(e) && p.onPaneToTab && isTerminalTab(t) && dp.tabId !== t.id) { e.preventDefault(); e.stopPropagation(); endPaneDrag(); p.onPaneToTab(dp.tabId, dp.paneId, t.id); return }
+            if (dp && hasPane(e) && p.onPaneToTab && isTerminalTab(tb) && dp.tabId !== tb.id) { e.preventDefault(); e.stopPropagation(); endPaneDrag(); p.onPaneToTab(dp.tabId, dp.paneId, tb.id); return }
             const id = e.dataTransfer.getData(TAB_DRAG)
-            if (!id || id === t.id) return
+            if (!id || id === tb.id) return
             e.preventDefault()
             const after = e.clientX > e.currentTarget.getBoundingClientRect().left + e.currentTarget.getBoundingClientRect().width / 2
             setDragId('')
             setOver(null)
-            p.onMoveTab?.(id, t.id, after)
+            p.onMoveTab?.(id, tb.id, after)
           }}
-          onContextMenu={e => { e.preventDefault(); if (!t.pinned) setMenu({id: t.id, x: e.clientX, y: e.clientY}) }}>
-          <span className="tab-ico">{tabIcon(t)}<TabStatus tab={t} /></span>
-          {editing?.id === t.id ? (
-            <input className="tab-rename" aria-label="Tab name" autoFocus value={editing.value} maxLength={60}
-              onClick={e => e.stopPropagation()} onDoubleClick={e => e.stopPropagation()} onChange={e => setEditing({id: t.id, value: e.target.value})}
+          onContextMenu={e => { e.preventDefault(); if (!tb.pinned) setMenu({id: tb.id, x: e.clientX, y: e.clientY}) }}>
+          <span className="tab-ico">{tabIcon(tb)}<TabStatus tab={tb} /></span>
+          {editing?.id === tb.id ? (
+            <input className="tab-rename" aria-label={t('Tab name')} autoFocus value={editing.value} maxLength={60}
+              onClick={e => e.stopPropagation()} onDoubleClick={e => e.stopPropagation()} onChange={e => setEditing({id: tb.id, value: e.target.value})}
               onFocus={e => e.currentTarget.select()} onBlur={commit}
               onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') commit(); else if (e.key === 'Escape') setEditing(null) }} />
           ) : (
-            <span className="tab-title" title={t.pinned ? t.title : t.title + ' (double-click to rename)'} onDoubleClick={() => { if (!t.pinned && p.onRename) setEditing({id: t.id, value: t.title}) }}>{t.title}</span>
+            <span className="tab-title" title={tb.pinned ? tb.title : t('{title} (double-click to rename)', {title: tb.title})} onDoubleClick={() => { if (!tb.pinned && p.onRename) setEditing({id: tb.id, value: tb.title}) }}>{tb.title}</span>
           )}
-          {!t.pinned && (
-            <span className="x" role="button" aria-label={`Close ${t.title}`} onClick={e => { e.stopPropagation(); p.onClose(t.id) }}>
+          {!tb.pinned && (
+            <span className="x" role="button" aria-label={t('Close {title}', {title: tb.title})} onClick={e => { e.stopPropagation(); p.onClose(tb.id) }}>
               <IconClose size={13} />
             </span>
           )}
         </div>
       ))}
       {menu && menuTab && (
-        <div className="ctx-menu" role="menu" aria-label={'Tab ' + menuTab.title} style={{left: menu.x, top: menu.y}} onMouseDown={e => e.stopPropagation()} onContextMenu={e => e.preventDefault()}>
-          <button role="menuitem" disabled={!isTerminalTab(menuTab) || !p.onDuplicate} onClick={() => { setMenu(null); p.onDuplicate?.(menuTab.id) }}>Duplicate</button>
-          <button role="menuitem" disabled={!isTerminalTab(menuTab) || !p.onDuplicateWindow} onClick={() => { setMenu(null); p.onDuplicateWindow?.(menuTab.id) }}>Duplicate in new window</button>
-          <button role="menuitem" disabled={!p.onRename} onClick={() => { setMenu(null); setEditing({id: menuTab.id, value: menuTab.title}) }}>Rename</button>
-          <button role="menuitem" disabled={!isTerminalTab(menuTab) || !p.onSplitTab} onClick={() => { setMenu(null); p.onSplitTab?.(menuTab.id, 'row') }}>Split right</button>
-          <button role="menuitem" disabled={!isTerminalTab(menuTab) || !p.onSplitTab} onClick={() => { setMenu(null); p.onSplitTab?.(menuTab.id, 'col') }}>Split down</button>
+        <div className="ctx-menu" role="menu" aria-label={t('Tab {title}', {title: menuTab.title})} style={{left: menu.x, top: menu.y}} onMouseDown={e => e.stopPropagation()} onContextMenu={e => e.preventDefault()}>
+          <button role="menuitem" disabled={!isTerminalTab(menuTab) || !p.onDuplicate} onClick={() => { setMenu(null); p.onDuplicate?.(menuTab.id) }}>{t('Duplicate')}</button>
+          <button role="menuitem" disabled={!isTerminalTab(menuTab) || !p.onDuplicateWindow} onClick={() => { setMenu(null); p.onDuplicateWindow?.(menuTab.id) }}>{t('Duplicate in new window')}</button>
+          <button role="menuitem" disabled={!p.onRename} onClick={() => { setMenu(null); setEditing({id: menuTab.id, value: menuTab.title}) }}>{t('Rename')}</button>
+          <button role="menuitem" disabled={!isTerminalTab(menuTab) || !p.onSplitTab} onClick={() => { setMenu(null); p.onSplitTab?.(menuTab.id, 'row') }}>{t('Split right')}</button>
+          <button role="menuitem" disabled={!isTerminalTab(menuTab) || !p.onSplitTab} onClick={() => { setMenu(null); p.onSplitTab?.(menuTab.id, 'col') }}>{t('Split down')}</button>
           <div className="ctx-sep" role="separator" />
-          <button role="menuitem" onClick={() => { setMenu(null); p.onClose(menuTab.id) }}>Close</button>
+          <button role="menuitem" onClick={() => { setMenu(null); p.onClose(menuTab.id) }}>{t('Close')}</button>
         </div>
       )}
-      <button className="tab add" aria-label="New connection" title="New connection" onClick={p.onNew}><IconPlus size={16} /></button>
+      <button className="tab add" aria-label={t('New connection')} title={t('New connection')} onClick={p.onNew}><IconPlus size={16} /></button>
       <div className="spacer" />
       <div className="top-tools">
-        {p.updateVersion && <button className="update-chip" title={`Version ${p.updateVersion} is available`} aria-label={`Update available: version ${p.updateVersion}`} onClick={p.onUpdate}>Update</button>}
+        {p.updateVersion && <button className="update-chip" title={t('Version {version} is available', {version: p.updateVersion})} aria-label={t('Update available: version {version}', {version: p.updateVersion})} onClick={p.onUpdate}>{t('Update')}</button>}
         <SnippetPicker snippets={p.snippets} disabled={!inTerminal} onRun={p.onRunSnippet} />
-        <button className="icon" title="Settings (⌘/Ctrl + ,)" aria-label="Open settings" onClick={p.onSettings}><IconGear /></button>
-        <button className="icon" disabled={!inTerminal} title="Split right" aria-label="Split right" onClick={() => p.onSplit('row')}><IconSplitH /></button>
-        <button className="icon" disabled={!inTerminal} title="Split down" aria-label="Split down" onClick={() => p.onSplit('col')}><IconSplitV /></button>
-        {p.onToggleSidebar && <button className={'icon' + (p.sidebarOpen ? ' on' : '')} disabled={!inTerminal} title={p.sidebarOpen ? 'Hide sidebar' : 'Show sidebar'} aria-label="Toggle sidebar" aria-pressed={!!p.sidebarOpen} onClick={p.onToggleSidebar}><IconSidebar /></button>}
+        <button className="icon" title={t('Settings (⌘/Ctrl + ,)')} aria-label={t('Open settings')} onClick={p.onSettings}><IconGear /></button>
+        <button className="icon" disabled={!inTerminal} title={t('Split right')} aria-label={t('Split right')} onClick={() => p.onSplit('row')}><IconSplitH /></button>
+        <button className="icon" disabled={!inTerminal} title={t('Split down')} aria-label={t('Split down')} onClick={() => p.onSplit('col')}><IconSplitV /></button>
+        {p.onToggleSidebar && <button className={'icon' + (p.sidebarOpen ? ' on' : '')} disabled={!inTerminal} title={p.sidebarOpen ? t('Hide sidebar') : t('Show sidebar')} aria-label={t('Toggle sidebar')} aria-pressed={!!p.sidebarOpen} onClick={p.onToggleSidebar}><IconSidebar /></button>}
       </div>
     </div>
   )

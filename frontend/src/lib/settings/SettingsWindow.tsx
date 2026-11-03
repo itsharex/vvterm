@@ -4,6 +4,9 @@ import {useToast} from '../ui/Toast'
 import {useConfirm} from '../ui/Confirm'
 import {Switch} from '../ui/Switch'
 import {Select} from '../ui/Select'
+import {LANGUAGES, useT, useTn, type TFn} from '../i18n'
+import {rich} from '../assistant/rich'
+import {setLanguageSetting} from '../i18n/store'
 import {biometricName, errMsg} from '../util'
 import {ThemePicker} from './ThemePicker'
 import {resolveTerminalTheme} from '../terminal/themes'
@@ -24,26 +27,26 @@ const SyncPanel = lazy(loadSync)
 const AssistantSettings = lazy(loadAssistant)
 // the pages are fetched right after the window opens, so a tab opens at once instead of flashing "Loading…"
 const preload = () => { void loadSupport(); void loadSync(); void loadAssistant() }
-const Loading = () => <div className="muted" role="status">Loading…</div>
+const Loading = () => { const t = useT(); return <div className="muted" role="status">{t('Loading…')}</div> }
 
 /** what this computer calls the place that keeps the vault key for quick unlock */
-const keychainName = () => {
+const keychainName = (t: TFn) => {
   const p = typeof navigator === 'undefined' ? '' : navigator.platform || navigator.userAgent || ''
-  return /mac/i.test(p) ? 'the macOS Keychain' : /windows|win32|win64/i.test(p) ? 'Windows Credential Manager' : 'the system keychain'
+  return /mac/i.test(p) ? t('the macOS Keychain') : /windows|win32|win64/i.test(p) ? t('Windows Credential Manager') : t('the system keychain')
 }
 
 type Cat = 'general' | 'account' | 'terminal' | 'security' | 'assistant' | 'sync' | 'shortcuts' | 'storage'
 interface CatInfo {id: Cat; label: string; icon: () => JSX.Element; desc: string; group: string}
 // the order is the order of the keys (Mod+1…8) and of Ctrl+Tab; the groups only draw the menu
-const CATS: CatInfo[] = [
-  {id: 'general', label: 'General', icon: () => <IconGear size={16} />, group: 'Preferences', desc: 'How the interface looks and behaves.'},
-  {id: 'account', label: 'Account', icon: () => <IconUser size={16} />, group: 'Preferences', desc: 'Your profile and ways to support Vutty.'},
-  {id: 'terminal', label: 'Terminal', icon: () => <IconTerminal size={16} />, group: 'Preferences', desc: 'Theme, font, cursor and how the terminal reacts.'},
-  {id: 'security', label: 'Security', icon: () => <IconShield size={16} />, group: 'Vault and integrations', desc: 'Lock the vault, unlock it faster and change its master password.'},
-  {id: 'assistant', label: 'AI assistant', icon: () => <IconSparkle size={16} />, group: 'Vault and integrations', desc: 'Let an AI command-line tool you already use work in your terminal.'},
-  {id: 'sync', label: 'Sync', icon: () => <IconCloud size={16} />, group: 'Vault and integrations', desc: 'Keep your encrypted hosts and keys in step across machines.'},
-  {id: 'shortcuts', label: 'Shortcuts', icon: () => <IconEnterKey size={16} />, group: 'Advanced', desc: 'Change the keys that drive Vutty.'},
-  {id: 'storage', label: 'Storage', icon: () => <IconFolder size={16} />, group: 'Advanced', desc: 'Clear what Vutty can rebuild, or start the settings over.'},
+const cats = (t: TFn): CatInfo[] => [
+  {id: 'general', label: t('General'), icon: () => <IconGear size={16} />, group: t('Preferences'), desc: t('How the interface looks and behaves.')},
+  {id: 'account', label: t('Account'), icon: () => <IconUser size={16} />, group: t('Preferences'), desc: t('Your profile and ways to support Vutty.')},
+  {id: 'terminal', label: t('Terminal'), icon: () => <IconTerminal size={16} />, group: t('Preferences'), desc: t('Theme, font, cursor and how the terminal reacts.')},
+  {id: 'security', label: t('Security'), icon: () => <IconShield size={16} />, group: t('Vault and integrations'), desc: t('Lock the vault, unlock it faster and change its master password.')},
+  {id: 'assistant', label: t('AI assistant'), icon: () => <IconSparkle size={16} />, group: t('Vault and integrations'), desc: t('Let an AI command-line tool you already use work in your terminal.')},
+  {id: 'sync', label: t('Sync'), icon: () => <IconCloud size={16} />, group: t('Vault and integrations'), desc: t('Keep your encrypted hosts and keys in step across machines.')},
+  {id: 'shortcuts', label: t('Shortcuts'), icon: () => <IconEnterKey size={16} />, group: t('Advanced'), desc: t('Change the keys that drive Vutty.')},
+  {id: 'storage', label: t('Storage'), icon: () => <IconFolder size={16} />, group: t('Advanced'), desc: t('Clear what Vutty can rebuild, or start the settings over.')},
 ]
 
 const FONTS = [
@@ -55,11 +58,11 @@ const FONTS = [
 ]
 
 const REPO = 'https://github.com/vunguyenvu35/vutty'
-const LINKS: [string, string][] = [
-  ['Documentation', REPO + '#readme'],
-  ['Request a feature', REPO + '/issues/new'],
-  ['Report a bug', REPO + '/issues/new'],
-  ['Release notes', REPO + '/blob/main/RELEASE_NOTES.md'],
+const links = (t: TFn): [string, string][] => [
+  [t('Documentation'), REPO + '#readme'],
+  [t('Request a feature'), REPO + '/issues/new'],
+  [t('Report a bug'), REPO + '/issues/new'],
+  [t('Release notes'), REPO + '/blob/main/RELEASE_NOTES.md'],
 ]
 
 const DONATE: [string, string][] = DONATE_NETWORKS.map(n => [`${n.name.replace(' · ', ' / ')} (${n.chain})`, n.address])
@@ -91,6 +94,10 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
   const be = useBackend()
   const toast = useToast()
   const confirm = useConfirm()
+  const t = useT()
+  const tn = useTn()
+  const CATS = cats(t)
+  const LINKS = links(t)
   const [cat, setCat] = useState<Cat>('general')
   const catRef = useRef(cat)
   catRef.current = cat
@@ -117,10 +124,10 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
     try {
       const u = await be.system.checkUpdate()
       setNewer(u)
-      toast.info(u.available ? `Version ${u.latest} is available` : 'You are on the latest version')
+      toast.info(u.available ? t('Version {latest} is available', {latest: u.latest}) : t('You are on the latest version'))
     } catch (e) { toast.error(errMsg(e)) } finally { setChecking(false) }
   }
-  useEffect(() => { const t = setTimeout(preload, 150); return () => clearTimeout(t) }, [])
+  useEffect(() => { const timer = setTimeout(preload, 150); return () => clearTimeout(timer) }, [])
   useEffect(() => { void be.system.info().then(i => setVersion(i.version)).catch(() => {}) }, [be])
   // where session logs go now: asked again when the choice changes
   useEffect(() => { if (ready && s.session_log !== 'off') void be.settings.sessionLogFolder().then(setLogFolder).catch(() => {}) }, [be, ready, s.session_log, s.session_log_dir])
@@ -170,6 +177,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
     if (!ready || stale) return // never save the placeholder or remembered values over the real ones
     try { onSettings(await be.settings.save({...s, ...patch})) } catch (e) { toast.error(errMsg(e)) }
   }
+  useEffect(() => { if (ready) setLanguageSetting(s.language) }, [ready, s.language])
   const guard = async (fn: () => Promise<void>, ok: string) => {
     setErr('')
     try { await fn(); toast.info(ok) } catch (e) { setErr(errMsg(e)) }
@@ -180,11 +188,11 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
     setBusyStorage(true)
     try {
       const r = await be.settings.clearCache()
-      toast.info(r.files > 0 ? `Cache cleared: ${r.files} file${r.files === 1 ? '' : 's'}, ${formatBytes(r.bytes)}` : 'Cache cleared')
+      toast.info(r.files > 0 ? tn(r.files, 'Cache cleared: {n} file, {size}', 'Cache cleared: {n} files, {size}', {size: formatBytes(r.bytes)}) : t('Cache cleared'))
     } catch (e) { toast.error(errMsg(e)) } finally { setBusyStorage(false) }
   }
   const resetSettings = async () => {
-    if (!await confirm('Reset every setting to its default? Your profile, sync target, hosts, keys and vault stay as they are.', {confirmLabel: 'Reset settings', danger: true})) return
+    if (!await confirm(t('Reset every setting to its default? Your profile, sync target, hosts, keys and vault stay as they are.'), {confirmLabel: t('Reset settings'), danger: true})) return
     setBusyStorage(true)
     try {
       const next = await be.settings.reset()
@@ -192,7 +200,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
       onVault() // the auto-lock time is part of the vault status
       setScroll(String(next.scrollback))
       setAuto(String(next.auto_lock_minutes))
-      toast.info('Settings reset to their defaults')
+      toast.info(t('Settings reset to their defaults'))
     } catch (e) { toast.error(errMsg(e)) } finally { setBusyStorage(false) }
   }
 
@@ -202,22 +210,22 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
 
   return (
     <div className={'win-back' + (maximized ? ' maximized' : '') + (native ? ' native' : '')} role="presentation">
-      <div className={'win' + (maximized ? ' max' : '') + (rolledUp ? ' rolled' : '') + (native ? ' native' : '')} role="dialog" aria-label="Settings"
+      <div className={'win' + (maximized ? ' max' : '') + (rolledUp ? ' rolled' : '') + (native ? ' native' : '')} role="dialog" aria-label={t('Settings')}
         style={maximized || native ? undefined : {transform: `translate(${offset.x}px, ${offset.y}px)`}}>
         <div className="win-title" {...(native ? {onDoubleClick: (e: React.MouseEvent) => { if (!(e.target as HTMLElement).closest('button')) void be.system.toggleMaximise() }} : {onPointerDown: startDrag, onPointerMove: moveDrag, onPointerUp: endDrag, onPointerCancel: endDrag, onDoubleClick: toggleMax})}>
           {/* maximised, the window covers the app and the native macOS buttons sit at the top left: the in-app dots give way to Restore / Close on the right */}
           {!maximized && !native && <span className="win-dots">
-            <button className="dot close" aria-label="Close settings" title="Close" onClick={onClose} />
-            <button className="dot min" aria-label={rolledUp ? 'Unroll settings' : 'Minimize settings'} title={rolledUp ? 'Show' : 'Minimize'} onClick={() => setRolledUp(r => !r)} />
-            <button className="dot max" aria-label={maximized ? 'Restore settings' : 'Maximize settings'} title={maximized ? 'Restore' : 'Maximize'} onClick={toggleMax} />
+            <button className="dot close" aria-label={t('Close settings')} title={t('Close')} onClick={onClose} />
+            <button className="dot min" aria-label={rolledUp ? t('Unroll settings') : t('Minimize settings')} title={rolledUp ? t('Show') : t('Minimize')} onClick={() => setRolledUp(r => !r)} />
+            <button className="dot max" aria-label={maximized ? t('Restore settings') : t('Maximize settings')} title={maximized ? t('Restore') : t('Maximize')} onClick={toggleMax} />
           </span>}
-          <span className="win-name">Settings</span>
+          <span className="win-name">{t('Settings')}</span>
           {maximized && (
             <span className="win-actions">
-              <button className="win-act" aria-label="Restore settings" title="Restore" onClick={toggleMax}>
+              <button className="win-act" aria-label={t('Restore settings')} title={t('Restore')} onClick={toggleMax}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="8" y="3" width="13" height="13" rx="2" /><path d="M16 21H5a2 2 0 0 1-2-2V8" /></svg>
               </button>
-              <button className="win-act" aria-label="Close settings" title="Close" onClick={onClose}>
+              <button className="win-act" aria-label={t('Close settings')} title={t('Close')} onClick={onClose}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
               </button>
             </span>
@@ -226,7 +234,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
 
         {!rolledUp && (
           <div className="win-body">
-            <nav className="win-nav" aria-label="Settings menu">
+            <nav className="win-nav" aria-label={t('Settings menu')}>
               <div role="tablist" aria-orientation="vertical" className="win-tabs">
                 {CATS.map((c, i) => (
                   <Fragment key={c.id}>
@@ -240,23 +248,23 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                 ))}
               </div>
               <div className="spacer" />
-              <div className="win-group" aria-hidden="true">Help</div>
+              <div className="win-group" aria-hidden="true">{t('Help')}</div>
               {LINKS.map(([label, url]) => (
                 <button key={label} className="win-link" onClick={() => be.system.openUrl(url)}>{label}<IconArrowUpRight size={14} /></button>
               ))}
-              <button className="win-link" onClick={() => setSupportOpen(true)}>Support Vutty</button>
+              <button className="win-link" onClick={() => setSupportOpen(true)}>{t('Support Vutty')}</button>
               <div className="win-sep" />
               <div className="win-row">
-                <span>Theme</span>
-                <Select className="inline" label="Theme" value={s.theme} onChange={v => update({theme: v as ThemeMode})} disabled={!ready}
-                  options={[{value: 'auto', label: 'Auto'}, {value: 'light', label: 'Light'}, {value: 'dark', label: 'Dark'}]} />
+                <span>{t('Theme')}</span>
+                <Select className="inline" label={t('Theme')} value={s.theme} onChange={v => update({theme: v as ThemeMode})} disabled={!ready}
+                  options={[{value: 'auto', label: t('Auto')}, {value: 'light', label: t('Light')}, {value: 'dark', label: t('Dark')}]} />
               </div>
               {newer?.available && (
-                <button className="win-link update" onClick={() => be.system.openUrl(newer.url)}>Version {newer.latest} is available<IconArrowUpRight size={14} /></button>
+                <button className="win-link update" onClick={() => be.system.openUrl(newer.url)}>{t('Version {latest} is available', {latest: newer.latest})}<IconArrowUpRight size={14} /></button>
               )}
               <div className="win-row version">
-                <span>Version <b data-testid="app-version">{version || '…'}</b></span>
-                <button className="link" disabled={checking} onClick={() => void checkUpdate()}>{checking ? 'Checking…' : 'Check for updates'}</button>
+                <span>{rich(t('Version {version}'), {version: <b data-testid="app-version">{version || '…'}</b>})}</span>
+                <button className="link" disabled={checking} onClick={() => void checkUpdate()}>{checking ? t('Checking…') : t('Check for updates')}</button>
               </div>
             </nav>
 
@@ -270,38 +278,43 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
               {cat === 'general' && (
                 <>
                   <section className="card-section">
-                    <h4>Interface</h4>
+                    <h4>{t('Interface')}</h4>
                     <div className="setting-row">
-                      <div><b>Zoom</b><div className="muted">Make the whole interface larger or smaller (80% to 160%).</div></div>
+                      <div><b>{t('Language')}</b><div className="muted">{t('The language of the menus, pages and messages of the app. Automatic follows the language of the system.')}</div></div>
+                      <Select className="inline" label={t('Language')} value={s.language ?? 'auto'} onChange={v => update({language: v as Settings['language']})} disabled={!ready}
+                        options={[{value: 'auto', label: t('Automatic')}, ...LANGUAGES.map(l => ({value: l.code, label: l.name}))]} />
+                    </div>
+                    <div className="setting-row">
+                      <div><b>{t('Zoom')}</b><div className="muted">{t('Make the whole interface larger or smaller (80% to 160%).')}</div></div>
                       <div className="stepper">
-                        <button aria-label="Zoom out" disabled={s.zoom <= 80} onClick={() => update({zoom: Math.max(80, s.zoom - 10)})}>−</button>
-                        <output aria-label="Zoom level" className="zoom-level">{s.zoom}%</output>
-                        <button aria-label="Zoom in" disabled={s.zoom >= 160} onClick={() => update({zoom: Math.min(160, s.zoom + 10)})}>+</button>
-                        <button aria-label="Reset zoom" disabled={s.zoom === 100} onClick={() => update({zoom: 100})}>Reset</button>
+                        <button aria-label={t('Zoom out')} disabled={s.zoom <= 80} onClick={() => update({zoom: Math.max(80, s.zoom - 10)})}>−</button>
+                        <output aria-label={t('Zoom level')} className="zoom-level">{s.zoom}%</output>
+                        <button aria-label={t('Zoom in')} disabled={s.zoom >= 160} onClick={() => update({zoom: Math.min(160, s.zoom + 10)})}>+</button>
+                        <button aria-label={t('Reset zoom')} disabled={s.zoom === 100} onClick={() => update({zoom: 100})}>{t('Reset')}</button>
                       </div>
                     </div>
                     <div className="setting-row">
-                      <div><b>Reduce motion</b><div className="muted">Turn off animations and transitions.</div></div>
-                      <Switch label="Reduce motion" checked={s.reduce_motion} onChange={v => update({reduce_motion: v})} />
+                      <div><b>{t('Reduce motion')}</b><div className="muted">{t('Turn off animations and transitions.')}</div></div>
+                      <Switch label={t('Reduce motion')} checked={s.reduce_motion} onChange={v => update({reduce_motion: v})} />
                     </div>
                   </section>
                   <section className="card-section">
-                    <h4>Behaviour</h4>
+                    <h4>{t('Behaviour')}</h4>
                     <div className="setting-row">
-                      <div><b>Confirm before closing a tab</b><div className="muted">Ask first, because closing a terminal or SFTP tab ends its connection.</div></div>
-                      <Switch label="Confirm before closing a tab" checked={s.confirm_tab_close} onChange={v => update({confirm_tab_close: v})} />
+                      <div><b>{t('Confirm before closing a tab')}</b><div className="muted">{t('Ask first, because closing a terminal or SFTP tab ends its connection.')}</div></div>
+                      <Switch label={t('Confirm before closing a tab')} checked={s.confirm_tab_close} onChange={v => update({confirm_tab_close: v})} />
                     </div>
                     <div className="setting-row">
-                      <div><b>Be careful on production hosts</b><div className="muted">In the terminal of a host marked <i>prod</i>, ask before text with a line break is pasted (the line would run at once) and before a snippet or a history command is run. Terminals of production hosts also carry a red PROD badge.</div></div>
-                      <Switch label="Be careful on production hosts" checked={s.confirm_prod} onChange={v => update({confirm_prod: v})} />
+                      <div><b>{t('Be careful on production hosts')}</b><div className="muted">{rich(t('In the terminal of a host marked {prod}, ask before text with a line break is pasted (the line would run at once) and before a snippet or a history command is run. Terminals of production hosts also carry a red PROD badge.'), {prod: <i>prod</i>})}</div></div>
+                      <Switch label={t('Be careful on production hosts')} checked={s.confirm_prod} onChange={v => update({confirm_prod: v})} />
                     </div>
                     <div className="setting-row">
-                      <div><b>Check for updates automatically</b><div className="muted">When Vutty opens, ask GitHub (at most once a day) whether a newer release exists. Only the release information is read; nothing about you is sent.</div></div>
-                      <Switch label="Check for updates automatically" checked={s.auto_update_check} onChange={v => update({auto_update_check: v})} />
+                      <div><b>{t('Check for updates automatically')}</b><div className="muted">{t('When Vutty opens, ask GitHub (at most once a day) whether a newer release exists. Only the release information is read; nothing about you is sent.')}</div></div>
+                      <Switch label={t('Check for updates automatically')} checked={s.auto_update_check} onChange={v => update({auto_update_check: v})} />
                     </div>
                     <div className="setting-row">
-                      <div><b>Ask which protocol to use</b><div className="muted">Opening a host first shows SSH, Mosh and Telnet to choose from. Turn it off to connect with SSH straight away (hosts that have Telnet still ask).</div></div>
-                      <Switch label="Ask which protocol to use" checked={s.ask_protocol} onChange={v => update({ask_protocol: v})} />
+                      <div><b>{t('Ask which protocol to use')}</b><div className="muted">{t('Opening a host first shows SSH, Mosh and Telnet to choose from. Turn it off to connect with SSH straight away (hosts that have Telnet still ask).')}</div></div>
+                      <Switch label={t('Ask which protocol to use')} checked={s.ask_protocol} onChange={v => update({ask_protocol: v})} />
                     </div>
                   </section>
                 </>
@@ -310,47 +323,47 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
               {cat === 'account' && (
                 <>
                   <section className="card-section account-card">
-                    <h4>Profile</h4>
+                    <h4>{t('Profile')}</h4>
                     <div className="profile">
                       <span className="avatar" aria-hidden="true">{s.account_name || s.account_email ? initial : <IconUser size={26} />}</span>
                       <div className="profile-fields">
-                        <input aria-label="Display name" className="control wide" placeholder="Display name" value={name} onChange={e => setName(e.target.value)} />
-                        <input aria-label="Email" className="control wide" placeholder="Email (optional)" value={email} onChange={e => setEmail(e.target.value)} />
+                        <input aria-label={t('Display name')} className="control wide" placeholder={t('Display name')} value={name} onChange={e => setName(e.target.value)} />
+                        <input aria-label={t('Email')} className="control wide" placeholder={t('Email (optional)')} value={email} onChange={e => setEmail(e.target.value)} />
                       </div>
                     </div>
                     <div><button className="primary" disabled={name.trim() === s.account_name && email.trim() === s.account_email}
-                      onClick={() => guard(async () => { onSettings(await be.settings.save({...s, account_name: name, account_email: email})) }, 'Profile saved')}>Save profile</button></div>
-                    <div className="muted">Stored only on this Mac, in your settings file. It is not sent anywhere.</div>
+                      onClick={() => guard(async () => { onSettings(await be.settings.save({...s, account_name: name, account_email: email})) }, t('Profile saved'))}>{t('Save profile')}</button></div>
+                    <div className="muted">{t('Stored only on this Mac, in your settings file. It is not sent anywhere.')}</div>
                   </section>
                   <section className="card-section">
-                    <h4>Donate</h4>
+                    <h4>{t('Donate')}</h4>
                     <div className="muted">{SHOW_CRYPTO_DONATE
-                      ? 'Vutty is free and open source. If it saves you time, you can send USDT. Check the network before you send.'
-                      : 'Vutty is free and open source. If it saves you time, you can support it on Ko-fi.'}</div>
-                    <div className="muted">☕ $3 – a cup of coffee · 🍜 $10 – a lunch · 🚀 $25 – fuel new features</div>
-                    {!SHOW_CRYPTO_DONATE && <div><button className="primary" onClick={() => void be.system.openUrl(KOFI)}>Support on Ko-fi</button></div>}
+                      ? t('Vutty is free and open source. If it saves you time, you can send USDT. Check the network before you send.')
+                      : t('Vutty is free and open source. If it saves you time, you can support it on Ko-fi.')}</div>
+                    <div className="muted">{t('☕ $3 – a cup of coffee · 🍜 $10 – a lunch · 🚀 $25 – fuel new features')}</div>
+                    {!SHOW_CRYPTO_DONATE && <div><button className="primary" onClick={() => void be.system.openUrl(KOFI)}>{t('Support on Ko-fi')}</button></div>}
                     {SHOW_CRYPTO_DONATE && DONATE.map(([label, addr]) => (
                       <div className="setting-row" key={addr}>
                         <div><b>{label}</b><div className="muted" style={{wordBreak: 'break-all', userSelect: 'text'}}>{addr}</div></div>
-                        <button aria-label={'Copy ' + label + ' address'} onClick={() => { void be.system.writeClipboard(addr).then(() => toast.info('Address copied')).catch(e => toast.error(errMsg(e))) }}>Copy</button>
+                        <button aria-label={t('Copy {label} address', {label})} onClick={() => { void be.system.writeClipboard(addr).then(() => toast.info(t('Address copied'))).catch(e => toast.error(errMsg(e))) }}>{t('Copy')}</button>
                       </div>
                     ))}
                   </section>
                   <section className="card-section">
-                    <h4>Plan</h4>
+                    <h4>{t('Plan')}</h4>
                     <div className="setting-row">
-                      <div><b>Local</b> <span className="badge">free · open source</span><div className="muted">All features are available without an account.</div></div>
+                      <div><b>{t('Local')}</b> <span className="badge">{t('free · open source')}</span><div className="muted">{t('All features are available without an account.')}</div></div>
                     </div>
                   </section>
                   <section className="card-section">
-                    <h4>Cloud account</h4>
+                    <h4>{t('Cloud account')}</h4>
                     <div className="setting-row">
-                      <div><b>Sign in</b><div className="muted">Accounts, hosted backup and team sharing are planned. Until then your data stays on this Mac, and you can sync it through your own Git repository (Sync tab).</div></div>
-                      <button disabled title="Not available yet">Sign in</button>
+                      <div><b>{t('Sign in')}</b><div className="muted">{t('Accounts, hosted backup and team sharing are planned. Until then your data stays on this Mac, and you can sync it through your own Git repository (Sync tab).')}</div></div>
+                      <button disabled title={t('Not available yet')}>{t('Sign in')}</button>
                     </div>
                     <div className="setting-row">
-                      <div><b>Team sharing</b><div className="muted">Share hosts and snippets with a team.</div></div>
-                      <span className="badge">coming later</span>
+                      <div><b>{t('Team sharing')}</b><div className="muted">{t('Share hosts and snippets with a team.')}</div></div>
+                      <span className="badge">{t('coming later')}</span>
                     </div>
                   </section>
                 </>
@@ -359,84 +372,84 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
               {cat === 'terminal' && (
                 <>
                   <section className="card-section">
-                    <h4>Terminal theme</h4>
+                    <h4>{t('Terminal theme')}</h4>
                     <ThemePicker value={s.terminal_theme} appearance={appearance} onChange={id => update({terminal_theme: id})} />
                   </section>
                   <section className="card-section">
-                    <h4>Text and cursor</h4>
+                    <h4>{t('Text and cursor')}</h4>
                     <div className="setting-row">
-                      <b>Font</b>
-                      <Select className="control" label="Font family" value={s.font_family} onChange={v => update({font_family: v})}
-                        options={[...(fontKnown ? [] : [{value: s.font_family, label: 'Custom'}]), ...FONTS.map(f => ({value: f.value, label: f.label}))]} />
+                      <b>{t('Font')}</b>
+                      <Select className="control" label={t('Font family')} value={s.font_family} onChange={v => update({font_family: v})}
+                        options={[...(fontKnown ? [] : [{value: s.font_family, label: t('Custom')}]), ...FONTS.map(f => ({value: f.value, label: f.label}))]} />
                     </div>
                     <div className="setting-row">
-                      <b>Font size</b>
+                      <b>{t('Font size')}</b>
                       <div className="stepper">
-                        <button aria-label="Decrease font size" disabled={s.font_size <= 8} onClick={() => update({font_size: s.font_size - 1})}>−</button>
-                        <input aria-label="Font size" className="control" type="number" min={8} max={40} value={s.font_size} onChange={e => update({font_size: Number(e.target.value)})} />
-                        <button aria-label="Increase font size" disabled={s.font_size >= 40} onClick={() => update({font_size: s.font_size + 1})}>+</button>
+                        <button aria-label={t('Decrease font size')} disabled={s.font_size <= 8} onClick={() => update({font_size: s.font_size - 1})}>−</button>
+                        <input aria-label={t('Font size')} className="control" type="number" min={8} max={40} value={s.font_size} onChange={e => update({font_size: Number(e.target.value)})} />
+                        <button aria-label={t('Increase font size')} disabled={s.font_size >= 40} onClick={() => update({font_size: s.font_size + 1})}>+</button>
                       </div>
                     </div>
                     <div className="setting-row">
-                      <b>Cursor</b>
-                      <div className="segmented" role="radiogroup" aria-label="Cursor style">
+                      <b>{t('Cursor')}</b>
+                      <div className="segmented" role="radiogroup" aria-label={t('Cursor style')}>
                         {(['block', 'bar', 'underline'] as CursorStyle[]).map(c => (
-                          <button key={c} role="radio" aria-checked={s.cursor_style === c} className={s.cursor_style === c ? 'on' : ''} onClick={() => update({cursor_style: c})}>{c}</button>
+                          <button key={c} role="radio" aria-checked={s.cursor_style === c} className={s.cursor_style === c ? 'on' : ''} onClick={() => update({cursor_style: c})}>{c === 'block' ? t('block') : c === 'bar' ? t('bar') : t('underline')}</button>
                         ))}
                       </div>
                     </div>
                     <div className="setting-row">
-                      <b>Blinking cursor</b>
-                      <Switch label="Blinking cursor" checked={s.cursor_blink} onChange={v => update({cursor_blink: v})} />
+                      <b>{t('Blinking cursor')}</b>
+                      <Switch label={t('Blinking cursor')} checked={s.cursor_blink} onChange={v => update({cursor_blink: v})} />
                     </div>
                     <div className="setting-row">
-                      <div><b>Copy on select</b><div className="muted">Selecting text copies it to the clipboard at once.</div></div>
-                      <Switch label="Copy on select" checked={s.copy_on_select} onChange={v => update({copy_on_select: v})} />
+                      <div><b>{t('Copy on select')}</b><div className="muted">{t('Selecting text copies it to the clipboard at once.')}</div></div>
+                      <Switch label={t('Copy on select')} checked={s.copy_on_select} onChange={v => update({copy_on_select: v})} />
                     </div>
                     <div className="setting-row">
-                      <div><b>Right click</b><div className="muted">What a right click does inside a terminal. Copy and paste keys are in Shortcuts.</div></div>
-                      <Select label="Right click" className="inline" value={s.right_click} onChange={v => update({right_click: v as Settings['right_click']})}
-                        options={[{value: 'paste', label: 'Paste', hint: 'Right-click pastes'}, {value: 'menu', label: 'Show a menu', hint: 'Copy, Paste, Select all, Clear'}, {value: 'none', label: 'Do nothing'}]} />
+                      <div><b>{t('Right click')}</b><div className="muted">{t('What a right click does inside a terminal. Copy and paste keys are in Shortcuts.')}</div></div>
+                      <Select label={t('Right click')} className="inline" value={s.right_click} onChange={v => update({right_click: v as Settings['right_click']})}
+                        options={[{value: 'paste', label: t('Paste'), hint: t('Right-click pastes')}, {value: 'menu', label: t('Show a menu'), hint: t('Copy, Paste, Select all, Clear')}, {value: 'none', label: t('Do nothing')}]} />
                     </div>
                     <div className="setting-row">
-                      <div><b>Highlight output</b><div className="muted">Colour URLs, IP addresses, paths, dates and the words error, warning and success. Colours chosen by a program are kept.</div></div>
-                      <Switch label="Highlight output" checked={s.highlight} onChange={v => update({highlight: v})} />
+                      <div><b>{t('Highlight output')}</b><div className="muted">{t('Colour URLs, IP addresses, paths, dates and the words error, warning and success. Colours chosen by a program are kept.')}</div></div>
+                      <Switch label={t('Highlight output')} checked={s.highlight} onChange={v => update({highlight: v})} />
                     </div>
                     <div className="setting-row">
-                      <div><b>Suggest commands</b><div className="muted">While you type, a list of the commands that match appears under the cursor (↓ ↑ choose a row, Enter or Tab put it on the line, Esc closes it), and ⌘⇧J (Ctrl+Shift+J elsewhere) opens it by hand. It uses the commands you ran in Vutty, the shell history of this computer (~/.zsh_history, ~/.bash_history) in the local terminal, and your Snippets of one line; it is not offered in vim or at a password prompt, and a line that looks like a secret is never suggested.</div></div>
-                      <Switch label="Suggest commands" checked={s.suggest} onChange={v => update({suggest: v})} />
+                      <div><b>{t('Suggest commands')}</b><div className="muted">{t('While you type, a list of the commands that match appears under the cursor (↓ ↑ choose a row, Enter or Tab put it on the line, Esc closes it), and ⌘⇧J (Ctrl+Shift+J elsewhere) opens it by hand. It uses the commands you ran in Vutty, the shell history of this computer (~/.zsh_history, ~/.bash_history) in the local terminal, and your Snippets of one line; it is not offered in vim or at a password prompt, and a line that looks like a secret is never suggested.')}</div></div>
+                      <Switch label={t('Suggest commands')} checked={s.suggest} onChange={v => update({suggest: v})} />
                     </div>
                     <div className="setting-row">
-                      <div><b>Suggest from the host's shell history</b><div className="muted">Also read the last 3000 commands of ~/.bash_history and ~/.zsh_history on an SSH host, once when its terminal opens. They are kept in memory only, and a command with a secret in it is left out.</div></div>
-                      <Switch label="Suggest from the host's shell history" checked={s.suggest_host} disabled={!s.suggest} onChange={v => update({suggest_host: v})} />
+                      <div><b>{t("Suggest from the host's shell history")}</b><div className="muted">{t('Also read the last 3000 commands of ~/.bash_history and ~/.zsh_history on an SSH host, once when its terminal opens. They are kept in memory only, and a command with a secret in it is left out.')}</div></div>
+                      <Switch label={t("Suggest from the host's shell history")} checked={s.suggest_host} disabled={!s.suggest} onChange={v => update({suggest_host: v})} />
                     </div>
                     <div className="setting-row">
-                      <div><b>Scrollback</b><div className="muted">Lines kept per terminal (500 to 100000).</div></div>
-                      <input aria-label="Scrollback lines" className="control narrow" type="number" value={scroll}
+                      <div><b>{t('Scrollback')}</b><div className="muted">{t('Lines kept per terminal (500 to 100000).')}</div></div>
+                      <input aria-label={t('Scrollback lines')} className="control narrow" type="number" value={scroll}
                         onChange={e => setScroll(e.target.value)} onBlur={() => update({scrollback: Number(scroll)})}
                         onKeyDown={e => e.key === 'Enter' && update({scrollback: Number(scroll)})} />
                     </div>
                   </section>
                   <section className="card-section">
-                    <h4>Session logs</h4>
+                    <h4>{t('Session logs')}</h4>
                     <div className="setting-row">
-                      <div><b>Save a log of terminal sessions</b><div className="muted">One text file for each session, line by line with the time: what the host printed, with colours and cursor moves taken out. What you type is not recorded, except what the host echoes back. A log holds everything that was shown on screen, a password in a file you displayed included, so keep the folder private. Files are readable only by you and each stops at 50 MB.</div></div>
-                      <Select label="Session logs" className="control" value={s.session_log} onChange={v => update({session_log: v as Settings['session_log']})}
-                        options={[{value: 'off', label: 'Off'}, {value: 'prod', label: 'Production hosts only', hint: 'Hosts marked prod'}, {value: 'all', label: 'All sessions', hint: 'SSH, Telnet, serial and this computer'}]} />
+                      <div><b>{t('Save a log of terminal sessions')}</b><div className="muted">{t('One text file for each session, line by line with the time: what the host printed, with colours and cursor moves taken out. What you type is not recorded, except what the host echoes back. A log holds everything that was shown on screen, a password in a file you displayed included, so keep the folder private. Files are readable only by you and each stops at 50 MB.')}</div></div>
+                      <Select label={t('Session logs')} className="control" value={s.session_log} onChange={v => update({session_log: v as Settings['session_log']})}
+                        options={[{value: 'off', label: t('Off')}, {value: 'prod', label: t('Production hosts only'), hint: t('Hosts marked prod')}, {value: 'all', label: t('All sessions'), hint: t('SSH, Telnet, serial and this computer')}]} />
                     </div>
                     {s.session_log !== 'off' && (
                       <div className="setting-row">
-                        <div><b>Folder</b><div className="muted mono" style={{wordBreak: 'break-all', userSelect: 'text'}} data-testid="session-log-folder">{logFolder || '…'}</div></div>
+                        <div><b>{t('Folder')}</b><div className="muted mono" style={{wordBreak: 'break-all', userSelect: 'text'}} data-testid="session-log-folder">{logFolder || '…'}</div></div>
                         <div className="fixed-row">
-                          <button onClick={() => void be.system.pickDirectory('Choose the folder for session logs').then(d => { if (d) void update({session_log_dir: d}) }).catch(e => toast.error(errMsg(e)))}>Choose…</button>
-                          {s.session_log_dir && <button onClick={() => void update({session_log_dir: ''})}>Use the default</button>}
-                          <button disabled={!logFolder} onClick={() => void be.system.openPath(logFolder).catch(e => toast.error(errMsg(e)))}>Open</button>
+                          <button onClick={() => void be.system.pickDirectory(t('Choose the folder for session logs')).then(d => { if (d) void update({session_log_dir: d}) }).catch(e => toast.error(errMsg(e)))}>{t('Choose…')}</button>
+                          {s.session_log_dir && <button onClick={() => void update({session_log_dir: ''})}>{t('Use the default')}</button>}
+                          <button disabled={!logFolder} onClick={() => void be.system.openPath(logFolder).catch(e => toast.error(errMsg(e)))}>{t('Open')}</button>
                         </div>
                       </div>
                     )}
                   </section>
                   <section className="card-section">
-                    <h4>Preview</h4>
+                    <h4>{t('Preview')}</h4>
                     <pre className="term-preview" data-testid="term-preview" style={{background: term.background, color: term.foreground, fontFamily: s.font_family, fontSize: s.font_size}}>
                       <span style={{color: term.green}}>demo@app-server</span>:<span style={{color: term.blue}}>~</span>$ ls -la{'\n'}
                       <span style={{color: term.blue}}>drwxr-xr-x</span> <span style={{color: term.yellow}}>5</span> demo  <span style={{color: term.cyan}}>projects</span>{'\n'}
@@ -450,51 +463,51 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
               {cat === 'security' && (
                 <>
                   <section className="card-section">
-                    <h4>Vault</h4>
+                    <h4>{t('Vault')}</h4>
                     <div className="setting-row">
-                      <div><b>Auto-lock</b><div className="muted">Minutes of inactivity before the vault locks (0 = never).</div></div>
+                      <div><b>{t('Auto-lock')}</b><div className="muted">{t('Minutes of inactivity before the vault locks (0 = never).')}</div></div>
                       <div className="fixed-row">
-                        <input aria-label="Auto-lock minutes" className="control narrow" value={auto} onChange={e => setAuto(e.target.value)} />
-                        <button onClick={() => guard(async () => { await be.vault.setAutoLock(Number(auto)); onVault() }, 'Auto-lock updated')}>Apply</button>
+                        <input aria-label={t('Auto-lock minutes')} className="control narrow" value={auto} onChange={e => setAuto(e.target.value)} />
+                        <button onClick={() => guard(async () => { await be.vault.setAutoLock(Number(auto)); onVault() }, t('Auto-lock updated'))}>{t('Apply')}</button>
                       </div>
                     </div>
                     <div className="setting-row">
-                      <div><b>Lock when the computer sleeps</b><div className="muted">The vault locks as the computer goes to sleep, and on a Mac when the screen is locked, so nobody who opens the lid finds your keys unlocked. Open terminals stay connected. Where the system does not announce a sleep, the vault locks when the computer wakes up.</div></div>
-                      <Switch label="Lock when the computer sleeps" checked={s.lock_on_sleep} onChange={v => update({lock_on_sleep: v})} />
+                      <div><b>{t('Lock when the computer sleeps')}</b><div className="muted">{t('The vault locks as the computer goes to sleep, and on a Mac when the screen is locked, so nobody who opens the lid finds your keys unlocked. Open terminals stay connected. Where the system does not announce a sleep, the vault locks when the computer wakes up.')}</div></div>
+                      <Switch label={t('Lock when the computer sleeps')} checked={s.lock_on_sleep} onChange={v => update({lock_on_sleep: v})} />
                     </div>
                     <div className="setting-row">
                       <div>
-                        <b>{vault.biometric_available ? `Unlock with ${biometricName()}` : `Unlock with ${keychainName()}`}</b>
+                        <b>{vault.biometric_available ? t('Unlock with {name}', {name: biometricName()}) : t('Unlock with {name}', {name: keychainName(t)})}</b>
                         <div className="muted">{vault.biometric_available
-                          ? `Use ${biometricName()} instead of typing the master password. The vault key stays in ${keychainName()}, and each unlock asks you to confirm.`
-                          : `Stores the vault key in ${keychainName()}, so you do not type the master password. Anyone signed in to this computer account can then open the vault.`}</div>
+                          ? t('Use {biometric} instead of typing the master password. The vault key stays in {keychain}, and each unlock asks you to confirm.', {biometric: biometricName(), keychain: keychainName(t)})
+                          : t('Stores the vault key in {keychain}, so you do not type the master password. Anyone signed in to this computer account can then open the vault.', {keychain: keychainName(t)})}</div>
                       </div>
-                      <Switch label="Keychain unlock" checked={vault.keychain_enabled}
-                        onChange={v => guard(async () => { await (v ? be.vault.enableBiometric() : be.vault.disableBiometric()); onVault() }, v ? 'Keychain unlock enabled' : 'Keychain unlock disabled')} />
+                      <Switch label={t('Keychain unlock')} checked={vault.keychain_enabled}
+                        onChange={v => guard(async () => { await (v ? be.vault.enableBiometric() : be.vault.disableBiometric()); onVault() }, v ? t('Keychain unlock enabled') : t('Keychain unlock disabled'))} />
                     </div>
                     {vault.biometric_available && vault.keychain_enabled && (
                       <div className="setting-row">
-                        <div><b>Ask as soon as Vutty opens</b><div className="muted">The lock screen shows the {biometricName()} sheet by itself. Off: press "Use {biometricName()}" yourself.</div></div>
-                        <Switch label="Ask on open" checked={s.biometric_on_open} onChange={v => update({biometric_on_open: v})} />
+                        <div><b>{t('Ask as soon as Vutty opens')}</b><div className="muted">{t('The lock screen shows the {name} sheet by itself. Off: press "Use {name}" yourself.', {name: biometricName()})}</div></div>
+                        <Switch label={t('Ask on open')} checked={s.biometric_on_open} onChange={v => update({biometric_on_open: v})} />
                       </div>
                     )}
                   </section>
                   <section className="card-section">
-                    <h4>Password hint</h4>
-                    <div className="muted">A reminder shown on the lock screen if you forget the master password. Anyone who opens Vutty can read it, so never write the password in it.</div>
+                    <h4>{t('Password hint')}</h4>
+                    <div className="muted">{t('A reminder shown on the lock screen if you forget the master password. Anyone who opens Vutty can read it, so never write the password in it.')}</div>
                     <div className="input-row">
-                      <input aria-label="Password hint" className="control wide" maxLength={120} placeholder="A reminder only you understand" value={hint} onChange={e => setHint(e.target.value)} />
+                      <input aria-label={t('Password hint')} className="control wide" maxLength={120} placeholder={t('A reminder only you understand')} value={hint} onChange={e => setHint(e.target.value)} />
                       <button disabled={hint.trim() === (vault.hint ?? '')}
-                        onClick={() => guard(async () => { await be.vault.setHint(hint); onVault() }, hint.trim() ? 'Password hint saved' : 'Password hint removed')}>Save</button>
+                        onClick={() => guard(async () => { await be.vault.setHint(hint); onVault() }, hint.trim() ? t('Password hint saved') : t('Password hint removed'))}>{t('Save')}</button>
                     </div>
                   </section>
                   <section className="card-section">
-                    <h4>Change master password</h4>
-                    <input aria-label="Current password" type="password" className="control wide" placeholder="Current password" value={oldPw} onChange={e => setOldPw(e.target.value)} />
-                    <input aria-label="New password" type="password" className="control wide" placeholder="New password (12+ characters)" value={newPw} onChange={e => setNewPw(e.target.value)} />
+                    <h4>{t('Change master password')}</h4>
+                    <input aria-label={t('Current password')} type="password" className="control wide" placeholder={t('Current password')} value={oldPw} onChange={e => setOldPw(e.target.value)} />
+                    <input aria-label={t('New password')} type="password" className="control wide" placeholder={t('New password (12+ characters)')} value={newPw} onChange={e => setNewPw(e.target.value)} />
                     <div><button disabled={!oldPw || newPw.length < 12}
-                      onClick={() => guard(async () => { await be.vault.changePassword(oldPw, newPw); setOldPw(''); setNewPw('') }, 'Master password changed')}>Change password</button></div>
-                    <div className="muted">Forgot it? Lock the vault: the unlock screen offers a reset.</div>
+                      onClick={() => guard(async () => { await be.vault.changePassword(oldPw, newPw); setOldPw(''); setNewPw('') }, t('Master password changed'))}>{t('Change password')}</button></div>
+                    <div className="muted">{t('Forgot it? Lock the vault: the unlock screen offers a reset.')}</div>
                   </section>
                   {err && <div className="error" role="alert">{err}</div>}
                 </>
@@ -508,14 +521,14 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
 
               {cat === 'storage' && (
                 <section className="card-section">
-                  <h4>Storage</h4>
+                  <h4>{t('Storage')}</h4>
                   <div className="setting-row">
-                    <div><b>Clear cache</b><div className="muted">Removes files Vutty can make again and what it remembers about your AI tools (they are looked up again). Your hosts, keys, vault, settings and history are not touched.</div></div>
-                    <button disabled={busyStorage} onClick={() => void clearCache()}>Clear cache</button>
+                    <div><b>{t('Clear cache')}</b><div className="muted">{t('Removes files Vutty can make again and what it remembers about your AI tools (they are looked up again). Your hosts, keys, vault, settings and history are not touched.')}</div></div>
+                    <button disabled={busyStorage} onClick={() => void clearCache()}>{t('Clear cache')}</button>
                   </div>
                   <div className="setting-row">
-                    <div><b>Reset settings</b><div className="muted">Puts appearance, terminal, general options, shortcuts and auto-lock back to their defaults. Your profile and sync target stay. Hosts, keys and the vault are not touched.</div></div>
-                    <button className="danger" disabled={busyStorage} onClick={() => void resetSettings()}>Reset settings…</button>
+                    <div><b>{t('Reset settings')}</b><div className="muted">{t('Puts appearance, terminal, general options, shortcuts and auto-lock back to their defaults. Your profile and sync target stay. Hosts, keys and the vault are not touched.')}</div></div>
+                    <button className="danger" disabled={busyStorage} onClick={() => void resetSettings()}>{t('Reset settings…')}</button>
                   </div>
                 </section>
               )}

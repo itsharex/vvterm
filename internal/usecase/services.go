@@ -109,6 +109,10 @@ func (s *SettingsService) Save(in Settings) (Settings, error) {
 	}
 	s.c.settings.SessionLogDir = in.SessionLogDir
 	s.c.settings.AskProtocol = in.AskProtocol
+	s.c.settings.Language = in.Language
+	if s.c.settings.Language == "" {
+		s.c.settings.Language = "auto"
+	}
 	s.c.settings.Highlight = in.Highlight
 	s.c.settings.ReduceMotion = in.ReduceMotion
 	s.c.settings.AutoUpdateCheck = in.AutoUpdateCheck
@@ -153,6 +157,11 @@ func validateSettings(in Settings) error {
 	}
 	if in.Zoom < 80 || in.Zoom > 160 {
 		return errors.New("zoom must be between 80 and 160 percent")
+	}
+	switch in.Language {
+	case "", "auto", "en", "vi", "ja", "zh":
+	default:
+		return errors.New("language must be auto, en, vi, ja or zh")
 	}
 	switch in.SessionLog {
 	case "", SessionLogOff, SessionLogProd, SessionLogAll:

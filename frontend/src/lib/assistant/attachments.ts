@@ -1,4 +1,5 @@
 import type {AiAttachment} from '../types'
+import {t} from '../i18n'
 
 /** The limits of the Go side (internal/domain/assistant/attachment.go): a file over one is refused here, with a reason. */
 export const MAX_TEXT_FILES = 5
@@ -39,7 +40,7 @@ function readAs<T extends string | ArrayBuffer>(f: Blob, how: 'text' | 'dataurl'
   return new Promise((resolve, reject) => {
     const r = new FileReader()
     r.onload = () => resolve(r.result as T)
-    r.onerror = () => reject(r.error ?? new Error('could not read the file'))
+    r.onerror = () => reject(r.error ?? new Error(t('could not read the file')))
     if (how === 'text') r.readAsText(f)
     else r.readAsDataURL(f)
   })
@@ -52,24 +53,24 @@ let n = 0
  * script…): a file that is not text is refused with the reason instead of being sent as noise.
  */
 export async function readAttachment(file: File, taken: Attach[], supportsImages: boolean): Promise<{ok: true; attach: Attach} | {ok: false; error: string}> {
-  const name = file.name || 'pasted file'
+  const name = file.name || t('pasted file')
   const img = imageMime(file)
   if (img) {
-    if (!supportsImages) return {ok: false, error: `${name}: this provider cannot take pictures. Select the text in the terminal instead.`}
-    if (taken.filter(a => a.kind === 'image').length >= MAX_IMAGES) return {ok: false, error: `At most ${MAX_IMAGES} pictures can be added.`}
-    if (file.size > MAX_IMAGE_BYTES) return {ok: false, error: `${name} is larger than ${MAX_IMAGE_BYTES / 1024 / 1024} MB.`}
-    if (taken.filter(a => a.kind === 'image').reduce((s, a) => s + a.size, 0) + file.size > MAX_IMAGES_TOTAL) return {ok: false, error: 'The pictures are too large together.'}
+    if (!supportsImages) return {ok: false, error: t('{name}: this provider cannot take pictures. Select the text in the terminal instead.', {name})}
+    if (taken.filter(a => a.kind === 'image').length >= MAX_IMAGES) return {ok: false, error: t('At most {n} pictures can be added.', {n: MAX_IMAGES})}
+    if (file.size > MAX_IMAGE_BYTES) return {ok: false, error: t('{name} is larger than {size} MB.', {name, size: MAX_IMAGE_BYTES / 1024 / 1024})}
+    if (taken.filter(a => a.kind === 'image').reduce((s, a) => s + a.size, 0) + file.size > MAX_IMAGES_TOTAL) return {ok: false, error: t('The pictures are too large together.')}
     const url = await readAs<string>(file, 'dataurl')
     return {ok: true, attach: {id: 'a' + ++n, name, kind: 'image', mime: img, size: file.size, data: url.slice(url.indexOf(',') + 1), url}}
   }
   if (OTHER_BINARY.test(name) || file.type.startsWith('video/') || file.type.startsWith('audio/') || file.type === 'application/pdf') {
-    return {ok: false, error: `${name} is not a text file or a picture. Text files (logs, configs, scripts) and PNG, JPEG, GIF or WebP pictures can be added.`}
+    return {ok: false, error: t('{name} is not a text file or a picture. Text files (logs, configs, scripts) and PNG, JPEG, GIF or WebP pictures can be added.', {name})}
   }
-  if (taken.filter(a => a.kind === 'text').length >= MAX_TEXT_FILES) return {ok: false, error: `At most ${MAX_TEXT_FILES} text files can be added.`}
-  if (file.size > MAX_TEXT_BYTES) return {ok: false, error: `${name} is larger than ${MAX_TEXT_BYTES / 1024} KB: add the part you need.`}
+  if (taken.filter(a => a.kind === 'text').length >= MAX_TEXT_FILES) return {ok: false, error: t('At most {n} text files can be added.', {n: MAX_TEXT_FILES})}
+  if (file.size > MAX_TEXT_BYTES) return {ok: false, error: t('{name} is larger than {size} KB: add the part you need.', {name, size: MAX_TEXT_BYTES / 1024})}
   const text = await readAs<string>(file, 'text')
-  if (!text.trim()) return {ok: false, error: `${name} is empty.`}
-  if (text.includes('\u0000') || text.includes('�')) return {ok: false, error: `${name} is not a text file.`}
+  if (!text.trim()) return {ok: false, error: t('{name} is empty.', {name})}
+  if (text.includes('\u0000') || text.includes('�')) return {ok: false, error: t('{name} is not a text file.', {name})}
   return {ok: true, attach: {id: 'a' + ++n, name, kind: 'text', mime: file.type || 'text/plain', size: file.size, text}}
 }
 

@@ -127,6 +127,7 @@ func NewSettingsWindow(dir string) (*SettingsWindow, error) {
 // raises the window when the main app asks for it.
 func (w *SettingsWindow) Startup(ctx context.Context) {
 	w.ctx = ctx
+	w.System.SetMenuBuilder(func(_ map[string]string, lang string) *menu.Menu { return w.menuViaMainIn(lang) })
 	w.System.SetContext(ctx)
 	quitWithMain(ctx, w.client)
 	go func() {
@@ -164,13 +165,19 @@ func quitWithMain(ctx context.Context, c *BridgeClient) {
 
 // Menu is the same menu bar as the main window's, so it does not change when Settings has the focus.
 func (w *SettingsWindow) Menu() *menu.Menu {
-	return menuViaMain(w.client, func() context.Context { return w.ctx })
+	w.System.SetMenuLang(systemMenuLang()) // the page tells the language of the setting when it is up
+	return w.menuViaMainIn(w.System.MenuLang())
+}
+
+func (w *SettingsWindow) menuViaMainIn(lang string) *menu.Menu {
+	return menuViaMain(w.client, func() context.Context { return w.ctx }, lang)
 }
 
 // menuViaMain is the main window's menu bar for a window of another process: its items are done by the main
 // window (through the bridge); only Full Screen and the Help links are done here.
-func menuViaMain(c *BridgeClient, ctx func() context.Context) *menu.Menu {
+func menuViaMain(c *BridgeClient, ctx func() context.Context, lang string) *menu.Menu {
 	return BuildMenu(MenuHooks{
+		Lang: lang,
 		Emit: func(action string) { go func() { _ = c.MenuAction(action) }() },
 		OpenURL: func(url string) {
 			if x := ctx(); x != nil && urlAllowed(url) {

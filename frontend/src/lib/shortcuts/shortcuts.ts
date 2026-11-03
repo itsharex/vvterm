@@ -4,6 +4,8 @@
  * Settings.shortcuts (action id -> combo); anything not overridden uses the default below. The backend
  * validates the same grammar, so a combo that passes here is accepted there.
  */
+import {t} from '../i18n'
+
 export interface ActionDef {
   id: string
   label: string
@@ -13,43 +15,54 @@ export interface ActionDef {
   defaultMac?: string
 }
 
+/** The heading of a group of actions, in the language of the interface. */
+export function groupLabel(g: ActionDef['group']): string {
+  switch (g) {
+    case 'General': return t('General')
+    case 'Pages': return t('Pages')
+    case 'Tabs': return t('Tabs')
+    case 'Terminal': return t('Terminal')
+    case 'View': return t('View')
+  }
+}
+
 export const ACTIONS: ActionDef[] = [
-  {id: 'open_settings', label: 'Open settings', group: 'General', default: 'Mod+,'},
-  {id: 'new_connection', label: 'New connection (find a host)', group: 'General', default: 'Mod+T'},
-  {id: 'new_host', label: 'New host', group: 'General', default: 'Mod+N'},
-  {id: 'new_local_terminal', label: 'New terminal on this computer', group: 'General', default: 'Mod+Shift+T'},
-  {id: 'go_hosts', label: 'Go to Hosts', group: 'Pages', default: 'Mod+1'},
-  {id: 'go_keychain', label: 'Go to Keychain', group: 'Pages', default: 'Mod+2'},
-  {id: 'go_forwards', label: 'Go to Port Forwarding', group: 'Pages', default: 'Mod+3'},
-  {id: 'go_snippets', label: 'Go to Snippets', group: 'Pages', default: 'Mod+4'},
-  {id: 'go_knownhosts', label: 'Go to Known Hosts', group: 'Pages', default: 'Mod+5'},
-  {id: 'go_logs', label: 'Go to Logs', group: 'Pages', default: 'Mod+6'},
-  {id: 'go_vaults', label: 'Back to Vaults (the home screen)', group: 'Pages', default: 'Mod+Shift+H'},
-  {id: 'open_sftp', label: 'Open SFTP', group: 'Pages', default: 'Mod+Shift+S'},
-  {id: 'lock_vault', label: 'Lock the vault', group: 'General', default: 'Mod+L'},
-  {id: 'close_tab', label: 'Close the current tab', group: 'Tabs', default: 'Mod+W'},
-  {id: 'next_tab', label: 'Next tab', group: 'Tabs', default: 'Ctrl+Tab'},
-  {id: 'prev_tab', label: 'Previous tab', group: 'Tabs', default: 'Ctrl+Shift+Tab'},
-  {id: 'close_pane', label: 'Close the focused pane', group: 'Terminal', default: 'Mod+Shift+W'},
-  {id: 'broadcast_input', label: 'Broadcast input to every pane of the tab', group: 'Terminal', default: 'Mod+Alt+B', defaultMac: 'Mod+B'},
-  {id: 'ai_next_model', label: 'Switch the assistant to its next model', group: 'Terminal', default: 'Mod+Shift+M'},
-  {id: 'split_right', label: 'Split the pane right', group: 'Terminal', default: 'Mod+D'},
-  {id: 'split_down', label: 'Split the pane down', group: 'Terminal', default: 'Mod+Shift+D'},
-  {id: 'terminal_copy', label: 'Copy the selection', group: 'Terminal', default: 'Mod+Shift+C', defaultMac: 'Mod+C'},
-  {id: 'terminal_paste', label: 'Paste into the terminal', group: 'Terminal', default: 'Mod+Shift+V', defaultMac: 'Mod+V'},
-  {id: 'terminal_search', label: 'Search the terminal scrollback', group: 'Terminal', default: 'Mod+F'},
-  {id: 'suggest_popup', label: 'Show command suggestions', group: 'Terminal', default: 'Mod+Shift+J'},
-  {id: 'toggle_suggest', label: 'Turn command suggestions on or off', group: 'Terminal', default: 'Mod+Shift+G'},
-  {id: 'zoom_in', label: 'Zoom in', group: 'View', default: 'Mod+='},
-  {id: 'zoom_out', label: 'Zoom out', group: 'View', default: 'Mod+-'},
-  {id: 'zoom_reset', label: 'Reset zoom', group: 'View', default: 'Mod+0'},
+  {id: 'open_settings', get label() { return t('Open settings') }, group: 'General', default: 'Mod+,'},
+  {id: 'new_connection', get label() { return t('New connection (find a host)') }, group: 'General', default: 'Mod+T'},
+  {id: 'new_host', get label() { return t('New host') }, group: 'General', default: 'Mod+N'},
+  {id: 'new_local_terminal', get label() { return t('New terminal on this computer') }, group: 'General', default: 'Mod+Shift+T'},
+  {id: 'go_hosts', get label() { return t('Go to Hosts') }, group: 'Pages', default: 'Mod+1'},
+  {id: 'go_keychain', get label() { return t('Go to Keychain') }, group: 'Pages', default: 'Mod+2'},
+  {id: 'go_forwards', get label() { return t('Go to Port Forwarding') }, group: 'Pages', default: 'Mod+3'},
+  {id: 'go_snippets', get label() { return t('Go to Snippets') }, group: 'Pages', default: 'Mod+4'},
+  {id: 'go_knownhosts', get label() { return t('Go to Known Hosts') }, group: 'Pages', default: 'Mod+5'},
+  {id: 'go_logs', get label() { return t('Go to Logs') }, group: 'Pages', default: 'Mod+6'},
+  {id: 'go_vaults', get label() { return t('Back to Vaults (the home screen)') }, group: 'Pages', default: 'Mod+Shift+H'},
+  {id: 'open_sftp', get label() { return t('Open SFTP') }, group: 'Pages', default: 'Mod+Shift+S'},
+  {id: 'lock_vault', get label() { return t('Lock the vault') }, group: 'General', default: 'Mod+L'},
+  {id: 'close_tab', get label() { return t('Close the current tab') }, group: 'Tabs', default: 'Mod+W'},
+  {id: 'next_tab', get label() { return t('Next tab') }, group: 'Tabs', default: 'Ctrl+Tab'},
+  {id: 'prev_tab', get label() { return t('Previous tab') }, group: 'Tabs', default: 'Ctrl+Shift+Tab'},
+  {id: 'close_pane', get label() { return t('Close the focused pane') }, group: 'Terminal', default: 'Mod+Shift+W'},
+  {id: 'broadcast_input', get label() { return t('Broadcast input to every pane of the tab') }, group: 'Terminal', default: 'Mod+Alt+B', defaultMac: 'Mod+B'},
+  {id: 'ai_next_model', get label() { return t('Switch the assistant to its next model') }, group: 'Terminal', default: 'Mod+Shift+M'},
+  {id: 'split_right', get label() { return t('Split the pane right') }, group: 'Terminal', default: 'Mod+D'},
+  {id: 'split_down', get label() { return t('Split the pane down') }, group: 'Terminal', default: 'Mod+Shift+D'},
+  {id: 'terminal_copy', get label() { return t('Copy the selection') }, group: 'Terminal', default: 'Mod+Shift+C', defaultMac: 'Mod+C'},
+  {id: 'terminal_paste', get label() { return t('Paste into the terminal') }, group: 'Terminal', default: 'Mod+Shift+V', defaultMac: 'Mod+V'},
+  {id: 'terminal_search', get label() { return t('Search the terminal scrollback') }, group: 'Terminal', default: 'Mod+F'},
+  {id: 'suggest_popup', get label() { return t('Show command suggestions') }, group: 'Terminal', default: 'Mod+Shift+J'},
+  {id: 'toggle_suggest', get label() { return t('Turn command suggestions on or off') }, group: 'Terminal', default: 'Mod+Shift+G'},
+  {id: 'zoom_in', get label() { return t('Zoom in') }, group: 'View', default: 'Mod+='},
+  {id: 'zoom_out', get label() { return t('Zoom out') }, group: 'View', default: 'Mod+-'},
+  {id: 'zoom_reset', get label() { return t('Reset zoom') }, group: 'View', default: 'Mod+0'},
 ]
 
 /** Keys that cannot be rebound: they always do the same thing. */
 export const FIXED_SHORTCUTS: {label: string; keys: string}[] = [
-  {label: 'Close a panel, menu or window', keys: 'Esc'},
-  {label: 'Reconnect a dropped session', keys: 'Enter'},
-  {label: 'Connect to a host', keys: 'Double-click, or Enter in the search box'},
+  {get label() { return t('Close a panel, menu or window') }, keys: 'Esc'},
+  {get label() { return t('Reconnect a dropped session') }, keys: 'Enter'},
+  {get label() { return t('Connect to a host') }, get keys() { return t('Double-click, or Enter in the search box') }},
 ]
 
 export const isMac = () => typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || navigator.userAgent || '')
@@ -130,20 +143,20 @@ function validateStep(c: string, needsModifier: boolean): string | null {
   const key = parts[parts.length - 1]
   const mods = new Set<string>()
   for (const m of parts.slice(0, -1)) {
-    if (!['Mod', 'Ctrl', 'Alt', 'Shift', 'Meta'].includes(m) || mods.has(m)) return `invalid modifier "${m}"`
+    if (!['Mod', 'Ctrl', 'Alt', 'Shift', 'Meta'].includes(m) || mods.has(m)) return t('invalid modifier "{m}"', {m})
     mods.add(m)
   }
-  if (key === 'Escape') return 'Escape is reserved: it always closes panels'
+  if (key === 'Escape') return t('Escape is reserved: it always closes panels')
   if (/^F([1-9]|1[0-2])$/.test(key)) return null
-  if (!(NAMED[key === 'Space' ? ' ' : key] || /^[A-Za-z0-9,./;'[\]\\\-=`]$/.test(key))) return `unsupported key "${key}"`
-  if (needsModifier && !(mods.has('Mod') || mods.has('Ctrl') || mods.has('Alt') || mods.has('Meta'))) return 'add Ctrl, Alt or ⌘ so normal typing never triggers it'
+  if (!(NAMED[key === 'Space' ? ' ' : key] || /^[A-Za-z0-9,./;'[\]\\\-=`]$/.test(key))) return t('unsupported key "{key}"', {key})
+  if (needsModifier && !(mods.has('Mod') || mods.has('Ctrl') || mods.has('Alt') || mods.has('Meta'))) return t('add Ctrl, Alt or ⌘ so normal typing never triggers it')
   return null
 }
 
 /** The same rules the backend enforces, so the editor can explain a rejection before saving. */
 export function validateCombo(c: string): string | null {
   const steps = stepsOf(c)
-  if (steps.length > 2) return 'a shortcut can have at most two steps'
+  if (steps.length > 2) return t('a shortcut can have at most two steps')
   return validateStep(steps[0], true) ?? (steps[1] !== undefined ? validateStep(steps[1], false) : null)
 }
 

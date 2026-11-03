@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {useT, useTn} from '../i18n'
 import {useBackend} from '../backend'
 import {Modal} from '../ui/Modal'
 import {errMsg} from '../util'
@@ -14,6 +15,8 @@ const SHOWN = 200
  */
 export function SyncDialog({sid, localDir, remoteDir, onClose, onQueued}: {sid: string; localDir: string; remoteDir: string; onClose(): void; onQueued(): void}) {
   const be = useBackend()
+  const t = useT()
+  const tn = useTn()
   const [dir, setDir] = useState<Dir>('sync-up')
   const [diff, setDiff] = useState<SyncDiff | null>(null)
   const [busy, setBusy] = useState(false)
@@ -37,41 +40,41 @@ export function SyncDialog({sid, localDir, remoteDir, onClose, onQueued}: {sid: 
     } catch (e) { setError(errMsg(e)); setBusy(false) }
   }
   const n = diff?.copy.length ?? 0
-  const bytes = diff?.copy.reduce((t, i) => t + i.size, 0) ?? 0
+  const bytes = diff?.copy.reduce((sum, i) => sum + i.size, 0) ?? 0
 
   return (
-    <Modal title="Sync folders" onClose={onClose} wide
+    <Modal title={t('Sync folders')} onClose={onClose} wide
       footer={<>
-        <button onClick={onClose}>Close</button>
-        <button disabled={busy || !src || !dst} onClick={() => void compare()}>{diff ? 'Compare again' : 'Compare'}</button>
-        <button className="primary" disabled={busy || n === 0} onClick={() => void start()}>{n === 0 ? 'Sync' : `Sync ${n} ${n === 1 ? 'file' : 'files'}`}</button>
+        <button onClick={onClose}>{t('Close')}</button>
+        <button disabled={busy || !src || !dst} onClick={() => void compare()}>{diff ? t('Compare again') : t('Compare')}</button>
+        <button className="primary" disabled={busy || n === 0} onClick={() => void start()}>{n === 0 ? t('Sync') : tn(n, 'Sync {n} file', 'Sync {n} files')}</button>
       </>}>
-      <div className="sync" role="group" aria-label="Sync direction">
-        <label><input type="radio" name="sync-dir" checked={dir === 'sync-up'} onChange={() => choose('sync-up')} /> Local → Remote</label>
-        <label><input type="radio" name="sync-dir" checked={dir === 'sync-down'} onChange={() => choose('sync-down')} /> Remote → Local</label>
+      <div className="sync" role="group" aria-label={t('Sync direction')}>
+        <label><input type="radio" name="sync-dir" checked={dir === 'sync-up'} onChange={() => choose('sync-up')} /> {t('Local → Remote')}</label>
+        <label><input type="radio" name="sync-dir" checked={dir === 'sync-down'} onChange={() => choose('sync-down')} /> {t('Remote → Local')}</label>
       </div>
       <dl className="sync-paths">
-        <dt>From</dt><dd><code>{src}</code> <span className="muted">({dir === 'sync-up' ? 'this computer' : 'server'})</span></dd>
-        <dt>To</dt><dd><code>{dst}</code> <span className="muted">({dir === 'sync-up' ? 'server' : 'this computer'})</span></dd>
+        <dt>{t('From')}</dt><dd><code>{src}</code> <span className="muted">({dir === 'sync-up' ? t('this computer') : t('server')})</span></dd>
+        <dt>{t('To')}</dt><dd><code>{dst}</code> <span className="muted">({dir === 'sync-up' ? t('server') : t('this computer')})</span></dd>
       </dl>
-      <p className="muted sync-note">New and changed files are copied. Nothing is ever deleted, on either side.</p>
+      <p className="muted sync-note">{t('New and changed files are copied. Nothing is ever deleted, on either side.')}</p>
       {error && <div className="error" role="alert">{error}</div>}
       {diff && (
-        <div className="sync-result" role="region" aria-label="Sync preview">
+        <div className="sync-result" role="region" aria-label={t('Sync preview')}>
           <p role="status">
-            {n === 0 ? 'Everything is up to date.' : `${n} ${n === 1 ? 'file' : 'files'} to copy (${formatBytes(bytes)}).`}
-            {diff.same > 0 && <> {diff.same} identical.</>}
+            {n === 0 ? t('Everything is up to date.') : tn(n, '{n} file to copy ({size}).', '{n} files to copy ({size}).', {size: formatBytes(bytes)})}
+            {diff.same > 0 && <> {t('{n} identical.', {n: diff.same})}</>}
           </p>
           {n > 0 && (
-            <ul className="sync-list" aria-label="Files to copy">
+            <ul className="sync-list" aria-label={t('Files to copy')}>
               {diff.copy.slice(0, SHOWN).map(i => (
-                <li key={i.path}><span className={'sync-tag ' + i.reason}>{i.reason === 'new' ? 'New' : 'Changed'}</span><span className="sync-file" title={i.path}>{i.path}</span><span className="muted">{formatBytes(i.size)}</span></li>
+                <li key={i.path}><span className={'sync-tag ' + i.reason}>{i.reason === 'new' ? t('New') : t('Changed')}</span><span className="sync-file" title={i.path}>{i.path}</span><span className="muted">{formatBytes(i.size)}</span></li>
               ))}
-              {n > SHOWN && <li className="muted">…and {n - SHOWN} more</li>}
+              {n > SHOWN && <li className="muted">{t('…and {n} more', {n: n - SHOWN})}</li>}
             </ul>
           )}
           {diff.extra.length > 0 && (
-            <p className="muted" aria-label="Only on the target">{diff.extra.length} {diff.extra.length === 1 ? 'file exists' : 'files exist'} only in the destination and stay{diff.extra.length === 1 ? 's' : ''} untouched.</p>
+            <p className="muted" aria-label={t('Only on the target')}>{tn(diff.extra.length, '{n} file exists only in the destination and stays untouched.', '{n} files exist only in the destination and stay untouched.')}</p>
           )}
         </div>
       )}

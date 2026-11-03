@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react'
+import {useT} from '../i18n'
 import {IconGrid, IconList} from '../ui/Icons'
 
 export type ViewMode = 'grid' | 'list'
@@ -14,6 +15,7 @@ export function saveView(v: ViewMode) {
 
 /** Grid / List switch of the host list: an icon button that opens a small menu with a check on the current view. */
 export function ViewMenu({value, onChange}: {value: ViewMode; onChange(v: ViewMode): void}) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const wrap = useRef<HTMLSpanElement>(null)
   useEffect(() => {
@@ -32,13 +34,13 @@ export function ViewMenu({value, onChange}: {value: ViewMode; onChange(v: ViewMo
   )
   return (
     <span className="add-menu view-menu" ref={wrap}>
-      <button className="icon" aria-label="View" aria-haspopup="menu" aria-expanded={open} title={value === 'grid' ? 'Grid view' : 'List view'} onClick={() => setOpen(o => !o)}>
+      <button className="icon" aria-label={t('View')} aria-haspopup="menu" aria-expanded={open} title={value === 'grid' ? t('Grid view') : t('List view')} onClick={() => setOpen(o => !o)}>
         {value === 'grid' ? <IconGrid size={17} /> : <IconList size={17} />}
       </button>
       {open && (
-        <div className="menu-pop right" role="menu" aria-label="View">
-          {item('grid', 'Grid', <IconGrid size={16} />)}
-          {item('list', 'List', <IconList size={16} />)}
+        <div className="menu-pop right" role="menu" aria-label={t('View')}>
+          {item('grid', t('Grid'), <IconGrid size={16} />)}
+          {item('list', t('List'), <IconList size={16} />)}
         </div>
       )}
     </span>

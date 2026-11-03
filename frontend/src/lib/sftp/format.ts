@@ -1,3 +1,5 @@
+import {t} from '../i18n'
+
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`
   const units = ['KB', 'MB', 'GB', 'TB']
@@ -36,15 +38,15 @@ export function joinPath(dir: string, name: string): string {
 /** A file or folder name must be one path segment. */
 export function validName(name: string): string | null {
   const n = name.trim()
-  if (!n) return 'Enter a name'
-  if (n === '.' || n === '..') return 'Choose a different name'
-  if (/[/\0]/.test(n)) return 'A name cannot contain "/"'
+  if (!n) return t('Enter a name')
+  if (n === '.' || n === '..') return t('Choose a different name')
+  if (/[/\0]/.test(n)) return t('A name cannot contain "/"')
   return null
 }
 
 /** The "Kind" column: folder, or the upper-cased extension, or plain "file". */
 export function kindOf(e: {name: string; is_dir: boolean}): string {
-  if (e.is_dir) return 'folder'
+  if (e.is_dir) return t('folder')
   const i = e.name.lastIndexOf('.')
-  return i > 0 && i < e.name.length - 1 ? e.name.slice(i + 1).toUpperCase() : 'file'
+  return i > 0 && i < e.name.length - 1 ? e.name.slice(i + 1).toUpperCase() : t('file')
 }

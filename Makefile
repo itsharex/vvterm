@@ -37,6 +37,7 @@ test-go:
 
 test-web:
 	cd frontend && npm ci && npx tsc --noEmit && npx vitest run
+	node scripts/check-i18n.mjs
 
 e2e:
 	./e2e/run.sh

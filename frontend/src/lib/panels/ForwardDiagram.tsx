@@ -1,23 +1,26 @@
 import type {ForwardType} from '../types'
+import {useT, type TFn} from '../i18n'
 
 interface Layout {
   nodes: [string, string, string]
   /** which hop goes through the SSH tunnel: first→second, or second→third */
   tunnel: 'ab' | 'bc'
+  /** what the picture says, for a screen reader */
   note: string
 }
 
-const LAYOUTS: Record<ForwardType, Layout> = {
-  local: {nodes: ['This computer', 'SSH host', 'Destination'], tunnel: 'ab', note: 'a local port reaches the destination through the host'},
-  remote: {nodes: ['Remote clients', 'SSH host', 'Your side'], tunnel: 'bc', note: 'a port on the host comes back to a service on your side'},
-  dynamic: {nodes: ['Your app', 'SSH host', 'Any site'], tunnel: 'ab', note: 'a local SOCKS5 proxy sends traffic out through the host'},
-}
+const layouts = (t: TFn): Record<ForwardType, Layout> => ({
+  local: {nodes: [t('This computer'), t('SSH host'), t('Destination')], tunnel: 'ab', note: t('local forwarding: a local port reaches the destination through the host')},
+  remote: {nodes: [t('Remote clients'), t('SSH host'), t('Your side')], tunnel: 'bc', note: t('remote forwarding: a port on the host comes back to a service on your side')},
+  dynamic: {nodes: [t('Your app'), t('SSH host'), t('Any site')], tunnel: 'ab', note: t('dynamic forwarding: a local SOCKS5 proxy sends traffic out through the host')},
+})
 
 const NODE_X = [44, 125, 206]
 
 /** The three machines of a forwarding type and the encrypted hop between them. Decorative: the text says the same. */
 export function ForwardDiagram({type, highlight}: {type: ForwardType; /** the machine the current step is about: 0 first, 1 SSH host, 2 last */ highlight?: 0 | 1 | 2}) {
-  const l = LAYOUTS[type]
+  const t = useT()
+  const l = layouts(t)[type]
   const hop = (from: number, to: number, tunnel: boolean) => (
     <g key={from}>
       {tunnel
@@ -27,7 +30,7 @@ export function ForwardDiagram({type, highlight}: {type: ForwardType; /** the ma
     </g>
   )
   return (
-    <svg className="fw-diagram" viewBox="0 0 250 104" role="img" aria-label={`${type} forwarding: ${l.note}`} data-type={type}>
+    <svg className="fw-diagram" viewBox="0 0 250 104" role="img" aria-label={l.note} data-type={type}>
       {hop(0, 1, l.tunnel === 'ab')}
       {hop(1, 2, l.tunnel === 'bc')}
       {l.nodes.map((n, i) => (

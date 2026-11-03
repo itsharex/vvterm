@@ -8,6 +8,7 @@ import {Switch} from '../ui/Switch'
 import {makeFake, Providers} from '../../test/fakeBackend'
 import type {Settings, VaultStatus} from '../types'
 import {SHOW_CRYPTO_DONATE} from '../donate'
+import {setLanguageSetting} from '../i18n/store'
 
 const vaultSt: VaultStatus = {exists: true, unlocked: true, keychain_enabled: false, auto_lock_minutes: 15}
 
@@ -23,6 +24,18 @@ function setup(over: Partial<Settings> = {}, vault = vaultSt) {
   return {be, onVault, onClose}
 }
 const tab = (n: string) => userEvent.click(screen.getByRole('tab', {name: n}))
+
+describe('SettingsWindow: language', () => {
+  afterEach(() => { act(() => setLanguageSetting('auto')) })
+  it('offers Automatic and the four languages by their own names, and saves the choice', async () => {
+    const {be} = setup()
+    const sel = await screen.findByRole('combobox', {name: /^Language, Automatic/})
+    await userEvent.click(sel)
+    expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual(['Automatic', 'English', 'Tiếng Việt', '日本語', '中文'])
+    await userEvent.click(screen.getByRole('option', {name: '日本語'}))
+    await waitFor(() => expect(be.state.settings.language).toBe('ja'))
+  })
+})
 
 describe('SettingsWindow: session logs', () => {
   it('is off to begin with, with no folder shown; turning it on shows the default folder and saves the choice', async () => {

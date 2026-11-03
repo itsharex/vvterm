@@ -1,5 +1,6 @@
 import {DragEvent, ReactNode, useRef, useState} from 'react'
 import {Section, SidePanel} from '../ui/Modal'
+import {useT, t as tt} from '../i18n'
 import {useBackend} from '../backend'
 import {useToast} from '../ui/Toast'
 import {errMsg} from '../util'
@@ -10,19 +11,17 @@ const MAX_KEY_FILE = 256 * 1024
 
 /** Reads a dropped or chosen key file as text (a private key is a few KiB; anything big is not one). */
 export async function readKeyFile(file: File): Promise<string> {
-  if (file.size > MAX_KEY_FILE) throw new Error('That file is too large to be a private key')
+  if (file.size > MAX_KEY_FILE) throw new Error(tt('That file is too large to be a private key'))
   const text = await (typeof file.text === 'function' ? file.text() : new Promise<string>((res, rej) => {
     const r = new FileReader()
     r.onload = () => res(String(r.result))
     r.onerror = () => rej(r.error)
     r.readAsText(file)
   }))
-  if (!/PRIVATE KEY/.test(text)) throw new Error('That does not look like a private key file')
+  if (!/PRIVATE KEY/.test(text)) throw new Error(tt('That does not look like a private key file'))
   return text
 }
 
-const EDIT_TITLES: Record<KeyMode, string> = {key: 'Edit Key', generate: 'Edit Key', password: 'Edit Password', agent: 'Edit ssh-agent identity'}
-const TITLES: Record<KeyMode, string> = {key: 'New Key', generate: 'Generate Key', password: 'New Password', agent: 'New ssh-agent identity'}
 
 /** A text area whose name floats up onto its border once it has the focus or something in it. */
 function FloatArea(p: {label: string; value: string; onChange(v: string): void; required?: boolean; autoFocus?: boolean; mono?: boolean}) {
@@ -63,6 +62,9 @@ interface Props {
  * add a password, add an ssh-agent identity.
  */
 export function KeyPanel({mode, onClose, onChanged, onDraft, identity}: Props) {
+  const t = useT()
+  const EDIT_TITLES: Record<KeyMode, string> = {key: t('Edit Key'), generate: t('Edit Key'), password: t('Edit Password'), agent: t('Edit ssh-agent identity')}
+  const TITLES: Record<KeyMode, string> = {key: t('New Key'), generate: t('Generate Key'), password: t('New Password'), agent: t('New ssh-agent identity')}
   const be = useBackend()
   const toast = useToast()
   const fileInput = useRef<HTMLInputElement>(null)
@@ -114,10 +116,10 @@ export function KeyPanel({mode, onClose, onChanged, onDraft, identity}: Props) {
     void takeFile(e.dataTransfer.files?.[0])
   }
   const copy = async (text: string) => {
-    try { await be.system.writeClipboard(text); toast.info('Public key copied') } catch { toast.error('Clipboard not available') }
+    try { await be.system.writeClipboard(text); toast.info(t('Public key copied')) } catch { toast.error(t('Clipboard not available')) }
   }
 
-  const labelBox = <input aria-label="Label" value={label} onChange={e => setLabel(e.target.value)} placeholder="Label" autoFocus />
+  const labelBox = <input aria-label={t('Label')} value={label} onChange={e => setLabel(e.target.value)} placeholder={t('Label')} autoFocus />
   const errBox = err && <div className="error" role="alert">{err}</div>
 
   let cards: ReactNode
@@ -127,99 +129,99 @@ export function KeyPanel({mode, onClose, onChanged, onDraft, identity}: Props) {
     const changed = label.trim() !== identity.name || user !== (identity.username ?? '') || secret !== ''
     cards = (
       <>
-        <Section title="Identity">
+        <Section title={t('Identity')}>
           {labelBox}
-          {mode !== 'key' && <input aria-label="Username" value={user} onChange={e => setUser(e.target.value)} placeholder="Username" />}
+          {mode !== 'key' && <input aria-label={t('Username')} value={user} onChange={e => setUser(e.target.value)} placeholder={t('Username')} />}
           {mode === 'key' && identity.public_key && (
             <>
               <div className="pubkey" data-testid="pubkey">{identity.public_key}</div>
-              <button onClick={() => copy(identity.public_key!)}>Copy public key</button>
+              <button onClick={() => copy(identity.public_key!)}>{t('Copy public key')}</button>
             </>
           )}
-          {mode === 'agent' && <div className="muted">Authenticates with the keys loaded in your running ssh-agent.</div>}
+          {mode === 'agent' && <div className="muted">{t('Authenticates with the keys loaded in your running ssh-agent.')}</div>}
         </Section>
         {mode === 'password' && (
-          <Section title="Password">
-            <input aria-label="New password" type="password" autoComplete="new-password" value={pw} onChange={e => setPw(e.target.value)} placeholder="Leave empty to keep the current password" />
-            <div className="muted">The hosts that use this identity switch to the new password as soon as you save.</div>
+          <Section title={t('Password')}>
+            <input aria-label={t('New password')} type="password" autoComplete="new-password" value={pw} onChange={e => setPw(e.target.value)} placeholder={t('Leave empty to keep the current password')} />
+            <div className="muted">{t('The hosts that use this identity switch to the new password as soon as you save.')}</div>
           </Section>
         )}
         {mode === 'key' && (
-          <Section title="Replace the private key">
-            <div className="muted">Leave empty to keep the current key. A new key replaces it for every host that uses this identity.</div>
-            <FloatArea label="Private key" value={pem} onChange={setPem} />
-            <FloatArea label="Public key" value={pub} onChange={setPub} />
-            <FloatArea label="Certificate" value={cert} onChange={setCert} />
-            {encrypted && <input aria-label="Passphrase" type="password" autoComplete="off" value={pass} onChange={e => setPass(e.target.value)} placeholder="Passphrase of the private key" />}
-            <input ref={fileInput} type="file" hidden aria-label="Key file" onChange={e => { void takeFile(e.target.files?.[0]); e.target.value = '' }} />
-            <button className="wide-btn" onClick={() => fileInput.current?.click()}>Import from key file</button>
+          <Section title={t('Replace the private key')}>
+            <div className="muted">{t('Leave empty to keep the current key. A new key replaces it for every host that uses this identity.')}</div>
+            <FloatArea label={t('Private key')} value={pem} onChange={setPem} />
+            <FloatArea label={t('Public key')} value={pub} onChange={setPub} />
+            <FloatArea label={t('Certificate')} value={cert} onChange={setCert} />
+            {encrypted && <input aria-label={t('Passphrase')} type="password" autoComplete="off" value={pass} onChange={e => setPass(e.target.value)} placeholder={t('Passphrase of the private key')} />}
+            <input ref={fileInput} type="file" hidden aria-label={t('Key file')} onChange={e => { void takeFile(e.target.files?.[0]); e.target.value = '' }} />
+            <button className="wide-btn" onClick={() => fileInput.current?.click()}>{t('Import from key file')}</button>
           </Section>
         )}
       </>
     )
-    footer = <><button onClick={onClose}>Cancel</button><button className="primary" disabled={busy || !label.trim() || !changed}
-      onClick={() => run(() => be.vault.updateIdentity(identity.id, label.trim(), user, secret, pass, pub, cert), 'Changes saved')}>Save changes</button></>
+    footer = <><button onClick={onClose}>{t('Cancel')}</button><button className="primary" disabled={busy || !label.trim() || !changed}
+      onClick={() => run(() => be.vault.updateIdentity(identity.id, label.trim(), user, secret, pass, pub, cert), t('Changes saved'))}>{t('Save changes')}</button></>
   } else if (mode === 'key') {
     cards = (
       <>
         <Section>
           {labelBox}
-          <FloatArea label="Private key" required value={pem} onChange={setPem} />
-          <FloatArea label="Public key" value={pub} onChange={setPub} />
-          <FloatArea label="Certificate" value={cert} onChange={setCert} />
-          {encrypted && <input aria-label="Passphrase" type="password" autoComplete="off" value={pass} onChange={e => setPass(e.target.value)} placeholder="Passphrase of the private key" />}
+          <FloatArea label={t('Private key')} required value={pem} onChange={setPem} />
+          <FloatArea label={t('Public key')} value={pub} onChange={setPub} />
+          <FloatArea label={t('Certificate')} value={cert} onChange={setCert} />
+          {encrypted && <input aria-label={t('Passphrase')} type="password" autoComplete="off" value={pass} onChange={e => setPass(e.target.value)} placeholder={t('Passphrase of the private key')} />}
         </Section>
         <Section>
           <div className={'drop-zone' + (over ? ' over' : '')} data-testid="key-drop" onDragOver={e => { e.preventDefault(); setOver(true) }} onDragLeave={() => setOver(false)} onDrop={drop}>
             <DropIcon />
-            <span>Drag and drop a private key file to import</span>
+            <span>{t('Drag and drop a private key file to import')}</span>
           </div>
-          <input ref={fileInput} type="file" hidden aria-label="Key file" onChange={e => { void takeFile(e.target.files?.[0]); e.target.value = '' }} />
-          <button className="primary wide-btn" onClick={() => fileInput.current?.click()}>Import from key file</button>
+          <input ref={fileInput} type="file" hidden aria-label={t('Key file')} onChange={e => { void takeFile(e.target.files?.[0]); e.target.value = '' }} />
+          <button className="primary wide-btn" onClick={() => fileInput.current?.click()}>{t('Import from key file')}</button>
         </Section>
       </>
     )
     footer = (
       <>
-        <button onClick={onClose}>Cancel</button>
+        <button onClick={onClose}>{t('Cancel')}</button>
         <button className="primary" disabled={busy || !label.trim() || !pem.trim()}
-          onClick={() => run(() => be.vault.addKeyPair(label.trim(), pem, pass, pub, cert), 'Key saved')}>Save key</button>
+          onClick={() => run(() => be.vault.addKeyPair(label.trim(), pem, pass, pub, cert), t('Key saved'))}>{t('Save key')}</button>
       </>
     )
   } else if (mode === 'generate') {
     cards = created ? (
-      <Section title="Public key">
-        <p className="ok">Key “{created.name}” created. Add this public key to <code>~/.ssh/authorized_keys</code> on your servers:</p>
+      <Section title={t('Public key')}>
+        <p className="ok">{t('Key “{name}” created. Add this public key to ~/.ssh/authorized_keys on your servers:', {name: created.name})}</p>
         <div className="pubkey" data-testid="pubkey">{created.public_key}</div>
-        <button onClick={() => copy(created.public_key!)}>Copy public key</button>
+        <button onClick={() => copy(created.public_key!)}>{t('Copy public key')}</button>
       </Section>
     ) : (
       <Section>
         {labelBox}
-        <div className="muted">Generates an ed25519 key pair. The private key stays encrypted in the vault and is never shown.</div>
+        <div className="muted">{t('Generates an ed25519 key pair. The private key stays encrypted in the vault and is never shown.')}</div>
       </Section>
     )
     footer = created
-      ? <button className="primary" onClick={onClose}>Done</button>
-      : <><button onClick={onClose}>Cancel</button><button className="primary" disabled={busy || !label.trim()} onClick={() => run(() => be.vault.generateKey(label.trim()), 'Key generated', true)}>Generate</button></>
+      ? <button className="primary" onClick={onClose}>{t('Done')}</button>
+      : <><button onClick={onClose}>{t('Cancel')}</button><button className="primary" disabled={busy || !label.trim()} onClick={() => run(() => be.vault.generateKey(label.trim()), t('Key generated'), true)}>{t('Generate')}</button></>
   } else if (mode === 'password') {
     cards = (
       <Section>
         {labelBox}
-        <input aria-label="Username" value={user} onChange={e => setUser(e.target.value)} placeholder="Username" />
-        <input aria-label="Password" type="password" autoComplete="off" value={pw} onChange={e => setPw(e.target.value)} placeholder="Password" />
+        <input aria-label={t('Username')} value={user} onChange={e => setUser(e.target.value)} placeholder={t('Username')} />
+        <input aria-label={t('Password')} type="password" autoComplete="off" value={pw} onChange={e => setPw(e.target.value)} placeholder={t('Password')} />
       </Section>
     )
-    footer = <><button onClick={onClose}>Cancel</button><button className="primary" disabled={busy || !label.trim() || !pw} onClick={() => run(() => be.vault.addPassword(label.trim(), user, pw), 'Password saved')}>Save password</button></>
+    footer = <><button onClick={onClose}>{t('Cancel')}</button><button className="primary" disabled={busy || !label.trim() || !pw} onClick={() => run(() => be.vault.addPassword(label.trim(), user, pw), t('Password saved'))}>{t('Save password')}</button></>
   } else {
     cards = (
       <Section>
         {labelBox}
-        <input aria-label="Username" value={user} onChange={e => setUser(e.target.value)} placeholder="Username" />
-        <div className="muted">Authenticates with the keys loaded in your running ssh-agent.</div>
+        <input aria-label={t('Username')} value={user} onChange={e => setUser(e.target.value)} placeholder={t('Username')} />
+        <div className="muted">{t('Authenticates with the keys loaded in your running ssh-agent.')}</div>
       </Section>
     )
-    footer = <><button onClick={onClose}>Cancel</button><button className="primary" disabled={busy || !label.trim()} onClick={() => run(() => be.vault.addAgent(label.trim(), user), 'Agent identity added')}>Add identity</button></>
+    footer = <><button onClick={onClose}>{t('Cancel')}</button><button className="primary" disabled={busy || !label.trim()} onClick={() => run(() => be.vault.addAgent(label.trim(), user), t('Agent identity added'))}>{t('Add identity')}</button></>
   }
 
   return (

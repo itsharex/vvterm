@@ -6,6 +6,7 @@ import {errMsg} from '../util'
 import {IconSearch, IconTrash} from '../ui/Icons'
 import {SortMenu, usePref, type SortOption} from '../ui/ListTools'
 import type {ActivityEntry} from '../types'
+import {useT, type TFn} from '../i18n'
 
 /** The groups of the filter chips and the kinds each one shows. */
 export const LOG_GROUPS: {id: string; label: string; kinds: string[]}[] = [
@@ -27,7 +28,8 @@ export function formatWhen(iso: string, now = new Date()): string {
 }
 
 type Sort = 'newest' | 'oldest' | 'host' | 'problems'
-const SORTS: SortOption<Sort>[] = [{value: 'newest', label: 'Newest first'}, {value: 'oldest', label: 'Oldest first'}, {value: 'host', label: 'Host'}, {value: 'problems', label: 'Problems first'}]
+const SORT_VALUES: Sort[] = ['newest', 'oldest', 'host', 'problems']
+const sortOptions = (t: TFn): SortOption<Sort>[] => [{value: 'newest', label: t('Newest first')}, {value: 'oldest', label: t('Oldest first')}, {value: 'host', label: t('Host')}, {value: 'problems', label: t('Problems first')}]
 
 /**
  * Logs: what happened in Vutty: connections and how they ended, trusted host keys, forwards, SFTP
@@ -35,13 +37,14 @@ const SORTS: SortOption<Sort>[] = [{value: 'newest', label: 'Newest first'}, {va
  */
 export function LogsPage() {
   const be = useBackend()
+  const t = useT()
   const toast = useToast()
   const confirm = useConfirm()
   const [items, setItems] = useState<ActivityEntry[] | null>(null)
   const [group, setGroup] = useState('all')
   const [q, setQ] = useState('')
   const [error, setError] = useState('')
-  const [sort, setSort] = usePref<Sort>('vutty.logs.sort', SORTS.map(o => o.value), 'newest')
+  const [sort, setSort] = usePref<Sort>('vutty.logs.sort', SORT_VALUES, 'newest')
 
   const reload = useCallback(async () => {
     try {
@@ -72,42 +75,44 @@ export function LogsPage() {
   }, [items, sort])
 
   const clear = async () => {
-    if (!(await confirm('Clear the whole log? This cannot be undone.', {confirmLabel: 'Clear', danger: true}))) return
+    if (!(await confirm(t('Clear the whole log? This cannot be undone.'), {confirmLabel: t('Clear'), danger: true}))) return
     try {
       await be.logs.clear()
-      toast.info('Log cleared')
+      toast.info(t('Log cleared'))
       await reload()
     } catch (e) {
       toast.error(errMsg(e))
     }
   }
 
+  const groupLabel: Record<string, string> = {all: t('All'), connections: t('Connections'), files: t('Files'), forwards: t('Forwards'), security: t('Security'), sync: t('Sync'), assistant: t('Assistant')}
+
   return (
-    <div className="hosts-page" aria-label="Logs">
+    <div className="hosts-page" aria-label={t('Logs')}>
       <div className="toolbar list-toolbar">
-        <div className="search-box small grow"><IconSearch size={14} /><input aria-label="Search logs" placeholder="Search logs" value={q} onChange={e => setQ(e.target.value)} /></div>
-        <div className="chips" role="group" aria-label="Show">
+        <div className="search-box small grow"><IconSearch size={14} /><input aria-label={t('Search logs')} placeholder={t('Search logs')} value={q} onChange={e => setQ(e.target.value)} /></div>
+        <div className="chips" role="group" aria-label={t('Show')}>
           {LOG_GROUPS.map(g => (
-            <button key={g.id} className={'chip' + (group === g.id ? ' on' : '')} aria-pressed={group === g.id} onClick={() => setGroup(g.id)}>{g.label}</button>
+            <button key={g.id} className={'chip' + (group === g.id ? ' on' : '')} aria-pressed={group === g.id} onClick={() => setGroup(g.id)}>{groupLabel[g.id] ?? g.label}</button>
           ))}
         </div>
-        <SortMenu value={sort} options={SORTS} onChange={setSort} />
-        <button className="ghost-btn danger" aria-label="Clear logs" onClick={clear} disabled={!items?.length && !q && group === 'all'}><IconTrash size={14} /> Clear</button>
+        <SortMenu value={sort} options={sortOptions(t)} onChange={setSort} />
+        <button className="ghost-btn danger" aria-label={t('Clear logs')} onClick={clear} disabled={!items?.length && !q && group === 'all'}><IconTrash size={14} /> {t('Clear')}</button>
       </div>
 
-      <h3 className="sec-title">Logs</h3>
-      <div className="log-table" role="table" aria-label="Activity">
+      <h3 className="sec-title">{t('Logs')}</h3>
+      <div className="log-table" role="table" aria-label={t('Activity')}>
         {shown.map(e => (
           <div key={e.id} role="row" className={'log-row' + (e.ok ? '' : ' bad')}>
             <span role="cell" className="log-when muted">{formatWhen(e.at)}</span>
-            <span role="cell" className="log-dot" aria-label={e.ok ? 'ok' : 'failed'} />
+            <span role="cell" className="log-dot" aria-label={e.ok ? t('ok') : t('failed')} />
             <span role="cell" className="log-host">{e.host_label ?? ''}</span>
             <span role="cell" className="log-msg">{e.message}</span>
           </div>
         ))}
       </div>
       {error && <div className="error" role="alert">{error}</div>}
-      {items && items.length === 0 && !error && <div className="empty-hint">{q || group !== 'all' ? 'Nothing matches.' : 'Nothing has happened yet. Connections, transfers and forwards show up here.'}</div>}
+      {items && items.length === 0 && !error && <div className="empty-hint">{q || group !== 'all' ? t('Nothing matches.') : t('Nothing has happened yet. Connections, transfers and forwards show up here.')}</div>}
     </div>
   )
 }

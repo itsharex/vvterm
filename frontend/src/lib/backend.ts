@@ -1,4 +1,5 @@
 import {createContext, useContext} from 'react'
+import {t} from './i18n'
 import type {ExecRun, ExecSpec, InventoryOptions, SSHLink, VaultHealth, 
   CacheReport, ConnectionTest, ExportReport, ForwardStatus, Group, Host, HostFilter, Identity, ImportReport, PortForward, Settings,
   ActivityEntry, KnownHost, QueueJob, QueueSpec, RemoteEntry, SftpInfo, SyncDiff, Snippet, SyncStatus, TransferResult, VaultStatus,
@@ -55,6 +56,8 @@ export interface Backend {
   session: {
     open(hostId: string, cols: number, rows: number): Promise<string>
     attach(sid: string): Promise<void>
+    /** flow control: the terminal has parsed this many bytes of the session's output since it attached (a running total) */
+    ack(sid: string, parsed: number): Promise<void>
     write(sid: string, data: string): Promise<void>
     resize(sid: string, cols: number, rows: number): Promise<void>
     reconnect(sid: string, cols: number, rows: number): Promise<void>
@@ -227,6 +230,8 @@ export interface Backend {
     pickDirectory(title: string): Promise<string>
     saveFile(title: string, name: string): Promise<string>
     openUrl(url: string): Promise<void>
+    /** Tells the native menu bar which language to show (en|vi|ja|zh). */
+    setLanguage(lang: string): Promise<void>
     info(): Promise<{version: string}>
     /** Asks GitHub for the latest release and compares it with this build. */
     checkUpdate(): Promise<UpdateInfo>
@@ -270,7 +275,7 @@ function svc(pkg: string, name: string): Bound {
   const s = window.go?.[pkg]?.[name]
   if (!s) {
     console.warn(`backend service ${pkg}.${name} is not available`)
-    throw new Error('Vutty cannot reach its backend from this window. Close the window and open it again; if it keeps happening, restart Vutty.')
+    throw new Error(t('Vutty cannot reach its backend from this window. Close the window and open it again; if it keeps happening, restart Vutty.'))
   }
   return s
 }
@@ -317,6 +322,7 @@ export function wailsBackend(): Backend {
     session: {
       open: (h, c, r) => u('SessionService', 'Open', h, c, r),
       attach: s => u('SessionService', 'Attach', s),
+      ack: (s, n) => u('SessionService', 'Ack', s, n),
       write: (s, d) => u('SessionService', 'Write', s, d),
       resize: (s, c, r) => u('SessionService', 'Resize', s, c, r),
       reconnect: (s, c, r) => u('SessionService', 'Reconnect', s, c, r),
@@ -457,6 +463,7 @@ export function wailsBackend(): Backend {
       pickFile: t => call('app', 'SystemService', 'PickFile', t),
       pickDirectory: t => call('app', 'SystemService', 'PickDirectory', t),
       saveFile: (t, n) => call('app', 'SystemService', 'SaveFile', t, n),
+      setLanguage: l => call('app', 'SystemService', 'SetLanguage', l),
       openUrl: async url => {
         try {
           await call('app', 'SystemService', 'OpenURL', url)
@@ -508,7 +515,7 @@ export function bridgeBackend(): Backend {
     const text: string = await window.go!.app.SettingsBridge.Call(service, method, JSON.stringify(args))
     return (text ? JSON.parse(text) : undefined) as T
   }
-  const unavailable = () => Promise.reject(new Error('not available in the settings window'))
+  const unavailable = () => Promise.reject(new Error(t('not available in the settings window')))
   return {
     ...base,
     vault: {

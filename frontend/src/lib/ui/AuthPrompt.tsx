@@ -2,6 +2,7 @@ import {FormEvent, useState} from 'react'
 import {useBackend} from '../backend'
 import {errMsg} from '../util'
 import type {AuthChallenge} from '../types'
+import {useT} from '../i18n'
 
 /**
  * The questions a server puts while signing in (a verification code, a Duo choice, a second password): one box for
@@ -24,6 +25,7 @@ export function AuthPrompt({challenge, promptKey, onDone, onError, inline = fals
 
 function Form({challenge, promptKey, onDone, onError, inline}: {challenge: AuthChallenge; promptKey: string; onDone(): void; onError?(m: string): void; inline: boolean}) {
   const be = useBackend()
+  const t = useT()
   const [answers, setAnswers] = useState<string[]>(() => challenge.prompts.map(() => ''))
   const [busy, setBusy] = useState(false)
 
@@ -41,8 +43,8 @@ function Form({challenge, promptKey, onDone, onError, inline}: {challenge: AuthC
   const submit = (e: FormEvent) => { e.preventDefault(); if (!busy) void send(answers) }
 
   const body = (
-    <form onSubmit={submit} aria-label={`Sign in to ${challenge.host}`}>
-      <h3 style={{marginTop: 0}}>Sign in to {challenge.host}</h3>
+    <form onSubmit={submit} aria-label={t('Sign in to {host}', {host: challenge.host})}>
+      <h3 style={{marginTop: 0}}>{t('Sign in to {host}', {host: challenge.host})}</h3>
       {challenge.name && <div><b>{challenge.name}</b></div>}
       {challenge.instruction && <div className="muted" style={{whiteSpace: 'pre-wrap'}}>{challenge.instruction}</div>}
       {challenge.prompts.map((p, i) => (
@@ -53,12 +55,12 @@ function Form({challenge, promptKey, onDone, onError, inline}: {challenge: AuthC
         </label>
       ))}
       <div className="row">
-        <button type="submit" className="primary" disabled={busy || answers.every(a => a === '')}>Continue</button>
-        <button type="button" disabled={busy} onClick={() => void send(null)}>Cancel</button>
+        <button type="submit" className="primary" disabled={busy || answers.every(a => a === '')}>{t('Continue')}</button>
+        <button type="button" disabled={busy} onClick={() => void send(null)}>{t('Cancel')}</button>
       </div>
     </form>
   )
   return inline
-    ? <div className="notice" role="alertdialog" aria-label="Sign-in question">{body}</div>
-    : <div className="overlay" role="alertdialog" aria-label="Sign-in question"><div className="card">{body}</div></div>
+    ? <div className="notice" role="alertdialog" aria-label={t('Sign-in question')}>{body}</div>
+    : <div className="overlay" role="alertdialog" aria-label={t('Sign-in question')}><div className="card">{body}</div></div>
 }

@@ -1,5 +1,6 @@
 import {MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {useBackend} from '../backend'
+import {useT} from '../i18n'
 import {useConfirm} from '../ui/Confirm'
 import {useToast} from '../ui/Toast'
 import {IconArrowUp, IconDownload, IconFile, IconFolder, IconRefresh} from '../ui/Icons'
@@ -7,6 +8,7 @@ import {errMsg} from '../util'
 import {formatBytes, parentOf} from './format'
 import {QueuePanel} from './QueuePanel'
 import {queueTransfer, summarize, useQueues, verbOf} from './transfer'
+import {authenticity} from './RemotePane'
 import {AuthPrompt} from '../ui/AuthPrompt'
 import type {AuthChallenge, Host, HostKeyPrompt, QueueJob, RemoteEntry} from '../types'
 
@@ -18,12 +20,14 @@ let seq = 0
  * shown and closed when it is hidden or the terminal goes away.
  */
 export function FilesTab({host}: {host: Host | null}) {
-  if (!host) return <div className="side-empty">Files are shown for terminals connected to a saved SSH host. Focus one to browse its files.</div>
+  const t = useT()
+  if (!host) return <div className="side-empty">{t('Files are shown for terminals connected to a saved SSH host. Focus one to browse its files.')}</div>
   return <HostFiles key={host.id} host={host} />
 }
 
 function HostFiles({host}: {host: Host}) {
   const be = useBackend()
+  const t = useT()
   const toast = useToast()
   const confirm = useConfirm()
   const alive = useRef(true)
@@ -73,7 +77,7 @@ function HostFiles({host}: {host: Host}) {
         const info = await be.sftp.open(host.id, key)
         if (!alive.current) { void be.sftp.close(info.sid).catch(() => {}); return }
         opened = info.sid
-        offs.push(be.on(`sftp:closed:${info.sid}`, () => { setPhase('closed'); setReason('The connection was lost.'); setSid(''); opened = '' }))
+        offs.push(be.on(`sftp:closed:${info.sid}`, () => { setPhase('closed'); setReason(t('The connection was lost.')); setSid(''); opened = '' }))
         setPrompt(null)
         setAuth(null)
         setSid(info.sid)
@@ -93,9 +97,9 @@ function HostFiles({host}: {host: Host}) {
 
   const finished = useCallback((_sid: string, j: QueueJob) => {
     if (j.state === 'done') toast.info(summarize(verbOf(j.direction), j))
-    else if (j.state === 'failed') toast.error(`${j.name}: ${j.error || 'the transfer failed'}`)
+    else if (j.state === 'failed') toast.error(`${j.name}: ${j.error || t('the transfer failed')}`)
     if ((j.direction === 'upload' || j.direction === 'sync-up') && cwdRef.current && sidRef.current) void load(sidRef.current, cwdRef.current)
-  }, [toast, load])
+  }, [toast, load, t])
   const sidRef = useRef(sid)
   sidRef.current = sid
   const jobs = useQueues(sid ? [sid] : [], finished)[sid] ?? []
@@ -135,45 +139,45 @@ function HostFiles({host}: {host: Host}) {
     try { await fn() } catch (e) { setError(errMsg(e)) }
   }
   const upload = (folder: boolean) => guard(async () => {
-    const p = await (folder ? be.system.pickDirectory('Upload folder') : be.system.pickFile('Upload file'))
+    const p = await (folder ? be.system.pickDirectory(t('Upload folder')) : be.system.pickFile(t('Upload file')))
     if (p) await queueTransfer(be, confirm, sid, 'upload', [p], cwd)
   })
   const download = () => guard(async () => {
-    const dir = await be.system.pickDirectory('Save to folder')
+    const dir = await be.system.pickDirectory(t('Save to folder'))
     if (dir) await queueTransfer(be, confirm, sid, 'download', chosen.map(e => e.path), dir)
   })
 
   return (
-    <div className="side-files" aria-label="Server files">
+    <div className="side-files" aria-label={t('Server files')}>
       <div className="side-files-bar">
-        <button className="icon ghost" aria-label="Up one folder" disabled={!ready || cwd === '/'} onClick={() => void load(sid, parentOf(cwd))}><IconArrowUp size={15} /></button>
-        <button className="icon ghost" aria-label="Refresh files" disabled={!ready} onClick={() => void load(sid, cwd)}><IconRefresh size={15} /></button>
-        <code className="side-files-path" title={cwd} aria-label="Current folder">{cwd || (phase === 'connecting' ? 'Connecting…' : '')}</code>
+        <button className="icon ghost" aria-label={t('Up one folder')} disabled={!ready || cwd === '/'} onClick={() => void load(sid, parentOf(cwd))}><IconArrowUp size={15} /></button>
+        <button className="icon ghost" aria-label={t('Refresh files')} disabled={!ready} onClick={() => void load(sid, cwd)}><IconRefresh size={15} /></button>
+        <code className="side-files-path" title={cwd} aria-label={t('Current folder')}>{cwd || (phase === 'connecting' ? t('Connecting…') : '')}</code>
       </div>
       <div className="side-files-bar">
-        <button disabled={!ready} onClick={() => void upload(false)}>Upload file…</button>
-        <button disabled={!ready} onClick={() => void upload(true)}>Upload folder…</button>
-        <button disabled={!ready || chosen.length === 0} onClick={() => void download()} aria-label="Download selected files">
-          <IconDownload size={14} /> Download{chosen.length > 1 ? ` ${chosen.length}` : ''}
+        <button disabled={!ready} onClick={() => void upload(false)}>{t('Upload file…')}</button>
+        <button disabled={!ready} onClick={() => void upload(true)}>{t('Upload folder…')}</button>
+        <button disabled={!ready || chosen.length === 0} onClick={() => void download()} aria-label={t('Download selected files')}>
+          <IconDownload size={14} /> {chosen.length > 1 ? t('Download {n}', {n: chosen.length}) : t('Download')}
         </button>
       </div>
-      {phase === 'connecting' && !prompt && !auth && <div className="side-empty">Connecting to {host.label}…</div>}
+      {phase === 'connecting' && !prompt && !auth && <div className="side-empty">{t('Connecting to {name}…', {name: host.label})}</div>}
       <AuthPrompt inline challenge={auth?.c ?? null} promptKey={auth?.key ?? ''} onDone={() => setAuth(null)} onError={setReason} />
       {phase === 'closed' && (
         <div className="side-empty" role="alert">
-          <div>{reason || 'Disconnected.'}</div>
-          <button onClick={() => setAttempt(a => a + 1)}>Reconnect</button>
+          <div>{reason || t('Disconnected.')}</div>
+          <button onClick={() => setAttempt(a => a + 1)}>{t('Reconnect')}</button>
         </div>
       )}
       {prompt && (
-        <div className="side-empty" role="alertdialog" aria-label="Host key confirmation">
-          <div>The authenticity of <b>{prompt.p.host}</b> can't be established.</div>
+        <div className="side-empty" role="alertdialog" aria-label={t('Host key confirmation')}>
+          <div>{authenticity(t("The authenticity of {host} can't be established.", {host: '\u0001'}), prompt.p.host)}</div>
           <div className="fp" data-testid="fingerprint">{prompt.p.fingerprint}</div>
-          <div className="row"><button className="primary" onClick={() => answer(true)}>Trust and connect</button><button onClick={() => answer(false)}>Cancel</button></div>
+          <div className="row"><button className="primary" onClick={() => answer(true)}>{t('Trust and connect')}</button><button onClick={() => answer(false)}>{t('Cancel')}</button></div>
         </div>
       )}
       {ready && (
-        <div className="side-list side-files-list" role="listbox" aria-multiselectable="true" aria-label="Files" aria-busy={loading}>
+        <div className="side-list side-files-list" role="listbox" aria-multiselectable="true" aria-label={t('Files')} aria-busy={loading}>
           {shown.map(e => (
             <div key={e.path} role="option" tabIndex={0} aria-selected={selected.includes(e.path)} className={'side-item side-file' + (selected.includes(e.path) ? ' on' : '')}
               onClick={ev => pick(e, ev)} onDoubleClick={() => e.is_dir && void load(sid, e.path)} onKeyDown={ev => ev.key === 'Enter' && e.is_dir && void load(sid, e.path)}>
@@ -182,7 +186,7 @@ function HostFiles({host}: {host: Host}) {
               <small className="muted">{e.is_dir ? '' : formatBytes(e.size)}</small>
             </div>
           ))}
-          {!loading && shown.length === 0 && !error && <div className="side-empty">This folder is empty.</div>}
+          {!loading && shown.length === 0 && !error && <div className="side-empty">{t('This folder is empty.')}</div>}
         </div>
       )}
       {error && <div className="error side-files-error" role="alert">{error}</div>}

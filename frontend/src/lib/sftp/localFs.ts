@@ -1,3 +1,4 @@
+import {t} from '../i18n'
 import type {Backend} from '../backend'
 import type {RemoteHost} from './RemotePane'
 import type {PaneFs} from './FilePane'
@@ -5,6 +6,9 @@ import type {PaneFs} from './FilePane'
 /** The id of the "host" that is this computer: picked on the right side, it makes that pane a second view of local files. */
 export const LOCAL_HOST_ID = 'local'
 export const LOCAL_HOST: RemoteHost = {id: LOCAL_HOST_ID, label: 'This computer'}
+
+/** The name of a host as shown: the local "host" is translated, a saved host keeps its label. */
+export const hostLabel = (h: RemoteHost) => (h.id === LOCAL_HOST_ID ? t('This computer') : h.label)
 
 /** What a pane needs to browse and edit this computer's files. */
 export function localPaneFs(be: Backend): PaneFs {
@@ -16,7 +20,7 @@ export function localPaneFs(be: Backend): PaneFs {
     chmod: (p, m) => be.local.chmod(p, m),
     open: e => be.system.openPath(e.path),
     openWith: async e => {
-      const app = await be.system.pickFile('Open with…')
+      const app = await be.system.pickFile(t('Open with…'))
       if (app) await be.system.openPathWith(e.path, app)
     },
   }

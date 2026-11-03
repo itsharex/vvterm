@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react'
+import {useT} from '../i18n'
 import {IconChevron, IconData, IconFolderPlus} from '../ui/Icons'
 
 /**
@@ -6,6 +7,7 @@ import {IconChevron, IconData, IconFolderPlus} from '../ui/Icons'
  * a JSON file), which opens the Import / Export panel. Keyboard: Enter or Space opens, arrows move, Esc closes.
  */
 export function AddMenu({onGroup, onImport}: {onGroup(): void; onImport(): void}) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const wrap = useRef<HTMLSpanElement>(null)
 
@@ -29,13 +31,13 @@ export function AddMenu({onGroup, onImport}: {onGroup(): void; onImport(): void}
 
   return (
     <span className="add-menu" ref={wrap}>
-      <button className="split-caret" aria-label="More ways to add hosts" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+      <button className="split-caret" aria-label={t('More ways to add hosts')} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(o => !o)}>
         <IconChevron size={14} />
       </button>
       {open && (
-        <div className="menu-pop" role="menu" aria-label="Add" onKeyDown={move}>
-          <button role="menuitem" onClick={pick(onGroup)}><IconFolderPlus size={16} /> New group</button>
-          <button role="menuitem" onClick={pick(onImport)}><IconData size={16} /> Import</button>
+        <div className="menu-pop" role="menu" aria-label={t('Add')} onKeyDown={move}>
+          <button role="menuitem" onClick={pick(onGroup)}><IconFolderPlus size={16} /> {t('New group')}</button>
+          <button role="menuitem" onClick={pick(onImport)}><IconData size={16} /> {t('Import')}</button>
         </div>
       )}
     </span>

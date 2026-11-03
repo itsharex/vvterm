@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	runtime2 "runtime"
 	"strings"
+	"sync"
 
 	"github.com/wailsapp/wails/v2/pkg/menu"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -19,8 +20,10 @@ type SystemService struct {
 	ctx          context.Context
 	openSettings func() error
 	openWindow   func(hostID, title string) error
-	menuFor      func(shortcuts map[string]string) *menu.Menu
+	menuFor      func(shortcuts map[string]string, lang string) *menu.Menu
 	menuKeys     map[string]string
+	menuLang     string // en|vi|ja|zh
+	menuMu       sync.Mutex
 	links        sshLinks
 	updateDir    string // where an update is unpacked (inside the data folder)
 }
@@ -37,8 +40,37 @@ type AppInfo struct {
 // SetSettingsOpener installs what OpenSettings runs (the launcher of the Settings window process).
 func (s *SystemService) SetSettingsOpener(f func() error) { s.openSettings = f }
 
-// SetMenuBuilder installs what makes this window's menu bar for a set of shortcuts.
-func (s *SystemService) SetMenuBuilder(f func(shortcuts map[string]string) *menu.Menu) { s.menuFor = f }
+// SetMenuBuilder installs what makes this window's menu bar for a set of shortcuts and a language.
+func (s *SystemService) SetMenuBuilder(f func(shortcuts map[string]string, lang string) *menu.Menu) {
+	s.menuFor = f
+}
+
+// SetMenuLang sets the language the first menu bar is made in (before the page has told its own).
+func (s *SystemService) SetMenuLang(lang string) {
+	s.menuMu.Lock()
+	s.menuLang = lang
+	s.menuMu.Unlock()
+}
+
+// MenuLang is the language the menu bar is in now.
+func (s *SystemService) MenuLang() string {
+	s.menuMu.Lock()
+	defer s.menuMu.Unlock()
+	if s.menuLang == "" {
+		return "en"
+	}
+	return s.menuLang
+}
+
+// applyMenu makes the menu bar again with the current shortcuts and language. Callers hold menuMu.
+func (s *SystemService) applyMenu() {
+	lang := s.menuLang
+	if lang == "" {
+		lang = "en"
+	}
+	runtime.MenuSetApplicationMenu(s.ctx, s.menuFor(s.menuKeys, lang))
+	runtime.MenuUpdateApplicationMenu(s.ctx)
+}
 
 // SetMenuShortcuts is called by the page with the effective shortcuts (every action id to its key): the menu
 // bar is made again so each item shows its key. It does nothing when the keys did not change.
@@ -46,6 +78,8 @@ func (s *SystemService) SetMenuShortcuts(shortcuts map[string]string) {
 	if s.ctx == nil || s.menuFor == nil || runtime2.GOOS != "darwin" {
 		return
 	}
+	s.menuMu.Lock()
+	defer s.menuMu.Unlock()
 	if len(shortcuts) == len(s.menuKeys) {
 		same := true
 		for k, v := range shortcuts {
@@ -59,8 +93,26 @@ func (s *SystemService) SetMenuShortcuts(shortcuts map[string]string) {
 		}
 	}
 	s.menuKeys = shortcuts
-	runtime.MenuSetApplicationMenu(s.ctx, s.menuFor(shortcuts))
-	runtime.MenuUpdateApplicationMenu(s.ctx)
+	s.applyMenu()
+}
+
+// SetLanguage is called by the page with the language it shows (en|vi|ja|zh, 'auto' already resolved): the menu
+// bar is made again in that language, with the shortcuts it has now.
+func (s *SystemService) SetLanguage(lang string) error {
+	if !validMenuLang(lang) {
+		return errors.New("unknown language")
+	}
+	s.menuMu.Lock()
+	defer s.menuMu.Unlock()
+	if s.menuLang == lang {
+		return nil
+	}
+	s.menuLang = lang
+	if s.ctx == nil || s.menuFor == nil || runtime2.GOOS != "darwin" {
+		return nil
+	}
+	s.applyMenu()
+	return nil
 }
 
 // OpenSettings opens the Settings window (a second native window), or raises it. It fails when there

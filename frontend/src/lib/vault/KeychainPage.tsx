@@ -1,4 +1,5 @@
 import {useEffect, useMemo, useState} from 'react'
+import {useT, useTn, t as tt} from '../i18n'
 import {useToast} from '../ui/Toast'
 import {useConfirm} from '../ui/Confirm'
 import {useBackend} from '../backend'
@@ -8,8 +9,8 @@ import {byName, FilterChip, ListToolbar, usePref, VIEWS, type SortOption} from '
 import type {AuthType, Identity, VaultHealth} from '../types'
 
 type Sort = 'name' | 'name-desc' | 'type'
-const SORTS: SortOption<Sort>[] = [{value: 'name', label: 'Name A–Z'}, {value: 'name-desc', label: 'Name Z–A'}, {value: 'type', label: 'Type'}]
-const KINDS: {id: AuthType; label: string}[] = [{id: 'key', label: 'Keys'}, {id: 'password', label: 'Passwords'}, {id: 'agent', label: 'ssh-agent'}]
+const SORT_IDS: Sort[] = ['name', 'name-desc', 'type']
+const KIND_IDS: AuthType[] = ['key', 'password', 'agent']
 
 export type KeyMode = 'key' | 'generate' | 'password' | 'agent'
 
@@ -20,7 +21,7 @@ export function keyType(i: Pick<Identity, 'auth_type' | 'public_key'>): string {
   if (pk.startsWith('ssh-rsa')) return 'RSA'
   if (pk.startsWith('ecdsa-')) return 'ECDSA'
   if (pk.startsWith('ssh-dss')) return 'DSA'
-  return ({key: 'Key', password: 'Password', agent: 'ssh-agent'} as Record<string, string>)[i.auth_type] ?? i.auth_type
+  return ({key: tt('Key'), password: tt('Password'), agent: 'ssh-agent'} as Record<string, string>)[i.auth_type] ?? i.auth_type
 }
 
 interface Props {
@@ -35,6 +36,10 @@ interface Props {
 
 /** Keychain: a toolbar, then one card per key, password or agent identity. */
 export function KeychainPage({identities, draft, onNew, onEdit, onChanged}: Props) {
+  const t = useT()
+  const tn = useTn()
+  const SORTS: SortOption<Sort>[] = [{value: 'name', label: t('Name A–Z')}, {value: 'name-desc', label: t('Name Z–A')}, {value: 'type', label: t('Type')}]
+  const KINDS: {id: AuthType; label: string}[] = KIND_IDS.map(id => ({id, label: id === 'key' ? t('Keys') : id === 'password' ? t('Passwords') : 'ssh-agent'}))
   const be = useBackend()
   const toast = useToast()
   const confirm = useConfirm()
@@ -49,7 +54,7 @@ export function KeychainPage({identities, draft, onNew, onEdit, onChanged}: Prop
   const unreadable = health?.unreadable ?? []
   const brokenIds = new Set(unreadable.map(u => u.identity_id).filter(Boolean))
   const [kinds, setKinds] = useState<AuthType[]>([])
-  const [sort, setSort] = usePref<Sort>('vutty.keychain.sort', SORTS.map(o => o.value), 'name')
+  const [sort, setSort] = usePref<Sort>('vutty.keychain.sort', SORT_IDS, 'name')
   const [view, setView] = usePref('vutty.keychain.view', VIEWS, 'grid')
   const present = KINDS.filter(k => identities.some(i => i.auth_type === k.id))
   const activeKinds = kinds.filter(k => present.some(x => x.id === k))
@@ -62,7 +67,7 @@ export function KeychainPage({identities, draft, onNew, onEdit, onChanged}: Prop
   }, [identities, q, sort, activeKinds.join(',')])
 
   const remove = async (i: Identity) => {
-    if (!(await confirm(`Delete identity "${i.name}"? Its secret is removed from the vault.`, {confirmLabel: 'Delete', danger: true}))) return
+    if (!(await confirm(t('Delete identity "{name}"? Its secret is removed from the vault.', {name: i.name}), {confirmLabel: t('Delete'), danger: true}))) return
     try {
       await be.vault.deleteIdentity(i.id)
       onChanged()
@@ -73,20 +78,20 @@ export function KeychainPage({identities, draft, onNew, onEdit, onChanged}: Prop
   const copy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      toast.info('Public key copied')
+      toast.info(t('Public key copied'))
     } catch {
-      toast.error('Clipboard not available')
+      toast.error(t('Clipboard not available'))
     }
   }
   const icon = (i: Identity) => (i.auth_type === 'password' ? <IconLock size={20} /> : i.auth_type === 'agent' ? <IconUser size={20} /> : <IconKey size={20} />)
 
   return (
-    <div className="hosts-page" aria-label="Keychain">
+    <div className="hosts-page" aria-label={t('Keychain')}>
       <div className="toolbar">
-        <button className="split-btn" aria-label="New key" onClick={() => onNew('key')}><IconPlus size={14} /> New key</button>
-        <button className="ghost-btn" aria-label="Generate key" onClick={() => onNew('generate')}><IconKey size={14} /> Generate key</button>
-        <button className="ghost-btn" aria-label="New password" onClick={() => onNew('password')}><IconLock size={14} /> Password</button>
-        <button className="ghost-btn" aria-label="New ssh-agent identity" onClick={() => onNew('agent')}><IconUser size={14} /> ssh-agent</button>
+        <button className="split-btn" aria-label={t('New key')} onClick={() => onNew('key')}><IconPlus size={14} /> {t('New key')}</button>
+        <button className="ghost-btn" aria-label={t('Generate key')} onClick={() => onNew('generate')}><IconKey size={14} /> {t('Generate key')}</button>
+        <button className="ghost-btn" aria-label={t('New password')} onClick={() => onNew('password')}><IconLock size={14} /> {t('Password')}</button>
+        <button className="ghost-btn" aria-label={t('New ssh-agent identity')} onClick={() => onNew('agent')}><IconUser size={14} /> ssh-agent</button>
       </div>
 
       {identities.length > 0 && (
@@ -98,38 +103,37 @@ export function KeychainPage({identities, draft, onNew, onEdit, onChanged}: Prop
         <div className="dx-warn" role="alert">
           <IconWarn size={15} />
           <div>
-            <b>{unreadable.length} saved {unreadable.length === 1 ? 'item' : 'items'} can't be read with this vault's key.</b> They were sealed with another key
-            (a leftover of an older version). Hosts that use them fail with "message authentication failed", and a sync would pass them on to your other machines.
-            Edit each one marked <i>Can't be read</i> and enter it again.
-            {unreadable.filter(u => !u.identity_id).map(u => <div key={u.secret_id}>Also: {u.name}. Edit the host and enter it again.</div>)}
+            <b>{tn(unreadable.length, '{n} saved item can\'t be read with this vault\'s key.', '{n} saved items can\'t be read with this vault\'s key.')}</b>{' '}
+            {t('They were sealed with another key (a leftover of an older version). Hosts that use them fail with "message authentication failed", and a sync would pass them on to your other machines. Edit each one marked "Can\'t be read" and enter it again.')}
+            {unreadable.filter(u => !u.identity_id).map(u => <div key={u.secret_id}>{t('Also: {name}. Edit the host and enter it again.', {name: u.name})}</div>)}
           </div>
         </div>
       )}
-      <h3 className="sec-title">Keys</h3>
-      <div className={'cards' + (view === 'list' ? ' as-list' : '')} role="list" aria-label="Identities" data-view={view}>
+      <h3 className="sec-title">{t('Keys')}</h3>
+      <div className={'cards' + (view === 'list' ? ' as-list' : '')} role="list" aria-label={t('Identities')} data-view={view}>
         {draft !== undefined && (
-          <div className="card draft" aria-label="New key draft" data-testid="draft-card">
+          <div className="card draft" aria-label={t('New key draft')} data-testid="draft-card">
             <span className="tile key-tile"><IconKey size={20} /></span>
-            <div className="meta"><div className="label">{draft || 'Add a label…'}</div><div className="addr">Type unknown</div></div>
+            <div className="meta"><div className="label">{draft || t('Add a label…')}</div><div className="addr">{t('Type unknown')}</div></div>
           </div>
         )}
         {shown.map(i => (
-          <div key={i.id} className="card" role="listitem" onDoubleClick={onEdit ? () => onEdit(i) : undefined} title={onEdit ? `Double-click to edit ${i.name}` : undefined}>
+          <div key={i.id} className="card" role="listitem" onDoubleClick={onEdit ? () => onEdit(i) : undefined} title={onEdit ? t('Double-click to edit {name}', {name: i.name}) : undefined}>
             <span className="tile key-tile">{icon(i)}</span>
             <div className="meta">
-              <div className="label">{i.name}{brokenIds.has(i.id) && <span className="badge warn" title="Sealed with another key: edit it and enter it again">Can't be read</span>}</div>
-              <div className="addr">Type {keyType(i)}{i.certificate ? ' · certificate' : ''}{i.username ? ` · ${i.username}` : ''}</div>
+              <div className="label">{i.name}{brokenIds.has(i.id) && <span className="badge warn" title={t('Sealed with another key: edit it and enter it again')}>{t('Can\'t be read')}</span>}</div>
+              <div className="addr">{t('Type {type}', {type: keyType(i)})}{i.certificate ? ' · ' + t('certificate') : ''}{i.username ? ` · ${i.username}` : ''}</div>
             </div>
             <div className="actions">
-              {i.public_key && <button className="icon ghost" aria-label={`Copy public key of ${i.name}`} title="Copy public key" onClick={() => copy(i.public_key!)}><IconCopy size={14} /></button>}
-              {onEdit && <button className="icon ghost" aria-label={`Edit ${i.name}`} title="Edit" onClick={() => onEdit(i)}><IconEdit size={14} /></button>}
-              <button className="icon ghost danger" aria-label={`Delete ${i.name}`} onClick={() => remove(i)}><IconTrash size={14} /></button>
+              {i.public_key && <button className="icon ghost" aria-label={t('Copy public key of {name}', {name: i.name})} title={t('Copy public key')} onClick={() => copy(i.public_key!)}><IconCopy size={14} /></button>}
+              {onEdit && <button className="icon ghost" aria-label={t('Edit {name}', {name: i.name})} title={t('Edit')} onClick={() => onEdit(i)}><IconEdit size={14} /></button>}
+              <button className="icon ghost danger" aria-label={t('Delete {name}', {name: i.name})} onClick={() => remove(i)}><IconTrash size={14} /></button>
             </div>
           </div>
         ))}
       </div>
-      {identities.length > 0 && shown.length === 0 && <div className="empty-hint">No key matches.</div>}
-      {identities.length === 0 && draft === undefined && <div className="empty-hint">No keys yet. Import a private key, generate one, or save a password.</div>}
+      {identities.length > 0 && shown.length === 0 && <div className="empty-hint">{t('No key matches.')}</div>}
+      {identities.length === 0 && draft === undefined && <div className="empty-hint">{t('No keys yet. Import a private key, generate one, or save a password.')}</div>}
     </div>
   )
 }

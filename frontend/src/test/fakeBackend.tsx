@@ -256,7 +256,12 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
     hosts: {
       listGroups: async () => [...state.groups],
       saveGroup: async g => upsert(state.groups, {sort_order: 0, ...g}, 'g'),
-      deleteGroup: async i => { state.groups = state.groups.filter(g => g.id !== i) },
+      deleteGroup: async i => {
+        const gone = new Set([i])
+        for (let grew = true; grew;) { grew = false; for (const g of state.groups) if (g.parent_id && gone.has(g.parent_id) && !gone.has(g.id)) { gone.add(g.id); grew = true } }
+        state.groups = state.groups.filter(g => !gone.has(g.id))
+        state.hosts = state.hosts.filter(h => !gone.has(h.group_id ?? ""))
+      },
       listHosts: async () => [...state.hosts],
       saveHost: async h => {
         rec('hosts.saveHost', h)
@@ -269,6 +274,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
     session: {
       open: async (h, c, r) => { rec('session.open', h, c, r); return id('s') },
       attach: async s => { rec('session.attach', s) },
+      ack: async (s, n) => { rec('session.ack', s, n) },
       write: async (s, d) => { rec('session.write', s, d) },
       resize: async () => {},
       reconnect: async s => { rec('session.reconnect', s) },
@@ -550,6 +556,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       pickDirectory: async () => '/tmp/dir',
       saveFile: async (_t, name) => '/tmp/' + name,
       openUrl: async u => { rec('system.openUrl', u) },
+      setLanguage: async l => { rec('system.setLanguage', l) },
       info: async () => ({version: '1.1.0-test'}),
       checkUpdate: async () => { rec('system.checkUpdate'); const latest = state.latest ?? '1.1.0-test'; return {current: '1.1.0-test', latest, available: latest !== '1.1.0-test', url: 'https://github.com/vunguyenvu35/vutty/releases/tag/v' + latest, notes: ''} },
       selfUpdateStatus: async () => state.selfUpdate ?? {supported: false, reason: 'this copy of Vutty is not an installed application (a development build)'},

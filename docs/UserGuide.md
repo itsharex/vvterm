@@ -113,6 +113,8 @@ Groups appear as cards with their host count. Click one to open it (a breadcrumb
 
 ![Search](screenshots/41-search-filter.png)
 
+**Deleting a group deletes what is in it.** The confirmation says how many hosts and groups below it go with it (their port forwards too). Move the hosts you want to keep to another group first.
+
 **Quick connect:** type `ssh user@host:port` and press Enter. If it matches a saved host you connect; otherwise *New host* opens pre-filled so you can save it.
 
 ![Quick connect](screenshots/42-quick-connect.png)
@@ -247,6 +249,8 @@ Open **Settings** from the navigation, the gear in the title bar, or **⌘/Ctrl 
 ![Settings window](screenshots/45-settings-general.png)
 
 The menu on the left has **General, Account, Terminal, Security, AI assistant, Sync, Shortcuts, Storage**, then **Theme**, help links (documentation, feature requests, bug reports, release notes, Ko-fi) and the **version**. Changes apply immediately.
+
+**Language.** **General → Interface → Language** sets the language of the whole interface, the menus of the title bar included: **Automatic** (the language of the system, English when Vutty has none of it), **English**, **Tiếng Việt**, **日本語** or **中文**. It changes at once, in every window. What a server or the backend itself says (an error message from the connection, for example) and the names of products and protocols stay as they are.
 
 **Updates.** **Check for updates** (under the help links) asks GitHub for the latest release and compares it with your version. If there is a newer one, **Version X is available** appears: click it to open the release page and download the build for your system (macOS `.dmg` or `.zip`, Windows `.exe`, Linux `.tar.gz`). To update by hand, quit Vutty and replace the old app with the new one; your data is kept outside the app, so nothing is lost. **On a Mac with Apple silicon, Vutty can install the update for you:** open **Help → About → Check for updates**, and when a newer version is found choose **Install and restart**. It downloads the update itself, checks that its checksum list is signed with the project's key and that the download matches it (an update that fails either check is not installed, and says so), puts the new copy in place and starts it; the old copy stays next to it as `vutty.app.previous` for the first half minute. This needs Vutty to be in a folder you can write to (your Applications folder), not running from the disk image; if it is not, About says why. Releases that were not signed, and Windows and Linux copies, use the release page as before. How releases are signed is in [Release signing](ReleaseSigning.md). The check only runs when you click it, and only the release information is read: nothing about you is sent. A pre-release is not offered as an update.
 

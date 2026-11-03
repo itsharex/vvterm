@@ -1,3 +1,4 @@
+import {useT, useTn} from '../i18n'
 import {OS_INFO, OsIcon, osName} from '../ui/OsIcon'
 import {loadView, saveView, ViewMenu, ViewMode} from './ViewMenu'
 import {TagMenu} from './TagMenu'
@@ -85,22 +86,25 @@ function descendants(groups: Group[], id: string): Set<string> {
 }
 
 type Sort = 'name' | 'name-desc' | 'recent' | 'env'
-const SORTS: SortOption<Sort>[] = [{value: 'name', label: 'Name A–Z'}, {value: 'name-desc', label: 'Name Z–A'}, {value: 'recent', label: 'Recently connected'}, {value: 'env', label: 'Environment'}]
+const SORT_IDS: Sort[] = ['name', 'name-desc', 'recent', 'env']
 const ENV_RANK: Record<string, number> = {prod: 0, staging: 1, dev: 2, '': 3}
 
 /** Hosts page: find/connect bar, environment filter, group cards and host cards. */
 export function HostList(p: Props) {
+  const t = useT()
+  const tn = useTn()
+  const SORTS: SortOption<Sort>[] = [{value: 'name', label: t('Name A–Z')}, {value: 'name-desc', label: t('Name Z–A')}, {value: 'recent', label: t('Recently connected')}, {value: 'env', label: t('Environment')}]
   const [q, setQ] = useState('')
   const [env, setEnv] = useState<Env>('')
   const [view, setView] = useState<ViewMode>(loadView)
   const changeView = (v: ViewMode) => { setView(v); saveView(v) }
   const [groupId, setGroupId] = useState('')
-  const [sort, setSort] = usePref<Sort>('vutty.hosts.sort', SORTS.map(o => o.value), 'name')
+  const [sort, setSort] = usePref<Sort>('vutty.hosts.sort', SORT_IDS, 'name')
   useEffect(() => { if (p.resetKey) setGroupId('') }, [p.resetKey])
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const allTags = useMemo(() => Array.from(new Set(p.hosts.flatMap(h => h.tags ?? []))).sort((a, b) => a.localeCompare(b)), [p.hosts])
   // a tag that no host has any more (deleted elsewhere) is dropped from the filter
-  const activeTags = tagFilter.filter(t => allTags.includes(t))
+  const activeTags = tagFilter.filter(tag => allTags.includes(tag))
   const [dropOn, setDropOn] = useState<string | null>(null) // the group (or '' for All hosts) a host is being dragged over
   /** drop target props: a host card dragged over turns the target on, dropping it moves the host */
   const target = (gid: string) => ({
@@ -127,7 +131,7 @@ export function HostList(p: Props) {
     const needle = q.trim().toLowerCase().replace(/^ssh\s+/, '')
     return p.hosts.filter(h => {
       if (env && h.env !== env) return false
-      if (activeTags.length && !(h.tags ?? []).some(t => activeTags.includes(t))) return false
+      if (activeTags.length && !(h.tags ?? []).some(tag => activeTags.includes(tag))) return false
       if (!needle) return true
       return `${h.label} ${h.hostname} ${h.username} ${h.username}@${h.hostname} ${h.username}@${h.hostname}:${h.port} ${(h.tags ?? []).join(' ')}`.toLowerCase().includes(needle)
     })
@@ -176,7 +180,7 @@ export function HostList(p: Props) {
   }
 
   const hostCard = (h: Host) => (
-    <div key={h.id} className="host card" role="listitem" draggable={!!p.onMoveHost} onDragStart={e => { e.dataTransfer.setData(HOST_DRAG, h.id); e.dataTransfer.effectAllowed = 'move' }} onDoubleClick={() => p.onConnect(h)} title={`Double-click to connect to ${h.label}`}>
+    <div key={h.id} className="host card" role="listitem" draggable={!!p.onMoveHost} onDragStart={e => { e.dataTransfer.setData(HOST_DRAG, h.id); e.dataTransfer.effectAllowed = 'move' }} onDoubleClick={() => p.onConnect(h)} title={t('Double-click to connect to {name}', {name: h.label})}>
       {osName(h.os)
         ? (
           <span className="tile os-tile" style={{background: OS_INFO[h.os!].color}} title={`${osName(h.os)}${h.env ? ' · ' + h.env : ''}`} data-os={h.os}>
@@ -184,17 +188,17 @@ export function HostList(p: Props) {
             {h.env && <i className={'env-pip env-' + h.env} aria-label={h.env} />}
           </span>
         )
-        : <span className={'tile env-' + (h.env || 'none')} title={h.env || 'no environment'}><IconServer size={20} /></span>}
+        : <span className={'tile env-' + (h.env || 'none')} title={h.env || t('no environment')}><IconServer size={20} /></span>}
       <div className="meta">
         <div className="label">{h.label}</div>
         <div className="addr">{['ssh', h.telnet_enabled ? 'telnet' : '', h.username].filter(Boolean).join(', ')} · {formatAddr({hostname: h.hostname, port: h.port})}</div>
       </div>
       <div className="actions">
-        <button className="icon ghost" aria-label={`Connect ${h.label}`} onClick={() => p.onConnect(h)}><IconPlay size={14} /></button>
-        {p.onTelnet && h.telnet_enabled && <button className="icon ghost" aria-label={`Telnet ${h.label}`} title={`Connect with Telnet on port ${h.telnet_port || 23} (unencrypted)`} onClick={() => p.onTelnet!(h)}><IconTerminal size={14} /></button>}
-        <button className="icon ghost" aria-label={`Forwards ${h.label}`} onClick={() => p.onForwards(h)}><IconForward size={14} /></button>
-        <button className="icon ghost" aria-label={`Edit ${h.label}`} onClick={() => p.onEdit(h)}><IconEdit size={14} /></button>
-        <button className="icon ghost danger" aria-label={`Delete ${h.label}`} onClick={() => p.onDelete(h)}><IconTrash size={14} /></button>
+        <button className="icon ghost" aria-label={t('Connect {name}', {name: h.label})} onClick={() => p.onConnect(h)}><IconPlay size={14} /></button>
+        {p.onTelnet && h.telnet_enabled && <button className="icon ghost" aria-label={t('Telnet {name}', {name: h.label})} title={t('Connect with Telnet on port {port} (unencrypted)', {port: h.telnet_port || 23})} onClick={() => p.onTelnet!(h)}><IconTerminal size={14} /></button>}
+        <button className="icon ghost" aria-label={t('Forwards {name}', {name: h.label})} onClick={() => p.onForwards(h)}><IconForward size={14} /></button>
+        <button className="icon ghost" aria-label={t('Edit {name}', {name: h.label})} onClick={() => p.onEdit(h)}><IconEdit size={14} /></button>
+        <button className="icon ghost danger" aria-label={t('Delete {name}', {name: h.label})} onClick={() => p.onDelete(h)}><IconTrash size={14} /></button>
       </div>
     </div>
   )
@@ -203,10 +207,10 @@ export function HostList(p: Props) {
     <div className="hosts-page">
       <div className="connect-bar">
         <IconSearch size={16} />
-        <input aria-label="Search hosts" placeholder="Find a host or ssh user@hostname…" value={q}
+        <input aria-label={t('Search hosts')} placeholder={t('Find a host or ssh user@hostname…')} value={q}
           onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && connectFromBar()} />
         <button className="connect-btn" disabled={!goTo} onClick={connectFromBar}
-          title={goTo ? ('host' in goTo ? `Connect to ${goTo.host.label}` : 'Connect to a new host') : q.trim() ? 'Keep typing the name of a host, or an address such as user@host' : undefined}>Connect</button>
+          title={goTo ? ('host' in goTo ? t('Connect to {name}', {name: goTo.host.label}) : t('Connect to a new host')) : q.trim() ? t('Keep typing the name of a host, or an address such as user@host') : undefined}>{t('Connect')}</button>
       </div>
 
       <div className="toolbar">
@@ -226,8 +230,8 @@ export function HostList(p: Props) {
       </div>
 
       {!filtering && current && (
-        <nav className="crumbs" aria-label="Group path">
-          <button className={'link' + (dropOn === '' ? ' drop-over' : '')} onClick={() => setGroupId('')} {...target('')}>All hosts</button>
+        <nav className="crumbs" aria-label={t('Group path')}>
+          <button className={'link' + (dropOn === '' ? ' drop-over' : '')} onClick={() => setGroupId('')} {...target('')}>{t('All hosts')}</button>
           {trail.map((g, i) => (
             <span key={g.id}><IconChevron size={12} /> {i === trail.length - 1 ? <b>{g.name}</b> : <button className="link" onClick={() => setGroupId(g.id)}>{g.name}</button>}</span>
           ))}
@@ -236,19 +240,19 @@ export function HostList(p: Props) {
 
       {!filtering && subgroups.length > 0 && (
         <>
-          <h3 className="sec-title">Groups</h3>
+          <h3 className="sec-title">{t('Groups')}</h3>
           <div className={'cards' + (view === 'list' ? ' as-list' : '')}>
             {subgroups.map(g => (
-              <div key={g.id} className={'group card' + (dropOn === g.id ? ' drop-over' : '')} role="button" tabIndex={0} aria-label={`Open group ${g.name}`} {...target(g.id)}
+              <div key={g.id} className={'group card' + (dropOn === g.id ? ' drop-over' : '')} role="button" tabIndex={0} aria-label={t('Open group {name}', {name: g.name})} {...target(g.id)}
                 onClick={() => setGroupId(g.id)} onKeyDown={e => e.key === 'Enter' && setGroupId(g.id)}>
                 <span className="tile group-tile" style={g.color ? {background: g.color} : undefined}><IconFolder size={20} /></span>
                 <div className="meta">
                   <div className="label">{g.name}</div>
-                  <div className="addr">{count(g)} {count(g) === 1 ? 'Host' : 'Hosts'}</div>
+                  <div className="addr">{tn(count(g), '{n} Host', '{n} Hosts')}</div>
                 </div>
                 <div className="actions" onClick={e => e.stopPropagation()}>
-                  <button className="icon ghost" aria-label={`Edit group ${g.name}`} onClick={() => p.onEditGroup(g)}><IconEdit size={14} /></button>
-                  <button className="icon ghost danger" aria-label={`Delete group ${g.name}`} onClick={() => p.onDeleteGroup(g)}><IconTrash size={14} /></button>
+                  <button className="icon ghost" aria-label={t('Edit group {name}', {name: g.name})} onClick={() => p.onEditGroup(g)}><IconEdit size={14} /></button>
+                  <button className="icon ghost danger" aria-label={t('Delete group {name}', {name: g.name})} onClick={() => p.onDeleteGroup(g)}><IconTrash size={14} /></button>
                 </div>
               </div>
             ))}
@@ -256,19 +260,19 @@ export function HostList(p: Props) {
         </>
       )}
 
-      <h3 className="sec-title">Hosts</h3>
-      <div className={'cards' + (view === 'list' ? ' as-list' : '')} role="list" aria-label="Hosts" data-view={view}>
+      <h3 className="sec-title">{t('Hosts')}</h3>
+      <div className={'cards' + (view === 'list' ? ' as-list' : '')} role="list" aria-label={t('Hosts')} data-view={view}>
         {p.draft !== undefined && (
-          <div className="card draft" aria-label="New host draft" data-testid="draft-card">
+          <div className="card draft" aria-label={t('New host draft')} data-testid="draft-card">
             <span className="tile env-none"><IconServer size={20} /></span>
-            <div className="meta"><div className="label">{p.draft || 'Enter IP or Hostname…'}</div><div className="addr">ssh</div></div>
+            <div className="meta"><div className="label">{p.draft || t('Enter IP or Hostname…')}</div><div className="addr">ssh</div></div>
           </div>
         )}
         {visibleHosts.map(hostCard)}
       </div>
       {visibleHosts.length === 0 && p.draft === undefined && (
         <div className="empty-hint">
-          {filtering ? 'No hosts match.' : current ? 'This group has no hosts yet.' : 'No hosts yet. Add one to get started.'}
+          {filtering ? t('No hosts match.') : current ? t('This group has no hosts yet.') : t('No hosts yet. Add one to get started.')}
         </div>
       )}
     </div>

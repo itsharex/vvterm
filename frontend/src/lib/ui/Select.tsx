@@ -1,5 +1,6 @@
 import {KeyboardEvent, useEffect, useId, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import {createPortal} from 'react-dom'
+import {useT} from '../i18n'
 
 export interface SelectOption {
   value: string
@@ -27,6 +28,7 @@ interface Props {
  * when there is no room below.
  */
 export function Select({label, value, onChange, options, placeholder, className = '', disabled}: Props) {
+  const t = useT()
   const id = useId()
   const trigger = useRef<HTMLButtonElement>(null)
   const menu = useRef<HTMLDivElement>(null)
@@ -124,7 +126,7 @@ export function Select({label, value, onChange, options, placeholder, className 
     <div className={'select-wrap ' + className}>
       <button ref={trigger} type="button" className={'select-trigger' + (open ? ' open' : '')} role="combobox" disabled={disabled}
         aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? id : undefined}
-        aria-label={`${label}, ${current?.label ?? placeholder ?? 'none'}`}
+        aria-label={`${label}, ${current?.label ?? placeholder ?? t('none')}`}
         onClick={() => (open ? close(false) : openMenu())} onKeyDown={onTriggerKey}>
         <span className={'select-value' + (current ? '' : ' placeholder')}>{current?.label ?? placeholder ?? ''}</span>
         <svg className="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>

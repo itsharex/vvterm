@@ -1,5 +1,6 @@
 import {useState} from 'react'
 import {IconCopy} from '../ui/Icons'
+import {useT} from '../i18n'
 
 /** Splits an answer into plain paragraphs and fenced code blocks, so a command or a log excerpt reads as code. */
 export function splitBlocks(text: string): Array<{code: boolean; text: string; lang?: string}> {
@@ -23,13 +24,14 @@ function Inline({text}: {text: string}) {
 }
 
 export function CodeBlock({text, lang}: {text: string; lang?: string}) {
+  const t = useT()
   const [copied, setCopied] = useState(false)
   const copy = () => {
     void navigator.clipboard?.writeText(text).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1500) }).catch(() => {})
   }
   return (
     <div className="ai-code">
-      <div className="ai-code-head"><span>{lang || 'text'}</span><button className="link" onClick={copy} aria-label="Copy code"><IconCopy size={13} /> {copied ? 'Copied' : 'Copy'}</button></div>
+      <div className="ai-code-head"><span>{lang || 'text'}</span><button className="link" onClick={copy} aria-label={t('Copy code')}><IconCopy size={13} /> {copied ? t('Copied') : t('Copy')}</button></div>
       <pre><code>{text}</code></pre>
     </div>
   )

@@ -842,6 +842,18 @@ describe('App: confirmations are in-app dialogs (a desktop webview has no confir
     expect(native).not.toHaveBeenCalled()
   })
 
+  it('deleting a group asks with what is inside and deletes its hosts and groups too', async () => {
+    const be = await setupWithDialogs({groups: [{id: 'g1', name: 'prod', sort_order: 0}, {id: 'g2', name: 'edge', parent_id: 'g1', sort_order: 0}],
+      hosts: [host({id: 'h1', label: 'web-1', group_id: 'g1'}), host({id: 'h2', label: 'db-1', group_id: 'g2'}), host({id: 'h3', label: 'lab-1'})]})
+    await unlock(be)
+    await userEvent.click(screen.getByLabelText('Delete group prod'))
+    const dlg = await screen.findByRole('alertdialog')
+    expect(dlg).toHaveTextContent('Delete group "prod" with 2 hosts and 1 group below it? The hosts are deleted too')
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Delete'}))
+    await waitFor(() => expect(be.state.groups).toHaveLength(0))
+    expect(be.state.hosts.map(x => x.id)).toEqual(['h3'])
+  })
+
   it('closing a tab (when asked for) and deleting a host use the same in-app dialog', async () => {
     const native = vi.spyOn(window, 'confirm')
     const be = await setupWithDialogs({settings: {...DEFAULT_SETTINGS, font_family: 'monospace', confirm_tab_close: true}})

@@ -6,7 +6,7 @@
 
 ## Go (unit + integration)
 
-### `app` (50)
+### `app` (82)
 
 - TestDataDirEnvOverride
 - TestBuildWiresRealAdapters
@@ -18,7 +18,9 @@
 - TestSameProgram
 - TestPrepareSettingsHelperLinksThePlistAndRefreshesOnRebuild
 - TestAdoptLegacyDirMovesTheOldFolderOnce
+- TestAdoptLegacyDirPrefersTheNewestOldName
 - TestAdoptLegacyDBRenamesTheOldDatabase
+- TestAdoptLegacyDBTakesAVutermDatabase
 - TestKeychainAccountStaysTheOneFromBeforeTheRename
 - TestOldDataDirEnvironmentVariableStillWorks
 - TestBridgeConnectionFileIsPrivateAndRemovedOnClose
@@ -38,6 +40,10 @@
 - TestBridgeRefusesBrowserOriginsAndForeignHostNames
 - TestReadOnlyCallAssistantPolling
 - TestBridgeAllowsResetAndClearCacheFromSettings
+- TestEveryMenuLabelIsTranslated
+- TestMenuLangChangesLabels
+- TestSetLanguageValidates
+- TestMenuLangFromLocale
 - TestMenuBarHasTheUsualMenus
 - TestFileMenuAsksTheWindowForTheRightActions
 - TestViewMenuZoomsSplitsAndShowsPages
@@ -48,6 +54,32 @@
 - TestAcceleratorFromShortcutText
 - TestMenuShowsTheCurrentShortcutsOnMac
 - TestATwoStepShortcutHasNoMenuKey
+- TestBundleRootOf
+- TestCheckBundleOnlyLetsThroughThisApplicationInOneWholePiece
+- TestTheSwapScriptWaitsForTheAppToEndThenPutsTheNewCopyInPlaceAndKeepsTheOldOne
+- TestTheSwapScriptPutsTheOldCopyBackWhenTheNewOneCannotBeMovedIn
+- TestExtractKeepsTheProgramRunnableAndSymlinksAsTheyWere
+- TestExtractRefusesAZipWithNoApplicationOrWithTwo
+- TestAWholeUpdateWithTheRealUnpacker
+- TestOnlyAnInstalledApplicationInAFolderYouCanWriteToIsOfferedTheUpdate
+- TestAnUpdateThatIsSignedAndWholeIsUnpackedAndHandedOver
+- TestNothingIsInstalledWhenSomethingIsWrongWithTheRelease
+- TestAReleaseSignedByAnotherKeyIsRefusedAndTheAppIsNotEvenDownloaded
+- TestTheNameInTheSignedListMustCarryTheVersionOfTheRelease
+- TestAReleaseThatSendsTheDownloadToAnotherHostIsStopped
+- TestACancelledUpdateStopsAndLeavesNothingToApply
+- TestAFailureToUnpackOrToApplyIsReported
+- TestTheBuiltInKeyIsAValidOneAndOtherSystemsSayTheyCannotUpdateThemselves
+- TestGapDetectorOnlySeesALongPauseBetweenTicks
+- TestGapDetectorIgnoresTheMonotonicClock
+- TestWatchSleepGapCallsBackOncePerSleepAndStopsWithItsContext
+- TestTheVaultLocksWhenTheComputerSleepsAndSaysWhy
+- TestTheVaultStaysOpenWhenTheSettingIsOff
+- TestParseSSHLink
+- TestParseSSHLinkRefusesWhatIsNotAPlainSSHLink
+- TestALinkWaitsUntilTheScreenTakesItOnce
+- TestTheSystemSleepNotificationReachesTheProgram
+- TestTheSleepLockIsTiedToTheSystemNotification
 - TestWindowLauncherStartsEveryTimeAndClosesAll
 - TestOpenWindowFallsBackWithoutNativeWindows
 - TestBridgeRelaysTheSessionsAWindowOpenedAndEveryOtherEvent
@@ -137,7 +169,7 @@
 - TestContainsFlagsMaskAndSecrets
 - TestRedactIsIdempotent
 
-### `internal/exporter` (8)
+### `internal/exporter` (9)
 
 - TestSSHConfigRoundTripThroughImporter
 - TestSSHConfigKeysOnlyWhenRequestedWith0600
@@ -147,6 +179,7 @@
 - TestPlainJSONHasNoSecretsOrTombstones
 - TestBackupRoundTrip
 - TestSSHConfigSkipsHostWithInjectedHostname
+- TestForwardAgentIsExportedAndComesBack
 
 ### `internal/forward` (9)
 
@@ -160,18 +193,30 @@
 - TestSocks5FailureCodes
 - TestSocks5RejectsWrongVersionAndAuthOnly
 
-### `internal/importer` (10)
+### `internal/importer` (22)
 
 - TestParseBasicBlocksAndWildcards
 - TestIncludeGroupsByFileNameAndLoops
 - TestParseMissingFile
 - TestParseMetaComment
-- TestParseMetaCommentFromBeforeTheRename
+- TestParseMetaCommentFromBeforeTheRenames
 - TestParseJumpSpec
 - TestBuildPlanJumpsForwardsGroups
 - TestPublicForwardBindIsFlagged
 - TestConflictPolicies
 - TestJumpToExistingHostReusesIt
+- TestForwardAgentIsImportedWithAWarning
+- TestAWSDescribeInstances
+- TestAWSOptions
+- TestAWSQueryShapesAreRecognisedToo
+- TestGoogleCloudInstancesList
+- TestAnsibleInventoryJSON
+- TestAnsibleInventoryINI
+- TestAnEntryThatCannotBeUsedIsSkippedWithAWarningAndTheRestGoesOn
+- TestExpandRange
+- TestCSVListing
+- TestInventoryRefusesWhatIsNotAListing
+- TestInventoryBecomesGroupsAndHostsThroughBuild
 
 ### `internal/localtty` (5)
 
@@ -215,7 +260,7 @@
 - TestDownloadOfDirectoryIsRefused
 - TestUploadedFileContentOnServer
 
-### `internal/sqlitedb` (18)
+### `internal/sqlitedb` (19)
 
 - TestActivityListsNewestFirstAndRoundTrips
 - TestActivityFilters
@@ -231,13 +276,27 @@
 - TestUpgradeFromSchemaV1KeepsData
 - TestUpgradeFromSchemaV2AddsServerTypeAndForwardLabel
 - TestHostTelnetAndThemeRoundTrip
+- TestHostForwardAgentRoundTrips
 - TestIdentityCertificateRoundTrips
 - TestADatabaseThatStoppedHalfWayIsCompletedOnOpen
 - TestEveryAdditionIsPresentOnAFreshDatabaseAndTheStepCanRunTwice
 - TestADatabaseAtTheNewestVersionStillGetsColumnsAddedLater
 
-### `internal/sshx` (19)
+### `internal/sshx` (32)
 
+- TestGateHoldsWriterUntilTerminalCatchesUp
+- TestGateLateAndRepeatedAcksDoNoHarm
+- TestGateCloseOfBatcherReleasesAWaitingWriter
+- TestGateGivesUpWhenNobodyAnswers
+- TestPasswordThenVerificationCodeAsksOnlyForTheCode
+- TestAWrongCodeIsRefusedAndTheUserIsNotAskedForeverForThePassword
+- TestAKeyThenVerificationCodeAsksForTheCode
+- TestAKeyAloneNeverAsksAnything
+- TestPasswordAndCodeAskedInOneRoundLikePAM
+- TestWithoutAPasswordSavedEveryQuestionGoesToTheUser
+- TestACancelledQuestionStopsTheLogin
+- TestAServerThatNeedsACodeSaysSoWhenThereIsNobodyToAsk
+- TestLooksLikeCode
 - TestKnownHostsListEachNameOfALineAsItsOwnRow
 - TestKnownHostsListOfAMissingFileIsEmpty
 - TestForgetOneNameKeepsTheOtherAndEverythingElse
@@ -322,7 +381,19 @@
 - TestServerLogoutIsACleanEndAndCloseIsToo
 - TestConnectionRefusedIsReported
 
-### `internal/usecase` (164)
+### `internal/updater` (9)
+
+- TestTheKeyBuiltIntoTheAppIsAValidPublicKey
+- TestSignAndVerifyRoundTripAndRefuseAnythingElse
+- TestParseChecksums
+- TestGitHubHost
+- TestDownloadHashesWhatArrivesAndReportsProgress
+- TestDownloadStopsAtTheLimitWhateverTheServerSays
+- TestFetchRefusesWhatIsTooBigOrNotOK
+- TestRequestsStayOnAllowedHostsAndOverHTTPS
+- TestLatestReleaseReadsTagAndAssets
+
+### `internal/usecase` (216)
 
 - TestLogRecordsConnectingAndClosingATab
 - TestLogRecordsAFailedConnectionAndALostOne
@@ -334,6 +405,11 @@
 - TestNoActivityStoreMeansNoHistoryAndNoCrash
 - TestKnownHostsListAndForgetThroughTheService
 - TestSummarizeTransferAndByteFormatting
+- TestForwardAgentOffersNothingByDefault
+- TestForwardAgentOffersTheKeyOfTheHostWhenThereIsNoAgent
+- TestForwardAgentUsesTheRunningSSHAgentWhenThereIsOne
+- TestForwardAgentThatCannotBeSetUpStillOpensTheTerminalAndSaysWhy
+- TestForwardAgentRefusedByTheServerStillOpensTheTerminal
 - TestGatewayEnforcesToolPolicy
 - TestUntrustedServerNeverRunsASideEffectToolUnasked
 - TestTerminalToolsAndAutoRun
@@ -363,6 +439,11 @@
 - TestImagesNeedTheUsersConfirmationAndAProviderThatTakesThem
 - TestProvidersAnswerAtOnceAndDetectionRunsInTheBackground
 - TestReadOnlyCommandsRunWithoutAskingAndOnlyThose
+- TestTerminalAsksForTheVerificationCodeAndSignsInWithIt
+- TestAWrongVerificationCodeEndsTheConnectionWithAReason
+- TestCancellingTheQuestionClosesTheConnection
+- TestAnAnswerWithNoQuestionWaitingIsRefused
+- TestAQuestionAskedBeforeTheScreenListenedIsAskedAgainOnAttach
 - TestLocalTerminalSessionEndToEnd
 - TestDeviceSessionFailuresAreReportedInTheTab
 - TestDeviceLostIsAnErrorNotACleanEnd
@@ -377,12 +458,24 @@
 - TestTelnetHasItsOwnLoginAndSavedPassword
 - TestTelnetLatin1ServersAreConvertedBothWays
 - TestTerminalActivityKeepsTheVaultUnlocked
+- TestRunOnHostsCollectsEachHostsOutputAndExitCode
+- TestRunOnHostsRefusesAHostWhoseKeyIsNotTrustedYet
+- TestRunOnHostsGivesUpOnASlowHostAfterTheTimeout
+- TestCancelStopsTheRunningHostsAndTheOnesNotStarted
+- TestOutputIsCappedAndSaysSo
+- TestRunValidatesWhatItIsGiven
+- TestOnlyTheLastRunsAreKeptAndAForgottenRunIsGone
+- TestExpandHostVars
 - TestParseShellHistoryKeepsNewestFirstWithoutRepeats
 - TestParseShellHistoryDropsMultiLineAndSecretsAndHugeLines
 - TestHostHistoryIsOffWhenSuggestionsAreOff
 - TestSuggestSettingsDefaultAndPersist
 - TestHistoryFromFilesReadsZshAndBashNewestFirst
 - TestReadTailStartsAtALineAndKeepsTheEnd
+- TestImportInventoryAddsHostsAndAGroupAndSaysWhatItRead
+- TestImportInventoryAgainFollowsTheConflictChoice
+- TestImportInventoryRefusesWhatItCannotRead
+- TestImportInventoryWorksWithTheVaultLocked
 - TestAddKeyPairAcceptsAMatchingPublicKeyAndCertificate
 - TestAddKeyPairWithoutThePublicPartsIsAnOrdinaryImport
 - TestAddKeyPairRefusesWhatDoesNotBelong
@@ -393,6 +486,9 @@
 - TestLocalMkdirRenameDeleteNeverOverwrite
 - TestLocalProtectsRootAndHome
 - TestLocalChmodChangesTheBitsAndRefusesNonsense
+- TestLocalCopyCopiesFoldersWithContentAndKeepsModes
+- TestLocalCopyAsksAboutExistingFilesAndReplacesOnlyOnOverwrite
+- TestLocalCopyRefusesIntoItselfIgnoresLinksAndNeverCopiesOntoItself
 - TestQueueUploadsAFolderInTheBackgroundAndReportsIt
 - TestQueueDownloadsAFolder
 - TestConflictsListWhatWouldBeReplaced
@@ -427,6 +523,9 @@
 - TestBackupExportImportIntoFreshInstall
 - TestExportPlainJSONHasNoSecrets
 - TestSyncTwoMachinesEndToEnd
+- TestJoinRemoteVaultKeepsLocalHostsAndSecrets
+- TestReplaceRemoteOverwritesAnUnreadableRepositoryAndKeepsACopy
+- TestJoinRemoteVaultNeedsAnUnlockedVaultAndABundle
 - TestSyncRequiresUnlockedVaultAndRepoWithBundle
 - TestSettingsValidationAndPersistence
 - TestOldSettingsFileGetsDefaultsForNewFields
@@ -445,6 +544,20 @@
 - TestHighlightOutputIsOnForNewAndOldSettingsFilesAndCanBeSwitchedOff
 - TestTerminalMouseSettingsDefaultsAndValidation
 - TestSyncThroughAFolderEndToEnd
+- TestUpdateIdentityRenamesAndReplacesAPasswordWhereItIs
+- TestUpdateIdentityReplacesAKeyAndTheHostConnectsWithTheNewOne
+- TestUpdateIdentityOfAnAgentIdentityAndOfALockedVault
+- TestLineWriterWritesLinesWithTheirTime
+- TestLineWriterDropsColoursAndTitlesAndKeepsTheText
+- TestLineWriterDoesWhatTheTerminalDidToTheLine
+- TestLineWriterIsNotConfusedByAChunkBoundary
+- TestLineWriterMarksANewDayAndCutsALineThatNeverEnds
+- TestASessionIsWrittenToATextFileWithTheHostAndTheEnd
+- TestNoLogIsWrittenWhenItIsOffOrForAHostThatIsNotProductionInProdMode
+- TestAFolderThatCannotBeUsedDoesNotStopTheTerminalAndTheLogsSayWhy
+- TestASessionThatNeverPrintsLeavesNoFile
+- TestSessionLogSettingsAreCheckedAndKept
+- TestLanguageSettingIsCheckedAndKept
 - TestSessionFullLifecycle
 - TestAConnectionReportsHowFarItGotBeforeItIsReady
 - TestAConnectionThatFailsReportsNoSuchProgressAsDone
@@ -460,6 +573,7 @@
 - TestAttachReplaysStateAndBuffersOutput
 - TestAttachReplaysPendingHostKeyPrompt
 - TestAttachReplaysClosedState
+- TestOutputWaitsForTheTerminalToCatchUp
 - TestSftpBrowseTransferRenameDelete
 - TestSftpSessionsAreIndependentAndCloseIsIdempotent
 - TestSftpThroughAJumpHost
@@ -473,6 +587,11 @@
 - TestResetSettingsKeepsAccountAndSyncTarget
 - TestClearCacheRemovesCacheFilesAndForgetsTheAITools
 - TestClearCacheWithoutAFolderIsFine
+- TestConfirmProdIsOnByDefaultAndTheChoiceSurvivesARestartAndAReset
+- TestSettingsWrittenByAnOlderVersionGetTheProductionCheckOn
+- TestLockOnSleepIsOnByDefaultAndTheChoiceSurvivesARestartAndAReset
+- TestSettingsOfAnOlderVersionLockOnSleep
+- TestLockBecauseLocksAnOpenVaultOnceAndSaysWhy
 - TestTestConnectionSucceedsWithTypedPasswordAndStoresNothing
 - TestTestConnectionKnownHostSkipsPromptSecondTime
 - TestTestConnectionWithSavedIdentity
@@ -488,8 +607,12 @@
 - TestTransferRefusesBadInput
 - TestUploadRefusesFoldersNestedTooDeeply
 - TestDownloadIgnoresNamesThatWouldEscapeTheFolder
+- TestHealthFindsTheSecretsThatTheKeyCannotOpenAndNamesTheirOwners
+- TestHealthNeedsAnUnlockedVault
+- TestSyncSendsNothingWhenTheVaultKeyIsNotTheHeadersKey
+- TestLocalEmptyIsTrueUntilThisMachineHoldsSomething
 
-### `internal/vault` (23)
+### `internal/vault` (28)
 
 - TestCreateRejectsWeakPassword
 - TestCreateTwiceFails
@@ -514,8 +637,18 @@
 - TestHintSurvivesLockReopenAndPasswordChange
 - TestHintTooLongIsRejected
 - TestKeychainNeedsTheAuthenticator
+- TestKeychainRefusesAStaleKeyEvenWhenTheVaultHasNoSecrets
+- TestKeychainUnlockStillWorksWithTheRightKey
+- TestAVaultFromBeforeTheKeyCheckGetsOneAtTheNextPasswordUnlock
+- TestKeyCheckSurvivesChangePasswordAndAdopt
+- TestCheckKeyAndUnreadable
 
-**Go test functions: 446** (table-driven cases and sub-tests are extra).
+### `tools/updatesign` (2)
+
+- TestKeygenSignVerifyRoundTripAndNeverOverwritesAKey
+- TestSigningKeyFromTheEnvironmentAndBadInput
+
+**Go test functions: 573** (table-driven cases and sub-tests are extra).
 
 ## Frontend (Vitest)
 

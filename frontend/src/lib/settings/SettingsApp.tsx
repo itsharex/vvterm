@@ -3,6 +3,7 @@ import {useBackend} from '../backend'
 import {DEFAULT_SETTINGS} from './defaults'
 import {useAppearance} from './appearance'
 import {SettingsWindow} from './SettingsWindow'
+import {useT} from '../i18n'
 import type {Settings, VaultStatus} from '../types'
 
 /** What the window shows until the real status arrives (nothing can be changed then). */
@@ -27,6 +28,7 @@ const REFRESH_EVERY_MS = 3000
  * values are re-read whenever this window is focused again.
  */
 export default function SettingsApp() {
+  const t = useT()
   const be = useBackend()
   const [cached] = useState(readCache)
   const [settings, setSettings] = useState<Settings>(cached?.settings ?? DEFAULT_SETTINGS)
@@ -59,7 +61,7 @@ export default function SettingsApp() {
   }, [appearance])
   useEffect(() => { document.documentElement.style.setProperty('zoom', String((settings.zoom || 100) / 100)) }, [settings.zoom])
   useEffect(() => { document.documentElement.dataset.motion = settings.reduce_motion ? 'reduced' : 'full' }, [settings.reduce_motion])
-  useEffect(() => { document.title = 'Settings' }, [])
+  useEffect(() => { document.title = t('Settings') }, [t])
 
   // the window is up at once with the values it showed last time; nothing can be saved until the real ones arrive (see SettingsWindow stale)
   return (

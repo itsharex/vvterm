@@ -1,26 +1,35 @@
 import {useEffect, useRef, useState} from 'react'
 import type {Backend} from '../backend'
 import {useBackend} from '../backend'
+import {t, tn} from '../i18n'
 import {formatBytes} from './format'
 import type {QueueDirection, QueueJob, TransferResult} from '../types'
 
 /** "Uploaded 12 files and 3 folders (1.2 MB), 2 left as they were" */
 export function summarize(verb: string, r: Pick<TransferResult, 'files' | 'dirs' | 'bytes' | 'skipped' | 'ignored'>): string {
   const parts = [
-    r.files ? `${r.files} ${r.files === 1 ? 'file' : 'files'}` : '',
-    r.dirs ? `${r.dirs} ${r.dirs === 1 ? 'folder' : 'folders'}` : '',
+    r.files ? tn(r.files, '{n} file', '{n} files') : '',
+    r.dirs ? tn(r.dirs, '{n} folder', '{n} folders') : '',
   ].filter(Boolean)
-  let text = parts.length ? `${verb} ${parts.join(' and ')} (${formatBytes(r.bytes)})` : 'Nothing to transfer'
-  if (r.skipped.length) text += `, ${r.skipped.length} left as they were`
-  if (r.ignored.length) text += `, ${r.ignored.length} ${r.ignored.length === 1 ? 'link' : 'links'} ignored`
-  return text
+  const what = parts.length === 2 ? t('{a} and {b}', {a: parts[0], b: parts[1]}) : parts[0]
+  const size = formatBytes(r.bytes)
+  const sentence = verb === 'Uploaded' ? t('Uploaded {what} ({size})', {what, size})
+    : verb === 'Saved' ? t('Saved {what} ({size})', {what, size})
+    : verb === 'Synced' ? t('Synced {what} ({size})', {what, size})
+    : verb === 'Copied' ? t('Copied {what} ({size})', {what, size})
+    : `${verb} ${what} (${size})`
+  const extra = [
+    r.skipped.length ? tn(r.skipped.length, '{n} left as they were', '{n} left as they were') : '',
+    r.ignored.length ? tn(r.ignored.length, '{n} link ignored', '{n} links ignored') : '',
+  ].filter(Boolean)
+  return [parts.length ? sentence : t('Nothing to transfer'), ...extra].reduce((a, b) => t('{a}, {b}', {a, b}))
 }
 
 /** The one question asked when files already exist where they are going. */
 export function replaceQuestion(r: {skipped: string[]}, where: string): string {
-  if (r.skipped.length === 1) return `${r.skipped[0]} already exists in ${where}. Replace it?`
+  if (r.skipped.length === 1) return t('{name} already exists in {where}. Replace it?', {name: r.skipped[0], where})
   const first = r.skipped.slice(0, 3).join(', ') + (r.skipped.length > 3 ? ', …' : '')
-  return `${r.skipped.length} files already exist in ${where} (${first}). Replace them?`
+  return t('{n} files already exist in {where} ({first}). Replace them?', {n: r.skipped.length, where, first})
 }
 
 /** The word a finished job's summary starts with. */
@@ -34,7 +43,7 @@ type Ask = (message: string, options?: {confirmLabel?: string; danger?: boolean}
  */
 export async function queueTransfer(be: Backend, ask: Ask, sid: string, direction: 'upload' | 'download', sources: string[], destDir: string): Promise<string> {
   const clash = await be.sftp.conflicts(sid, direction, sources, destDir)
-  const overwrite = clash.length > 0 && (await ask(replaceQuestion({skipped: clash}, destDir), {confirmLabel: 'Replace', danger: true}))
+  const overwrite = clash.length > 0 && (await ask(replaceQuestion({skipped: clash}, destDir), {confirmLabel: t('Replace'), danger: true}))
   return be.sftp.enqueue(sid, {direction, sources, destDir, overwrite})
 }
 
