@@ -43,7 +43,7 @@ type Dialog =
   | {k: 'group'; group?: Group}
   | {k: 'forward'; forward?: PortForward; hostId?: string}
   | {k: 'snippet'; snippet?: Snippet}
-  | {k: 'key'; mode: KeyMode}
+  | {k: 'key'; mode: KeyMode; identity?: Identity}
   | {k: 'serial'}
   | {k: 'data'}
   | {k: 'about'; check?: boolean}
@@ -493,8 +493,8 @@ export default function App({initial}: {/** an app window opened for this place 
                 onDeleteGroup={delGroup} onQuickConnect={q => setDialog({k: 'host', prefill: q})} />
             )}
             {page === 'keychain' && (
-              <KeychainPage identities={identities} draft={dialog?.k === 'key' ? draft : undefined}
-                onNew={mode => { setDraft(''); setDialog({k: 'key', mode}) }} onChanged={() => void refreshData()} />
+              <KeychainPage identities={identities} draft={dialog?.k === 'key' && !dialog.identity ? draft : undefined}
+                onNew={mode => { setDraft(''); setDialog({k: 'key', mode}) }} onEdit={i => setDialog({k: 'key', mode: i.auth_type, identity: i})} onChanged={() => void refreshData()} />
             )}
             {page === 'snippets' && (
               <SnippetsPage snippets={snippets} canRun={tabs.some(isTerminalTab)} onNew={() => setDialog({k: 'snippet'})}
@@ -521,7 +521,7 @@ export default function App({initial}: {/** an app window opened for this place 
               onClose={close} onChanged={() => setFwTick(n => n + 1)} onDraft={setFwDraft} />
           )}
           {dialog?.k === 'serial' && <SerialPanel onClose={close} onConnect={(path, baud) => { close(); openDevice(`serial:${path}@${baud}`, portName(path)) }} />}
-          {dialog?.k === 'key' && <KeyPanel key={dialog.mode} mode={dialog.mode} onClose={close} onChanged={() => void refreshData()} onDraft={setDraft} />}
+          {dialog?.k === 'key' && <KeyPanel key={dialog.identity?.id ?? dialog.mode} mode={dialog.mode} identity={dialog.identity} onClose={close} onChanged={() => void refreshData()} onDraft={setDraft} />}
           {dialog?.k === 'snippet' && <SnippetForm key={dialog.snippet?.id ?? 'new'} snippet={dialog.snippet} onClose={close} onSaved={() => { close(); void refreshData() }} />}
         </div>
         <Workspace tabs={tabs} activeTab={onHome ? '' : termActive} settings={settings} appearance={appearance} shortcuts={bindings} hosts={hosts} onFocusPane={focusPane} onPaneExit={paneExit} onClosePane={closePaneAsk} onToggleBroadcast={broadcastTab} onToggleZoom={zoomPane} onDropTab={dropTab} onMovePane={movePaneTo} onPopPane={popPaneOut} onProtocol={chooseProtocol} onOpenFromNewTab={openFromBlank} onLocalFromNewTab={localFromBlank} onSelectTab={id => setActive(id)} groups={groups} onCloseTab={closeTab} onShowLogs={() => goHome('logs')} />

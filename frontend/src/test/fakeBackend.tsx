@@ -224,6 +224,15 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       addKey: async (name, path, pass) => { rec('vault.addKey', name, path, pass); return upsert(state.identities, {name, auth_type: 'key', public_key: 'ssh-ed25519 AAAAimported'}, 'i') },
       addKeyPair: async (name, pem, pass, pub, cert) => { rec('vault.addKeyPair', name, pem, pass, pub, cert); return upsert(state.identities, {name, auth_type: 'key', public_key: pub.trim() || 'ssh-ed25519 AAAApasted', certificate: cert.trim() || undefined}, 'i') },
       addKeyPEM: async (name, pem, pass) => { rec('vault.addKeyPEM', name, pem, pass); return upsert(state.identities, {name, auth_type: 'key', public_key: 'ssh-ed25519 AAAApasted'}, 'i') },
+      updateIdentity: async (id, name, user, secret, passphrase, publicKey, certificate) => {
+        rec('vault.updateIdentity', id, name, user, secret, passphrase, publicKey, certificate)
+        const x = state.identities.find(i => i.id === id)
+        if (!x) throw 'not found'
+        if (!name.trim()) throw 'identity name is required'
+        if (secret && x.auth_type === 'key' && !secret.includes('PRIVATE KEY')) throw 'ssh: no key found'
+        Object.assign(x, {name: name.trim(), username: user})
+        return {...x}
+      },
       addPassword: async (name, user, pw) => { rec('vault.addPassword', name, user, pw); return upsert(state.identities, {name, username: user, auth_type: 'password'}, 'i') },
       addAgent: async (name, user) => { rec('vault.addAgent', name, user); return upsert(state.identities, {name, username: user, auth_type: 'agent'}, 'i') },
       generateKey: async name => upsert(state.identities, {name, auth_type: 'key', public_key: 'ssh-ed25519 AAAAgenerated vutty'}, 'i'),

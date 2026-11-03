@@ -3,7 +3,7 @@ import {useToast} from '../ui/Toast'
 import {useConfirm} from '../ui/Confirm'
 import {useBackend} from '../backend'
 import {errMsg} from '../util'
-import {IconCopy, IconKey, IconLock, IconPlus, IconTrash, IconUser} from '../ui/Icons'
+import {IconCopy, IconEdit, IconKey, IconLock, IconPlus, IconTrash, IconUser} from '../ui/Icons'
 import {byName, FilterChip, ListToolbar, usePref, VIEWS, type SortOption} from '../ui/ListTools'
 import type {AuthType, Identity} from '../types'
 
@@ -28,11 +28,13 @@ interface Props {
   /** label typed in the New key panel: shown as a highlighted draft card. `undefined` = no draft. */
   draft?: string
   onNew(mode: KeyMode): void
+  /** change a key, password or agent identity where it is: the hosts that use it keep using it */
+  onEdit?(i: Identity): void
   onChanged(): void
 }
 
 /** Keychain: a toolbar, then one card per key, password or agent identity. */
-export function KeychainPage({identities, draft, onNew, onChanged}: Props) {
+export function KeychainPage({identities, draft, onNew, onEdit, onChanged}: Props) {
   const be = useBackend()
   const toast = useToast()
   const confirm = useConfirm()
@@ -92,7 +94,7 @@ export function KeychainPage({identities, draft, onNew, onChanged}: Props) {
           </div>
         )}
         {shown.map(i => (
-          <div key={i.id} className="card" role="listitem">
+          <div key={i.id} className="card" role="listitem" onDoubleClick={onEdit ? () => onEdit(i) : undefined} title={onEdit ? `Double-click to edit ${i.name}` : undefined}>
             <span className="tile key-tile">{icon(i)}</span>
             <div className="meta">
               <div className="label">{i.name}</div>
@@ -100,6 +102,7 @@ export function KeychainPage({identities, draft, onNew, onChanged}: Props) {
             </div>
             <div className="actions">
               {i.public_key && <button className="icon ghost" aria-label={`Copy public key of ${i.name}`} title="Copy public key" onClick={() => copy(i.public_key!)}><IconCopy size={14} /></button>}
+              {onEdit && <button className="icon ghost" aria-label={`Edit ${i.name}`} title="Edit" onClick={() => onEdit(i)}><IconEdit size={14} /></button>}
               <button className="icon ghost danger" aria-label={`Delete ${i.name}`} onClick={() => remove(i)}><IconTrash size={14} /></button>
             </div>
           </div>

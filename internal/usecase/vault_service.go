@@ -156,6 +156,33 @@ func (c *Core) importKey(name string, pemBytes, passphrase []byte) (domain.Ident
 	return c.importKeyPair(name, pemBytes, passphrase, "", "")
 }
 
+// prepareKey checks a private key (with its passphrase) and, when given, the public key and the certificate that go with it.
+// It returns what to keep in the vault (an encrypted key is stored decrypted, so no passphrase is asked later), the public
+// key line and the certificate as one normalised line (or "").
+func prepareKey(name string, pemBytes, passphrase []byte, publicKey, certificate string) (store []byte, pubLine, certLine string, err error) {
+	signer, err := vault.ParsePrivateKey(pemBytes, passphrase)
+	if err != nil {
+		return nil, "", "", err
+	}
+	certLine, err = checkPublicAndCertificate(signer, publicKey, certificate)
+	if err != nil {
+		return nil, "", "", err
+	}
+	store = pemBytes
+	if len(passphrase) > 0 {
+		raw, err := ssh.ParseRawPrivateKeyWithPassphrase(pemBytes, passphrase)
+		if err != nil {
+			return nil, "", "", err
+		}
+		blk, err := ssh.MarshalPrivateKey(normalizeKey(raw), name)
+		if err != nil {
+			return nil, "", "", err
+		}
+		store = pem.EncodeToMemory(blk)
+	}
+	return store, vault.PublicLine(signer), certLine, nil
+}
+
 // importKeyPair stores a private key and, when given, checks that the public key and the certificate
 // belong to it. Both are optional: the public key is always worked out from the private one.
 func (c *Core) importKeyPair(name string, pemBytes, passphrase []byte, publicKey, certificate string) (domain.Identity, error) {
@@ -165,31 +192,15 @@ func (c *Core) importKeyPair(name string, pemBytes, passphrase []byte, publicKey
 	if strings.TrimSpace(name) == "" {
 		return domain.Identity{}, errors.New("identity name is required")
 	}
-	signer, err := vault.ParsePrivateKey(pemBytes, passphrase)
+	store, pubLine, certLine, err := prepareKey(name, pemBytes, passphrase, publicKey, certificate)
 	if err != nil {
 		return domain.Identity{}, err
-	}
-	certLine, err := checkPublicAndCertificate(signer, publicKey, certificate)
-	if err != nil {
-		return domain.Identity{}, err
-	}
-	store := pemBytes
-	if len(passphrase) > 0 {
-		raw, err := ssh.ParseRawPrivateKeyWithPassphrase(pemBytes, passphrase)
-		if err != nil {
-			return domain.Identity{}, err
-		}
-		blk, err := ssh.MarshalPrivateKey(normalizeKey(raw), name)
-		if err != nil {
-			return domain.Identity{}, err
-		}
-		store = pem.EncodeToMemory(blk)
 	}
 	ref, err := c.Vault.AddSecret(domain.SecretPrivateKey, store)
 	if err != nil {
 		return domain.Identity{}, err
 	}
-	id, err := c.Store.SaveIdentity(domain.Identity{Name: name, AuthType: domain.AuthKey, SecretRef: ref, PublicKey: vault.PublicLine(signer), Certificate: certLine})
+	id, err := c.Store.SaveIdentity(domain.Identity{Name: name, AuthType: domain.AuthKey, SecretRef: ref, PublicKey: pubLine, Certificate: certLine})
 	if err != nil {
 		_ = c.Vault.DeleteSecret(ref)
 		return id, err
@@ -223,6 +234,42 @@ func (s *VaultService) AddPassword(name, user, pw string) (domain.Identity, erro
 		_ = s.c.Vault.DeleteSecret(ref)
 	}
 	return id, err
+}
+
+// UpdateIdentity changes an identity where it is, so the hosts that use it keep using it. The name and the user name are
+// always set. A non-empty secret replaces the stored one: the new private key of a key (with its passphrase and, when
+// given, its public key and certificate, checked like on import) or the new password. An empty secret keeps what is
+// stored, and an ssh-agent identity has none.
+func (s *VaultService) UpdateIdentity(id, name, user, secret, passphrase, publicKey, certificate string) (domain.Identity, error) {
+	x, err := s.c.Store.GetIdentity(id)
+	if err != nil {
+		return domain.Identity{}, err
+	}
+	if strings.TrimSpace(name) == "" {
+		return domain.Identity{}, errors.New("identity name is required")
+	}
+	x.Name, x.Username = strings.TrimSpace(name), user
+	if secret != "" && x.AuthType != domain.AuthAgent {
+		if !s.c.Vault.Status().Unlocked {
+			return domain.Identity{}, errNotUnlocked
+		}
+		kind, plain := domain.SecretPassword, []byte(secret)
+		if x.AuthType == domain.AuthKey {
+			store, pubLine, certLine, err := prepareKey(x.Name, []byte(secret), []byte(passphrase), publicKey, certificate)
+			if err != nil {
+				return domain.Identity{}, err
+			}
+			kind, plain, x.PublicKey, x.Certificate = domain.SecretPrivateKey, store, pubLine, certLine
+		}
+		if x.SecretRef == "" {
+			if x.SecretRef, err = s.c.Vault.AddSecret(kind, plain); err != nil {
+				return domain.Identity{}, err
+			}
+		} else if err = s.c.Vault.PutSecret(x.SecretRef, kind, plain); err != nil {
+			return domain.Identity{}, err
+		}
+	}
+	return s.c.Store.SaveIdentity(x)
 }
 
 // AddAgent registers an identity that authenticates through the running ssh-agent.

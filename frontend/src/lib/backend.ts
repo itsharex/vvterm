@@ -30,6 +30,8 @@ export interface Backend {
     addKeyPair(name: string, pem: string, passphrase: string, publicKey: string, certificate: string): Promise<Identity>
     addKeyPEM(name: string, pem: string, passphrase: string): Promise<Identity>
     addPassword(name: string, user: string, pw: string): Promise<Identity>
+    /** changes an identity where it is (the hosts that use it keep using it); a non-empty secret replaces the private key or the password */
+    updateIdentity(id: string, name: string, user: string, secret: string, passphrase: string, publicKey: string, certificate: string): Promise<Identity>
     addAgent(name: string, user: string): Promise<Identity>
     generateKey(name: string): Promise<Identity>
     deleteIdentity(id: string): Promise<void>
@@ -271,6 +273,7 @@ export function wailsBackend(): Backend {
       addKeyPEM: (n, p, pp) => u('VaultService', 'AddKeyPEM', n, p, pp),
       addKeyPair: (n, p, pp, pub, cert) => u('VaultService', 'AddKeyPair', n, p, pp, pub, cert),
       addPassword: (n, user, pw) => u('VaultService', 'AddPassword', n, user, pw),
+      updateIdentity: (id, n, user, s, pp, pub, cert) => u('VaultService', 'UpdateIdentity', id, n, user, s, pp, pub, cert),
       addAgent: (n, user) => u('VaultService', 'AddAgent', n, user),
       generateKey: n => u('VaultService', 'GenerateKey', n, 'ed25519'),
       deleteIdentity: id => u('VaultService', 'DeleteIdentity', id),

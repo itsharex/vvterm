@@ -16,16 +16,17 @@ const ids: Identity[] = [
 function Harness({be}: {be: ReturnType<typeof makeFake>}) {
   const [mode, setMode] = useState<KeyMode | null>(null)
   const [draft, setDraft] = useState('')
+  const [edit, setEdit] = useState<Identity | null>(null)
   const [list, setList] = useState<Identity[]>(be.state.identities)
   const refresh = async () => setList(await be.vault.listIdentities())
   return (
     <>
-      <KeychainPage identities={list} draft={mode ? draft : undefined} onNew={m => { setDraft(''); setMode(m) }} onChanged={refresh} />
-      {mode && <KeyPanel key={mode} mode={mode} onClose={() => setMode(null)} onChanged={refresh} onDraft={setDraft} />}
+      <KeychainPage identities={list} draft={mode && !edit ? draft : undefined} onNew={m => { setDraft(''); setEdit(null); setMode(m) }} onEdit={i => { setEdit(i); setMode(i.auth_type) }} onChanged={refresh} />
+      {mode && <KeyPanel key={edit?.id ?? mode} mode={mode} identity={edit ?? undefined} onClose={() => { setMode(null); setEdit(null) }} onChanged={refresh} onDraft={setDraft} />}
     </>
   )
 }
-function setup(identities: Identity[] = ids) {
+function setup(identities: Identity[] = ids.map(i => ({...i}))) { // a copy each time: editing one must not change the next test
   const be = makeFake({identities})
   render(<Providers be={be}><Harness be={be} /></Providers>)
   return be
@@ -175,6 +176,85 @@ describe('New key panel', () => {
     await userEvent.type(screen.getByLabelText('Label'), 'agent-1')
     await userEvent.click(screen.getByRole('button', {name: 'Add identity'}))
     await waitFor(() => expect(calls(be, 'vault.addAgent')).toHaveLength(1))
+  })
+})
+
+describe('Editing an identity', () => {
+  const edit = (name: string) => userEvent.click(screen.getByRole('button', {name: `Edit ${name}`}))
+
+  it('every card has an Edit button (and a double click opens it too), and the panel shows no draft card', async () => {
+    setup()
+    for (const n of ['agent', 'db', 'deploy', 'legacy']) expect(screen.getByRole('button', {name: `Edit ${n}`})).toBeInTheDocument()
+    await userEvent.dblClick(screen.getByText('db'))
+    expect(await screen.findByRole('dialog', {name: 'Edit Password'})).toBeInTheDocument()
+    expect(screen.queryByTestId('draft-card')).toBeNull()
+  })
+
+  it('renames a password identity and changes its user; the password is only sent when a new one is typed', async () => {
+    const be = setup()
+    await edit('db')
+    const dlg = await screen.findByRole('dialog', {name: 'Edit Password'})
+    const save = within(dlg).getByRole('button', {name: 'Save changes'})
+    expect(save).toBeDisabled() // nothing changed yet
+    expect(within(dlg).getByLabelText('Label')).toHaveValue('db')
+    expect(within(dlg).getByLabelText('Username')).toHaveValue('root')
+    await userEvent.clear(within(dlg).getByLabelText('Label'))
+    await userEvent.type(within(dlg).getByLabelText('Label'), 'db-prod')
+    await userEvent.clear(within(dlg).getByLabelText('Username'))
+    await userEvent.type(within(dlg).getByLabelText('Username'), 'admin')
+    await userEvent.click(save)
+    await waitFor(() => expect(calls(be, 'vault.updateIdentity')).toHaveLength(1))
+    expect(calls(be, 'vault.updateIdentity')[0]).toEqual(['vault.updateIdentity', 'i3', 'db-prod', 'admin', '', '', '', ''])
+    await waitFor(() => expect(screen.queryByRole('dialog', {name: 'Edit Password'})).toBeNull())
+    expect(screen.getByText('db-prod')).toBeInTheDocument()
+    expect(be.state.identities.filter(i => i.name.startsWith('db'))).toHaveLength(1) // edited, not duplicated
+  })
+
+  it('replaces the password when a new one is typed', async () => {
+    const be = setup()
+    await edit('db')
+    const dlg = await screen.findByRole('dialog', {name: 'Edit Password'})
+    await userEvent.type(within(dlg).getByLabelText('New password'), 's3cret-new')
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Save changes'}))
+    await waitFor(() => expect(calls(be, 'vault.updateIdentity')[0].slice(1, 5)).toEqual(['i3', 'db', 'root', 's3cret-new']))
+  })
+
+  it('a key shows its public key and keeps its private key unless a new one is given', async () => {
+    const be = setup()
+    await edit('deploy')
+    const dlg = await screen.findByRole('dialog', {name: 'Edit Key'})
+    expect(within(dlg).getByTestId('pubkey')).toHaveTextContent('ssh-ed25519 AAAAB3Nza')
+    expect(within(dlg).queryByLabelText('Username')).toBeNull()
+    expect(document.body.textContent).not.toMatch(/BEGIN .*PRIVATE KEY/)
+    await userEvent.clear(within(dlg).getByLabelText('Label'))
+    await userEvent.type(within(dlg).getByLabelText('Label'), 'deploy-2')
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Save changes'}))
+    await waitFor(() => expect(calls(be, 'vault.updateIdentity')[0].slice(1, 5)).toEqual(['i1', 'deploy-2', '', '']))
+  })
+
+  it('replaces the private key with a chosen file, and shows the error of a key that is refused', async () => {
+    const be = setup()
+    await edit('deploy')
+    const dlg = await screen.findByRole('dialog', {name: 'Edit Key'})
+    fireEvent.change(within(dlg).getByLabelText('Key file'), {target: {files: [keyFile(PEM)]}})
+    await waitFor(() => expect(within(dlg).getByLabelText('Private key')).toHaveValue(PEM))
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Save changes'}))
+    await waitFor(() => expect(calls(be, 'vault.updateIdentity')[0].slice(1, 5)).toEqual(['i1', 'deploy', '', PEM]))
+    be.vault.updateIdentity = async () => { throw 'ssh: no key found' }
+    await edit('deploy')
+    const again = await screen.findByRole('dialog', {name: 'Edit Key'})
+    await userEvent.type(within(again).getByLabelText('Private key'), 'junk')
+    await userEvent.click(within(again).getByRole('button', {name: 'Save changes'}))
+    expect(await within(again).findByRole('alert')).toHaveTextContent('ssh: no key found') // the panel stays open
+  })
+
+  it('an ssh-agent identity can be renamed', async () => {
+    const be = setup()
+    await edit('agent')
+    const dlg = await screen.findByRole('dialog', {name: 'Edit ssh-agent identity'})
+    await userEvent.type(within(dlg).getByLabelText('Username'), 'me')
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Save changes'}))
+    await waitFor(() => expect(calls(be, 'vault.updateIdentity')[0].slice(1, 5)).toEqual(['i4', 'agent', 'me', '']))
   })
 })
 

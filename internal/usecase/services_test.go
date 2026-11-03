@@ -1282,3 +1282,94 @@ func TestSyncThroughAFolderEndToEnd(t *testing.T) {
 		t.Fatalf("%v %+v", err, got)
 	}
 }
+
+// ---- editing an identity ----
+
+func TestUpdateIdentityRenamesAndReplacesAPasswordWhereItIs(t *testing.T) {
+	h := newHarness(t).unlocked(t)
+	id, err := h.app.Vault.AddPassword("old name", "root", "first-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	host, _ := h.app.Host.SaveHost(modelHost("pw-host", 22, id.ID))
+
+	// the name and the user change, the password stays when none is given
+	up, err := h.app.Vault.UpdateIdentity(id.ID, "  new name ", "admin", "", "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if up.ID != id.ID || up.Name != "new name" || up.Username != "admin" || up.SecretRef != id.SecretRef {
+		t.Fatalf("%+v", up)
+	}
+	if got, _ := h.core.Vault.GetSecret(up.SecretRef); string(got) != "first-secret" {
+		t.Fatalf("the password changed by itself: %q", got)
+	}
+	// a new password replaces the old one in the same record
+	if _, err := h.app.Vault.UpdateIdentity(id.ID, "new name", "admin", "second-secret", "", "", ""); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := h.core.Vault.GetSecret(id.SecretRef); string(got) != "second-secret" {
+		t.Fatalf("not replaced: %q", got)
+	}
+	// the host that used it still does
+	if x, _ := h.app.Host.GetHost(host.ID); x.IdentityID != id.ID {
+		t.Fatalf("the host lost its identity: %+v", x)
+	}
+	if len(h.app.Vault.ListIdentities()) != 1 {
+		t.Fatal("editing made a second identity")
+	}
+	if _, err := h.app.Vault.UpdateIdentity(id.ID, "  ", "admin", "", "", "", ""); err == nil {
+		t.Fatal("an empty name was accepted")
+	}
+	if _, err := h.app.Vault.UpdateIdentity("missing", "x", "", "", "", "", ""); err == nil {
+		t.Fatal("an unknown identity was accepted")
+	}
+}
+
+func TestUpdateIdentityReplacesAKeyAndTheHostConnectsWithTheNewOne(t *testing.T) {
+	h := newHarness(t).unlocked(t)
+	oldPriv, _, _ := vault.GenerateEd25519("old")
+	id, err := h.app.Vault.AddKeyPEM("srv", string(oldPriv), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	newPriv, newPub, _ := vault.GenerateEd25519("new")
+	pk, _, _, _, _ := ssh.ParseAuthorizedKey([]byte(newPub))
+	srv, _ := startKeyServer(t, pk) // trusts only the new key
+	host, _ := h.app.Host.SaveHost(modelHost("keyed", srv.Port(), id.ID))
+
+	// a bad key changes nothing
+	if _, err := h.app.Vault.UpdateIdentity(id.ID, "srv", "", "not a key", "", "", ""); err == nil {
+		t.Fatal("a bad key was accepted")
+	}
+	if x, _ := h.app.Vault.PublicKey(id.ID); x != id.PublicKey {
+		t.Fatal("a refused key changed the identity")
+	}
+	up, err := h.app.Vault.UpdateIdentity(id.ID, "srv", "", string(newPriv), "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if up.ID != id.ID || up.SecretRef != id.SecretRef || up.PublicKey == id.PublicKey {
+		t.Fatalf("%+v", up)
+	}
+	sid, _ := h.open(host.ID, 80, 24)
+	h.trust(t, sid)
+	h.rec.waitOutput(t, sid, "READY") // the host, untouched, now logs in with the new key
+}
+
+func TestUpdateIdentityOfAnAgentIdentityAndOfALockedVault(t *testing.T) {
+	h := newHarness(t).unlocked(t)
+	ag, _ := h.app.Vault.AddAgent("agent", "me")
+	up, err := h.app.Vault.UpdateIdentity(ag.ID, "agent 2", "you", "ignored", "", "", "")
+	if err != nil || up.Name != "agent 2" || up.Username != "you" || up.SecretRef != "" {
+		t.Fatalf("%+v %v", up, err)
+	}
+	pw, _ := h.app.Vault.AddPassword("p", "u", "x")
+	h.app.Vault.Lock()
+	if _, err := h.app.Vault.UpdateIdentity(pw.ID, "p", "u", "new", "", "", ""); err == nil {
+		t.Fatal("a secret was replaced in a locked vault")
+	}
+	if _, err := h.app.Vault.UpdateIdentity(pw.ID, "renamed", "u", "", "", "", ""); err != nil {
+		t.Fatalf("renaming needs no vault key: %v", err) // only the secret is sealed
+	}
+}
