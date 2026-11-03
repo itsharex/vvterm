@@ -40,9 +40,13 @@ type Settings struct {
 	ConfirmTabClose bool `json:"confirm_tab_close"` // ask before closing a terminal tab or pane (off by default)
 	// ConfirmProd asks before text with a line break is pasted, or a snippet or a history command is run, in the terminal of
 	// a host marked prod: a pasted newline runs the line at once (on by default).
-	ConfirmProd  bool `json:"confirm_prod"`
-	Highlight    bool `json:"highlight"`     // colour URLs, IPs, paths and error/warning/success words in terminal output
-	ReduceMotion bool `json:"reduce_motion"` // turn animations off
+	ConfirmProd bool `json:"confirm_prod"`
+	// SessionLog writes what a terminal session printed to a text file: off (the default), prod (only hosts marked prod) or all.
+	// SessionLogDir is the folder for them; empty means <data>/session-logs.
+	SessionLog    string `json:"session_log"`
+	SessionLogDir string `json:"session_log_dir"`
+	Highlight     bool   `json:"highlight"`     // colour URLs, IPs, paths and error/warning/success words in terminal output
+	ReduceMotion  bool   `json:"reduce_motion"` // turn animations off
 	// AutoUpdateCheck: look for a newer release on GitHub when the app opens, at most once a day (on by default)
 	AutoUpdateCheck bool `json:"auto_update_check"`
 	// BiometricOnOpen: the lock screen asks for Touch ID / Windows Hello by itself (on by default)
@@ -64,7 +68,7 @@ type Settings struct {
 func defaultSettings() Settings {
 	return Settings{Theme: "dark", TerminalTheme: "auto", FontSize: 13, FontFamily: "Menlo, Monaco, 'Courier New', monospace",
 		CursorStyle: "block", CursorBlink: true, CopyOnSelect: true, RightClick: "paste", Scrollback: 10000, AutoLockMinutes: 15,
-		Zoom: 100, ConfirmProd: true, Highlight: true, AskProtocol: true, BiometricOnOpen: true, AutoUpdateCheck: true, Suggest: true, Shortcuts: map[string]string{}}
+		Zoom: 100, ConfirmProd: true, SessionLog: SessionLogOff, Highlight: true, AskProtocol: true, BiometricOnOpen: true, AutoUpdateCheck: true, Suggest: true, Shortcuts: map[string]string{}}
 }
 
 // Core wires the packages together; the services below share one instance.

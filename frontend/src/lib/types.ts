@@ -106,6 +106,10 @@ export interface Settings {
   confirm_tab_close: boolean
   /** ask before pasting text with a line break, or running a snippet or a history command, in a production host's terminal */
   confirm_prod: boolean
+  /** write what each terminal session printed to a text file: off, prod (production hosts only) or all */
+  session_log: 'off' | 'prod' | 'all'
+  /** the folder for those files; '' means the default one inside the data folder */
+  session_log_dir: string
   /** a host opens on a Choose protocol screen first */
   ask_protocol: boolean
   /** the lock screen asks for Touch ID / Windows Hello by itself, without a click */

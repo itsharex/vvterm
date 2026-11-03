@@ -304,6 +304,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       save: async s => { state.settings = {...state.settings, ...s}; return state.settings },
       reset: async () => { rec('settings.reset'); const {account_name, account_email, sync_url} = state.settings; state.settings = {...DEFAULT_SETTINGS, font_family: 'monospace', account_name, account_email, sync_url}; return state.settings },
       clearCache: async () => { rec('settings.clearCache'); return {...state.cache} },
+      sessionLogFolder: async () => state.settings.session_log_dir || '/Users/me/Library/Application Support/vutty/session-logs',
     },
     sftp: {
       open: async (h, k) => { rec('sftp.open', h, k); return {sid: id('sf'), home: '/', host: state.hosts.find(x => x.id === h)?.label ?? 'host'} },

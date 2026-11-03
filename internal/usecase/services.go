@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"errors"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -80,6 +81,9 @@ func (s *SettingsService) Get() Settings {
 	return s.c.settings
 }
 
+// SessionLogFolder is the folder session logs are written to now (the one in Settings, else the default inside the data folder).
+func (s *SettingsService) SessionLogFolder() string { return s.c.sessionLogDir() }
+
 // Save updates appearance and terminal settings. Sync URL and auto-lock have dedicated methods.
 func (s *SettingsService) Save(in Settings) (Settings, error) {
 	if err := validateSettings(in); err != nil {
@@ -98,6 +102,11 @@ func (s *SettingsService) Save(in Settings) (Settings, error) {
 	s.c.settings.Zoom = in.Zoom
 	s.c.settings.ConfirmTabClose = in.ConfirmTabClose
 	s.c.settings.ConfirmProd = in.ConfirmProd
+	s.c.settings.SessionLog = in.SessionLog
+	if s.c.settings.SessionLog == "" {
+		s.c.settings.SessionLog = SessionLogOff
+	}
+	s.c.settings.SessionLogDir = in.SessionLogDir
 	s.c.settings.AskProtocol = in.AskProtocol
 	s.c.settings.Highlight = in.Highlight
 	s.c.settings.ReduceMotion = in.ReduceMotion
@@ -143,6 +152,14 @@ func validateSettings(in Settings) error {
 	}
 	if in.Zoom < 80 || in.Zoom > 160 {
 		return errors.New("zoom must be between 80 and 160 percent")
+	}
+	switch in.SessionLog {
+	case "", SessionLogOff, SessionLogProd, SessionLogAll:
+	default:
+		return errors.New("session logs must be off, prod or all")
+	}
+	if d := in.SessionLogDir; d != "" && (len(d) > 1024 || strings.ContainsRune(d, 0) || !filepath.IsAbs(d)) {
+		return errors.New("the folder for session logs must be an absolute path")
 	}
 	if err := validateAccount(in.AccountName, in.AccountEmail); err != nil {
 		return err

@@ -94,6 +94,8 @@ export interface Backend {
     reset(): Promise<Settings>
     /** removes what the app can make again; nothing the user created */
     clearCache(): Promise<CacheReport>
+    /** the folder session logs are written to now (the chosen one, else the default) */
+    sessionLogFolder(): Promise<string>
   }
   sftp: {
     open(hostId: string, promptKey: string): Promise<SftpInfo>
@@ -343,6 +345,7 @@ export function wailsBackend(): Backend {
       save: s => u('SettingsService', 'Save', s),
       reset: () => u('SettingsService', 'ResetSettings'),
       clearCache: () => u('SettingsService', 'ClearCache'),
+      sessionLogFolder: () => u('SettingsService', 'SessionLogFolder'),
     },
     sftp: {
       open: (h, k) => u('SftpService', 'Open', h, k),
@@ -511,6 +514,7 @@ export function bridgeBackend(): Backend {
       save: s => rpc('SettingsService', 'Save', s),
       reset: () => rpc('SettingsService', 'ResetSettings'),
       clearCache: () => rpc('SettingsService', 'ClearCache'),
+      sessionLogFolder: () => rpc('SettingsService', 'SessionLogFolder'),
     },
     // the host list (for choosing where an MCP server is offered) is read from the main process
     hosts: {...base.hosts, listHosts: async f => (await rpc<Host[]>('HostService', 'ListHosts', {query: '', group_id: '', env: '', tag: '', ...f})) ?? []},

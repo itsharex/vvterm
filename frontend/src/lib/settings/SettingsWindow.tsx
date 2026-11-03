@@ -95,6 +95,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
   const catRef = useRef(cat)
   catRef.current = cat
   const [version, setVersion] = useState('')
+  const [logFolder, setLogFolder] = useState('')
   const [scroll, setScroll] = useState(String(s.scrollback))
   const [auto, setAuto] = useState(String(vault.auto_lock_minutes))
   const [hint, setHint] = useState(vault.hint ?? '')
@@ -121,6 +122,8 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
   }
   useEffect(() => { const t = setTimeout(preload, 150); return () => clearTimeout(t) }, [])
   useEffect(() => { void be.system.info().then(i => setVersion(i.version)).catch(() => {}) }, [be])
+  // where session logs go now: asked again when the choice changes
+  useEffect(() => { if (ready && s.session_log !== 'off') void be.settings.sessionLogFolder().then(setLogFolder).catch(() => {}) }, [be, ready, s.session_log, s.session_log_dir])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !document.querySelector('.select-menu') && !document.querySelector('.key-capture') && !document.querySelector('.modal')) onClose() // a dropdown or a recording eats its own Esc
@@ -413,6 +416,24 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                         onChange={e => setScroll(e.target.value)} onBlur={() => update({scrollback: Number(scroll)})}
                         onKeyDown={e => e.key === 'Enter' && update({scrollback: Number(scroll)})} />
                     </div>
+                  </section>
+                  <section className="card-section">
+                    <h4>Session logs</h4>
+                    <div className="setting-row">
+                      <div><b>Save a log of terminal sessions</b><div className="muted">One text file for each session, line by line with the time: what the host printed, with colours and cursor moves taken out. What you type is not recorded, except what the host echoes back. A log holds everything that was shown on screen, a password in a file you displayed included, so keep the folder private. Files are readable only by you and each stops at 50 MB.</div></div>
+                      <Select label="Session logs" className="control" value={s.session_log} onChange={v => update({session_log: v as Settings['session_log']})}
+                        options={[{value: 'off', label: 'Off'}, {value: 'prod', label: 'Production hosts only', hint: 'Hosts marked prod'}, {value: 'all', label: 'All sessions', hint: 'SSH, Telnet, serial and this computer'}]} />
+                    </div>
+                    {s.session_log !== 'off' && (
+                      <div className="setting-row">
+                        <div><b>Folder</b><div className="muted mono" style={{wordBreak: 'break-all', userSelect: 'text'}} data-testid="session-log-folder">{logFolder || '…'}</div></div>
+                        <div className="fixed-row">
+                          <button onClick={() => void be.system.pickDirectory('Choose the folder for session logs').then(d => { if (d) void update({session_log_dir: d}) }).catch(e => toast.error(errMsg(e)))}>Choose…</button>
+                          {s.session_log_dir && <button onClick={() => void update({session_log_dir: ''})}>Use the default</button>}
+                          <button disabled={!logFolder} onClick={() => void be.system.openPath(logFolder).catch(e => toast.error(errMsg(e)))}>Open</button>
+                        </div>
+                      </div>
+                    )}
                   </section>
                   <section className="card-section">
                     <h4>Preview</h4>

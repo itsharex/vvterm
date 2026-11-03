@@ -24,6 +24,44 @@ function setup(over: Partial<Settings> = {}, vault = vaultSt) {
 }
 const tab = (n: string) => userEvent.click(screen.getByRole('tab', {name: n}))
 
+describe('SettingsWindow: session logs', () => {
+  it('is off to begin with, with no folder shown; turning it on shows the default folder and saves the choice', async () => {
+    const {be} = setup()
+    await tab('Terminal')
+    const sel = await screen.findByRole('combobox', {name: /^Session logs, Off/})
+    expect(screen.queryByTestId('session-log-folder')).toBeNull()
+    await userEvent.click(sel)
+    await userEvent.click(screen.getByRole('option', {name: /Production hosts only/}))
+    await waitFor(() => expect(be.state.settings.session_log).toBe('prod'))
+    expect(await screen.findByTestId('session-log-folder')).toHaveTextContent('/session-logs')
+    await userEvent.click(screen.getByRole('combobox', {name: /^Session logs/}))
+    await userEvent.click(screen.getByRole('option', {name: /All sessions/}))
+    await waitFor(() => expect(be.state.settings.session_log).toBe('all'))
+  })
+
+  it('warns what a log holds, and what is not recorded', async () => {
+    setup()
+    await tab('Terminal')
+    expect(await screen.findByText(/a password in a file you displayed included/)).toBeInTheDocument()
+    expect(screen.getByText(/What you type is not recorded/)).toBeInTheDocument()
+  })
+
+  it('chooses another folder, goes back to the default one, and opens the folder', async () => {
+    const {be} = setup({session_log: 'all'})
+    await tab('Terminal')
+    expect(await screen.findByTestId('session-log-folder')).toHaveTextContent('/Users/me/Library/Application Support/vutty/session-logs')
+    expect(screen.queryByRole('button', {name: 'Use the default'})).toBeNull()
+    await userEvent.click(screen.getByRole('button', {name: 'Choose…'}))
+    await waitFor(() => expect(be.state.settings.session_log_dir).toBe('/tmp/dir')) // what the fake folder picker answers
+    await waitFor(() => expect(screen.getByTestId('session-log-folder')).toHaveTextContent('/tmp/dir'))
+    await userEvent.click(screen.getByRole('button', {name: 'Open'}))
+    await waitFor(() => expect(be.state.calls).toContainEqual(['system.openPath', '/tmp/dir']))
+    await userEvent.click(screen.getByRole('button', {name: 'Use the default'}))
+    await waitFor(() => expect(be.state.settings.session_log_dir).toBe(''))
+    await waitFor(() => expect(screen.getByTestId('session-log-folder')).toHaveTextContent('/session-logs'))
+  })
+})
+
 describe('SettingsWindow: production hosts', () => {
   it('has the switch for being careful on production hosts, on to begin with, and saves it', async () => {
     const {be} = setup()
