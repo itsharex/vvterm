@@ -37,6 +37,9 @@ type Config struct {
 	Version string
 	// ExecReply is written for any `exec` request (the command itself is not run); empty refuses exec.
 	ExecReply string
+	// ExecFunc, when set, answers every `exec` request instead of ExecReply: it gets the command and returns what goes to
+	// standard output and to standard error and the exit status. It may block (a command that takes a while).
+	ExecFunc func(cmd string) (stdout, stderr string, status int)
 
 	// SFTP enables the sftp subsystem on an in-memory filesystem (no real files are exposed).
 	// SFTPSeed pre-creates entries: a path ending in "/" is a directory, otherwise a file with that content.
@@ -366,6 +369,20 @@ func (s *Server) session(ch ssh.Channel, reqs <-chan *ssh.Request) {
 				s.mu.Unlock()
 				r.Reply(true, nil)
 			case "exec":
+				if f := s.cfg.ExecFunc; f != nil {
+					var p struct{ Command string }
+					ssh.Unmarshal(r.Payload, &p)
+					r.Reply(true, nil)
+					go func() {
+						out, errOut, st := f(p.Command)
+						io.WriteString(ch, out)
+						io.WriteString(ch.Stderr(), errOut)
+						ch.SendRequest("exit-status", false, ssh.Marshal(struct{ C uint32 }{uint32(st)}))
+						ch.CloseWrite()
+						ch.Close()
+					}()
+					continue
+				}
 				if s.cfg.ExecReply == "" {
 					r.Reply(false, nil)
 					continue

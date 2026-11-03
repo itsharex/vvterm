@@ -1,6 +1,6 @@
 import {useMemo, useState} from 'react'
 import {Snippet} from '../types'
-import {IconBraces, IconCopy, IconEdit, IconPlay, IconPlus, IconTrash} from '../ui/Icons'
+import {IconBraces, IconCopy, IconEdit, IconPlay, IconPlus, IconServer, IconTrash} from '../ui/Icons'
 import {byName, ListToolbar, usePref, VIEWS, type SortOption} from '../ui/ListTools'
 
 interface Props {
@@ -9,6 +9,8 @@ interface Props {
   canRun: boolean
   onNew(): void
   onRun(s: Snippet, execute: boolean): void
+  /** run a snippet (or a command typed there) on several hosts at once */
+  onRunOnHosts?(s?: Snippet): void
   onEdit(s: Snippet): void
   onDelete(s: Snippet): void
 }
@@ -33,7 +35,10 @@ export function SnippetsPage(p: Props) {
     <div className="hosts-page">
       <div className="page-head">
         <h2>Snippets</h2>
-        <button className="split-btn" aria-label="New snippet" onClick={p.onNew}><IconPlus size={14} /> New snippet</button>
+        <div style={{display: 'flex', gap: 8}}>
+          {p.onRunOnHosts && <button className="ghost-btn" aria-label="Run on hosts" title="Run one command on several hosts at once" onClick={() => p.onRunOnHosts!()}><IconServer size={14} /> Run on hosts…</button>}
+          <button className="split-btn" aria-label="New snippet" onClick={p.onNew}><IconPlus size={14} /> New snippet</button>
+        </div>
       </div>
       {!p.canRun && p.snippets.length > 0 && (
         <div className="notice">Open a terminal to run a snippet: it is typed into the focused pane.</div>
@@ -49,6 +54,7 @@ export function SnippetsPage(p: Props) {
             </div>
             <div className="actions always">
               <button className="icon ghost" aria-label={`Run ${s.label}`} title="Run in the focused terminal" onClick={() => p.onRun(s, true)}><IconPlay size={14} /></button>
+              {p.onRunOnHosts && <button className="icon ghost" aria-label={`Run ${s.label} on hosts`} title="Run on several hosts" onClick={() => p.onRunOnHosts!(s)}><IconServer size={14} /></button>}
               <button className="icon ghost" aria-label={`Paste ${s.label}`} title="Type without pressing Enter" onClick={() => p.onRun(s, false)}><IconCopy size={14} /></button>
               <button className="icon ghost" aria-label={`Edit ${s.label}`} onClick={() => p.onEdit(s)}><IconEdit size={14} /></button>
               <button className="icon ghost danger" aria-label={`Delete ${s.label}`} onClick={() => p.onDelete(s)}><IconTrash size={14} /></button>

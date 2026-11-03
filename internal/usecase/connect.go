@@ -193,3 +193,29 @@ func certSigner(line string, signer ssh.Signer) (ssh.Signer, error) {
 	}
 	return ssh.NewCertSigner(cert, signer)
 }
+
+// connectQuiet dials a host (through its jump chain) for something nobody is watching, such as running one command on many
+// hosts. It never asks anything: a host key that is not trusted yet is refused, and a server that wants a verification code
+// fails with a message that says so. Open the host once in a terminal tab to trust its key.
+func (c *Core) connectQuiet(hostID string) (*sshx.Client, domain.Host, error) {
+	chain, err := c.Store.JumpChain(hostID)
+	if err != nil {
+		return nil, domain.Host{}, err
+	}
+	target := chain[len(chain)-1]
+	hops := make([]sshx.Hop, len(chain))
+	for i, h := range chain {
+		if hops[i], err = c.hopFor(h); err != nil {
+			return nil, target, err
+		}
+	}
+	d := &sshx.Dialer{Timeout: c.Dialer.Timeout, HostKeys: &sshx.HostKeyChecker{Path: c.Dialer.HostKeys.Path}} // no Prompt: unknown keys are refused
+	cl, err := d.Dial(hops)
+	if errors.Is(err, sshx.ErrHostKeyRejected) {
+		return nil, target, fmt.Errorf("the host key of %q is not trusted yet: open the host once in a terminal tab and trust it", target.Label)
+	}
+	if errors.Is(err, sshx.ErrHostKeyChanged) {
+		c.record(domain.ActHostKey, target.ID, target.Label, "HOST KEY CHANGED: connection blocked (possible man-in-the-middle)", false)
+	}
+	return cl, target, err
+}

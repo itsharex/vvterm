@@ -179,6 +179,30 @@ export interface VaultHealth {
   unreadable: UnreadableItem[]
 }
 
+/** One command on several hosts. {{host}}, {{hostname}} and {{user}} in the command become each host's own. */
+export interface ExecSpec {
+  host_ids: string[]
+  command: string
+  timeout_sec: number
+}
+export interface ExecResult {
+  host_id: string
+  label: string
+  env?: string
+  state: 'queued' | 'running' | 'ok' | 'failed' | 'canceled'
+  exit_code: number
+  /** standard output and standard error together (the first 64 KB) */
+  output: string
+  truncated?: boolean
+  error?: string
+  duration_ms: number
+}
+export interface ExecRun {
+  id: string
+  done: boolean
+  results: ExecResult[]
+}
+
 export interface HostKeyPrompt {
   host: string
   fingerprint: string

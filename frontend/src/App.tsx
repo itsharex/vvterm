@@ -13,6 +13,9 @@ import {KnownHostsPage} from './lib/panels/KnownHostsPage'
 import {LogsPage} from './lib/panels/LogsPage'
 import {SnippetsPage} from './lib/snippets/SnippetsPage'
 import {SnippetForm} from './lib/snippets/SnippetForm'
+import {FillVariables} from './lib/snippets/FillVariables'
+import {RunOnHostsPanel} from './lib/snippets/RunOnHostsPanel'
+import {fillVariables, parseVariables} from './lib/snippets/variables'
 import {toTerminalInput, writeToPane} from './lib/terminal/panes'
 import {PortForwardsPage} from './lib/panels/PortForwardsPage'
 import {AboutPanel} from './lib/panels/AboutPanel'
@@ -83,7 +86,9 @@ export default function App({initial}: {/** an app window opened for this place 
   const setSideWidth = (w: number) => { setSideWidthState(w); try { localStorage.setItem('vutty.sidebar.width', String(w)) } catch { /* not remembered */ } }
   const setSidebarTab = (t: SidebarTab) => { setSidebarTabState(t); try { localStorage.setItem('vutty.sidebar.tab', t) } catch { /* not remembered */ } }
   const toggleSidebar = () => setSidebarOpen(o => { try { localStorage.setItem('vutty.sidebar', o ? 'closed' : 'open') } catch { /* not remembered */ } return !o })
-  const [dialog, setDialog] = useState<Dialog>(null)
+  const [dialog, setDialog] = useState<Dialog | null>(null)
+  const [fill, setFill] = useState<{snippet: Snippet; execute: boolean} | null>(null)
+  const [runHosts, setRunHosts] = useState<{snippet?: Snippet} | null>(null)
   const [draft, setDraft] = useState('')
   const [fwDraft, setFwDraft] = useState<{label: string; type: ForwardType}>({label: '', type: 'local'})
   const [fwTick, setFwTick] = useState(0) // bumped when the forwarding panel saved something
@@ -367,12 +372,17 @@ export default function App({initial}: {/** an app window opened for this place 
     if (!tab || !isTerminalTab(tab)) return toast.error('Open a terminal first.')
     writeToPane(tab.activePane, toTerminalInput(text, run)) // a terminal that is still connecting takes nothing: no message for that
   }
-  const runSnippet = (s: Snippet, execute: boolean) => {
+  const sendSnippet = (s: Snippet, script: string, execute: boolean) => {
     const tab = tabs.find(t => t.id === (tabs.some(x => x.id === active) ? active : lastTerm))
     if (!tab) return toast.error('Open a terminal first: the snippet is typed into the focused pane.')
-    if (!writeToPane(tab.activePane, toTerminalInput(s.script, execute))) return // still connecting: nothing to say about it
+    if (!writeToPane(tab.activePane, toTerminalInput(script, execute))) return // still connecting: nothing to say about it
     setActive(tab.id)
     toast.info(execute ? `Ran “${s.label}”` : `Pasted “${s.label}”`)
+  }
+  // a snippet with blanks ({{name}}) is asked about first, then typed with the answers in it
+  const runSnippet = (s: Snippet, execute: boolean) => {
+    if (parseVariables(s.script).length > 0) return setFill({snippet: s, execute})
+    sendSnippet(s, s.script, execute)
   }
   const delSnippet = async (s: Snippet) => {
     if (!(await confirm(`Delete snippet "${s.label}"?`, {confirmLabel: 'Delete', danger: true}))) return
@@ -498,7 +508,7 @@ export default function App({initial}: {/** an app window opened for this place 
             )}
             {page === 'snippets' && (
               <SnippetsPage snippets={snippets} canRun={tabs.some(isTerminalTab)} onNew={() => setDialog({k: 'snippet'})}
-                onRun={runSnippet} onEdit={s => setDialog({k: 'snippet', snippet: s})} onDelete={delSnippet} />
+                onRun={runSnippet} onRunOnHosts={s => setRunHosts({snippet: s})} onEdit={s => setDialog({k: 'snippet', snippet: s})} onDelete={delSnippet} />
             )}
             {page === 'knownhosts' && <KnownHostsPage />}
             {page === 'logs' && <LogsPage />}
@@ -527,7 +537,7 @@ export default function App({initial}: {/** an app window opened for this place 
         <Workspace tabs={tabs} activeTab={onHome ? '' : termActive} settings={settings} appearance={appearance} shortcuts={bindings} hosts={hosts} onFocusPane={focusPane} onPaneExit={paneExit} onClosePane={closePaneAsk} onToggleBroadcast={broadcastTab} onToggleZoom={zoomPane} onDropTab={dropTab} onMovePane={movePaneTo} onPopPane={popPaneOut} onProtocol={chooseProtocol} onOpenFromNewTab={openFromBlank} onLocalFromNewTab={localFromBlank} onSelectTab={id => setActive(id)} groups={groups} onCloseTab={closeTab} onShowLogs={() => goHome('logs')} />
         {sidebarOpen && !onHome && activeTabObj && isTerminalTab(activeTabObj) && (
           <TerminalSidebar tab={sidebarTab} onTab={setSidebarTab} hosts={hosts} groups={groups} tabs={tabs} activeTab={termActive} onSelectTab={id => setActive(id)} onCloseTab={closeTab} snippets={snippets} settings={settings} appearance={appearance}
-            onInsert={insertIntoTerminal} onNewSnippet={() => { goHome('snippets'); setDialog({k: 'snippet'}) }} onConnect={connect} onSettings={saveSettings}
+            onInsert={insertIntoTerminal} onSnippet={runSnippet} onNewSnippet={() => { goHome('snippets'); setDialog({k: 'snippet'}) }} onConnect={connect} onSettings={saveSettings}
             paneId={activeTabObj.activePane} hostId={leaves(activeTabObj.root).find(l => l.id === activeTabObj.activePane)?.hostId} onOpenSettings={() => openSettings()} width={sideWidth} onWidth={setSideWidth} />
         )}
       </div>
@@ -536,6 +546,13 @@ export default function App({initial}: {/** an app window opened for this place 
         <SettingsWindow settings={settings} appearance={appearance} vault={vault} onSettings={setSettings}
           onVault={() => void refreshVault()} onChanged={() => void refreshData()} onClose={() => setSettingsOpen(false)} />
       )}
+      {fill && (
+        <FillVariables title={`${fill.execute ? 'Run' : 'Paste'} “${fill.snippet.label}”`} variables={parseVariables(fill.snippet.script)} verb={fill.execute ? 'Run' : 'Paste'}
+          onClose={() => setFill(null)}
+          onAsWritten={() => { const f = fill; setFill(null); sendSnippet(f.snippet, f.snippet.script, f.execute) }}
+          onSubmit={values => { const f = fill; setFill(null); sendSnippet(f.snippet, fillVariables(f.snippet.script, values), f.execute) }} />
+      )}
+      {runHosts && <RunOnHostsPanel hosts={hosts} snippets={snippets} snippet={runHosts.snippet} onClose={() => setRunHosts(null)} />}
       {dialog?.k === 'data' && <DataPanel onClose={close} onChanged={() => void refreshData()} />}
       {dialog?.k === 'about' && <AboutPanel onClose={close} checkNow={dialog.check} />}
       {dialog?.k === 'support' && <SupportPanel onClose={close} />}

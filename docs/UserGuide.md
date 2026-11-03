@@ -131,6 +131,10 @@ Snippets are commands you reuse. **Snippets → New snippet**: a label, an optio
 
 ![Snippets](screenshots/18-snippets-page.png)
 
+**Blanks.** Write `{{name}}` in a script where a value changes, or `{{name|default}}` to give it a default. When you Run or Paste the snippet, a box asks for each blank (an empty box uses the default) and the answers are put in as plain text; **Use as written** types the script untouched, for text that only looks like a blank. Go-template text such as `{{.Names}}` is not a blank.
+
+**Run on hosts.** **Snippets → Run on hosts…** (or the server button on a snippet) runs one command on several hosts at once. Choose the hosts (search, or **All shown**), write the command or start from a snippet, fill in its blanks, and choose how long to wait for each host. Then **Run**: every host gets its own connection and **no terminal**, five at a time, and the page lists each host as it finishes, with its exit code, how long it took and what it printed (a failed host opens by itself; the first 64 KB of the output are kept). **Cancel the run** disconnects the hosts that are running and skips the rest, **Copy all output** puts everything on the clipboard, and **Run again…** goes back to the form with your command and hosts. In the command, `{{host}}`, `{{hostname}}` and `{{user}}` become each host's own label, address and user name (a value with spaces or other shell characters is put in quotes). If any chosen host is marked **prod**, you are asked to confirm first. Nothing is asked while it runs: a host whose key you never trusted, or that asks for a verification code, fails with a message that says so; open it once in a terminal tab first. The command and the output are not written to the Logs (only that a command ran on the host, and its exit code), and a finished run is forgotten when you close the window.
+
 - **Run** (▶) types the script and presses Enter in the focused pane of your terminal and switches to it.
 - **Paste** types it *without* Enter, so you can read or edit it first.
 - Inside a terminal, the **Snippets** menu in the title bar does the same without going back home.

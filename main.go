@@ -58,7 +58,7 @@ func main() {
 			About:    &mac.AboutInfo{Title: "Vutty", Message: "SSH client with an encrypted vault.\nVersion " + app.Version, Icon: appIcon},
 		},
 		Bind: []interface{}{
-			a.Host, a.Vault, a.Session, a.Forward, a.Sync, a.ImportExp, a.Settings, a.Snippet, a.Sftp, a.Local, a.Serial, a.Log, a.KnownHost, a.Assistant, a.System,
+			a.Host, a.Vault, a.Session, a.Forward, a.Sync, a.ImportExp, a.Settings, a.Snippet, a.Sftp, a.Local, a.Serial, a.Log, a.KnownHost, a.Assistant, a.Exec, a.System,
 		},
 	})
 	if err != nil {

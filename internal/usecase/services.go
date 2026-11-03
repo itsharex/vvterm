@@ -23,6 +23,7 @@ type Services struct {
 	KnownHost *KnownHostsService
 	Settings  *SettingsService
 	Assistant *AssistantService
+	Exec      *ExecService
 }
 
 // New builds every use case service.
@@ -49,6 +50,7 @@ func New(core *Core) *Services {
 		Serial:    NewSerialService(core),
 		Log:       NewLogService(core),
 		KnownHost: NewKnownHostsService(core),
+		Exec:      NewExecService(core),
 	}
 }
 

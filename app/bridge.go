@@ -94,6 +94,7 @@ func NewBridge(a *App, onChange func(service string)) *Bridge {
 			"HostService": a.Host, "VaultService": a.Vault, "SessionService": a.Session, "ForwardService": a.Forward,
 			"SyncService": a.Sync, "ImportExportService": a.ImportExp, "SettingsService": a.Settings, "SnippetService": a.Snippet,
 			"SftpService": a.Sftp, "LocalService": a.Local, "SerialService": a.Serial, "LogService": a.Log, "KnownHostsService": a.KnownHost, "AssistantService": a.Assistant,
+			"ExecService": a.Exec,
 		},
 		wake: make(chan struct{}),
 		targets: map[string]bridgeTarget{
@@ -241,7 +242,7 @@ func (b *Bridge) SetMenuHandler(f func(action string)) { b.onMenu = f }
 
 // readOnlyCall is true for calls that only read or only drive a session: the other windows need not refresh.
 func readOnlyCall(service, method string) bool {
-	if service == "SessionService" || service == "SftpService" || service == "LocalService" || service == "SerialService" || service == "LogService" {
+	if service == "ExecService" || service == "SessionService" || service == "SftpService" || service == "LocalService" || service == "SerialService" || service == "LogService" {
 		return true
 	}
 	if service == "AssistantService" && (method == "Providers" || method == "Settings" || method == "Models") {

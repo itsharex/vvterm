@@ -1,5 +1,5 @@
 import {createContext, useContext} from 'react'
-import type {VaultHealth, 
+import type {ExecRun, ExecSpec, VaultHealth, 
   CacheReport, ConnectionTest, ExportReport, ForwardStatus, Group, Host, HostFilter, Identity, ImportReport, PortForward, Settings,
   ActivityEntry, KnownHost, QueueJob, QueueSpec, RemoteEntry, SftpInfo, SyncDiff, Snippet, SyncStatus, TransferResult, VaultStatus,
   AiAskOptions, AiAttachment, AiCommandCheck, AiCustomProvider, AiModelList, AiPolicy, AiPreview, AiProvider, AiSessionState, AiSettings,
@@ -184,6 +184,15 @@ export interface Backend {
       importable(): Promise<McpImportItem[]>
       import(ref: string): Promise<McpServer>
     }
+  }
+  /** One command on several hosts at once, each on its own connection and without a terminal. */
+  exec: {
+    /** starts the run and returns its id; progress arrives as `exec:update:<id>` events that carry the whole run */
+    run(spec: ExecSpec): Promise<string>
+    cancel(id: string): Promise<void>
+    get(id: string): Promise<ExecRun>
+    /** drops the run and what it printed */
+    forget(id: string): Promise<void>
   }
   /** This computer's files (the Local pane of the SFTP screen). */
   local: {
@@ -405,6 +414,12 @@ export function wailsBackend(): Backend {
     },
     serial: {
       ports: async () => (await call<string[]>('usecase', 'SerialService', 'Ports')) ?? [],
+    },
+    exec: {
+      run: spec => u('ExecService', 'Run', spec),
+      cancel: id => u('ExecService', 'Cancel', id),
+      get: async id => { const r = await u<ExecRun>('ExecService', 'Get', id); return {...r, results: r.results ?? []} },
+      forget: id => u('ExecService', 'Forget', id),
     },
     local: {
       home: () => call('usecase', 'LocalService', 'Home'),

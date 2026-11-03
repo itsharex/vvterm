@@ -2,7 +2,7 @@ import {ReactNode} from 'react'
 import {BackendContext, Backend} from '../lib/backend'
 import {ToastProvider} from '../lib/ui/Toast'
 import {DEFAULT_SETTINGS} from '../lib/settings/defaults'
-import type {VaultHealth, ActivityEntry, KnownHost, QueueJob, RemoteEntry, SyncDiff, TransferResult, ConnectionTest, ForwardStatus, Group, Host, Identity, PortForward, Settings, Snippet, VaultStatus,
+import type {ExecRun, VaultHealth, ActivityEntry, KnownHost, QueueJob, RemoteEntry, SyncDiff, TransferResult, ConnectionTest, ForwardStatus, Group, Host, Identity, PortForward, Settings, Snippet, VaultStatus,
   CacheReport, AiCommandCheck, AiModelList, AiPreview, AiProvider, AiReply, AiSessionState, AiSettings, McpImportItem, McpServer, McpTool} from '../lib/types'
 
 export interface Fake extends Backend {
@@ -40,6 +40,8 @@ export interface Fake extends Backend {
     testResult: ConnectionTest
     /** what the vault health check finds (default: nothing wrong) */
     health?: VaultHealth
+    /** runs of a command on several hosts: a test moves them along by emitting `exec:update:<id>` */
+    execRuns: Record<string, ExecRun>
     calls: Array<[string, ...unknown[]]>
     /** the AI assistant */
     ai: {
@@ -141,6 +143,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
     logs: [],
     testResult: {ok: true, message: 'Connected to 10.0.0.1 as root', server_version: 'SSH-2.0-OpenSSH_9.6', latency_ms: 42, hops: 1},
     calls: [],
+    execRuns: {},
     ai: {
       providers: [{id: 'claude', name: 'Claude Code', status: {state: 'ready', version: '2.1.0', detail: '', hint: ''}, enabled: true, default: true, model: '', supports_mcp: true, supports_images: true, custom: false}],
       models: {claude: {models: [{id: '', name: 'Default (CLI decides)'}, {id: 'opus', name: 'Opus 5.5'}, {id: 'sonnet', name: 'Sonnet 5.5'}], error: '', can_list: true}},
@@ -464,6 +467,17 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
           .slice(0, f.limit || 500)
       },
       clear: async () => { rec('logs.clear'); state.logs = [] },
+    },
+    exec: {
+      run: async spec => {
+        rec('exec.run', spec)
+        const id = 'run' + (Object.keys(state.execRuns).length + 1)
+        state.execRuns[id] = {id, done: false, results: spec.host_ids.map(h => ({host_id: h, label: state.hosts.find(x => x.id === h)?.label ?? h, env: state.hosts.find(x => x.id === h)?.env, state: 'queued' as const, exit_code: 0, output: '', duration_ms: 0}))}
+        return id
+      },
+      cancel: async id => { rec('exec.cancel', id) },
+      get: async id => { const r = state.execRuns[id]; if (!r) throw 'that run is no longer kept'; return {...r, results: r.results.map(x => ({...x}))} },
+      forget: async id => { rec('exec.forget', id); delete state.execRuns[id] },
     },
     local: {
       home: async () => '/Users/me',

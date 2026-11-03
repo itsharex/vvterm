@@ -37,6 +37,8 @@ interface Props {
   appearance: Appearance
   /** type this into the focused pane; `run` presses Enter after it */
   onInsert(text: string, run: boolean): void
+  /** run or paste a snippet (it may have blanks to fill in first); without it a snippet is typed as it is */
+  onSnippet?(s: Snippet, run: boolean): void
   onNewSnippet?(): void
   onConnect?(h: Host): void
   /** a theme or font was picked: save these settings */
@@ -113,7 +115,7 @@ export function TerminalSidebar(p: Props) {
       </div>
       <div className="side-body">
         {p.tab === 'hosts' && <HostsTab hosts={p.hosts} groups={p.groups ?? []} tabs={p.tabs ?? []} activeTab={p.activeTab ?? ''} onConnect={p.onConnect} onSelectTab={p.onSelectTab} onCloseTab={p.onCloseTab} />}
-        {p.tab === 'snippets' && <SnippetsTab snippets={p.snippets} onInsert={p.onInsert} onNew={p.onNewSnippet} />}
+        {p.tab === 'snippets' && <SnippetsTab snippets={p.snippets} onInsert={p.onInsert} onSnippet={p.onSnippet} onNew={p.onNewSnippet} />}
         {p.tab === 'history' && <HistoryTab hostId={p.hostId ?? ''} onInsert={p.onInsert} />}
         {p.tab === 'files' && <FilesTab host={p.hosts.find(h => h.id === p.hostId) ?? null} />}
         {p.tab === 'themes' && <ThemesTab settings={p.settings} appearance={p.appearance} onSettings={p.onSettings} />}
@@ -241,7 +243,8 @@ function HostsTab({hosts, groups, tabs, activeTab, onConnect, onSelectTab, onClo
   )
 }
 
-function SnippetsTab({snippets, onInsert, onNew}: {snippets: Snippet[]; onInsert(text: string, run: boolean): void; onNew?(): void}) {
+function SnippetsTab({snippets, onInsert, onSnippet, onNew}: {snippets: Snippet[]; onInsert(text: string, run: boolean): void; onSnippet?(s: Snippet, run: boolean): void; onNew?(): void}) {
+  const insert = (s: Snippet, run: boolean) => (onSnippet ? onSnippet(s, run) : onInsert(s.script, run))
   const [q, setQ] = useState('')
   const [searching, setSearching] = useState(false)
   const [open, setOpen] = useState<string | null>(null) // the snippet shown in full
@@ -264,8 +267,8 @@ function SnippetsTab({snippets, onInsert, onNew}: {snippets: Snippet[]; onInsert
                   <IconBraces size={13} /> <span>{s.label}</span>
                 </button>
                 {full && <>
-                  <button className="side-act" aria-label={'Run ' + s.label} onClick={() => onInsert(s.script, true)}>Run</button>
-                  <button className="side-act" aria-label={'Paste ' + s.label} onClick={() => onInsert(s.script, false)}>Paste</button>
+                  <button className="side-act" aria-label={'Run ' + s.label} onClick={() => insert(s, true)}>Run</button>
+                  <button className="side-act" aria-label={'Paste ' + s.label} onClick={() => insert(s, false)}>Paste</button>
                 </>}
               </div>
               {full ? <pre className="side-snippet-code">{s.script}</pre> : <code className="side-snippet-peek" onClick={() => setOpen(s.id)}>{s.script.replace(/\s+/g, ' ')}</code>}

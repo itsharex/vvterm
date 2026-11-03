@@ -283,6 +283,53 @@ describe('App snippets', () => {
     expect(typed.text).toEqual(['df -h\ruptime'])
   })
 
+  it('a snippet with blanks asks for them first and types the answers in (a default fills an empty box)', async () => {
+    const be = setup({snippets: [{id: 's9', label: 'Tail', script: 'tail -n {{lines|50}} {{file}}'} as never]})
+    await unlock(be)
+    await userEvent.dblClick(hostCard('web-1'))
+    await userEvent.click(screen.getByRole('tab', {name: 'Vaults'}))
+    await userEvent.click(screen.getByRole('button', {name: 'Snippets'}))
+    await userEvent.click(await screen.findByLabelText('Run Tail'))
+    const dlg = await screen.findByRole('dialog', {name: 'Run “Tail”'})
+    expect(typed.text).toEqual([]) // nothing is typed before the blanks are filled
+    expect(within(dlg).getByText('lines (default: 50)')).toBeInTheDocument()
+    await userEvent.type(within(dlg).getByLabelText('file'), '/var/log/syslog')
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Run'}))
+    expect(typed.text).toEqual(['tail -n 50 /var/log/syslog\r'])
+    expect(screen.queryByRole('dialog', {name: 'Run “Tail”'})).toBeNull()
+  })
+
+  it('Paste with blanks fills them without pressing Enter, and Use as written keeps the braces', async () => {
+    const be = setup({snippets: [{id: 's9', label: 'Tpl', script: 'echo {{name}}'} as never]})
+    await unlock(be)
+    await userEvent.dblClick(hostCard('web-1'))
+    await userEvent.click(screen.getByRole('tab', {name: 'Vaults'}))
+    await userEvent.click(screen.getByRole('button', {name: 'Snippets'}))
+    await userEvent.click(await screen.findByLabelText('Paste Tpl'))
+    let dlg = await screen.findByRole('dialog', {name: 'Paste “Tpl”'})
+    await userEvent.type(within(dlg).getByLabelText('name'), 'world')
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Paste'}))
+    expect(typed.text).toEqual(['echo world'])
+    await userEvent.click(screen.getByRole('tab', {name: 'Vaults'}))
+    await userEvent.click(await screen.findByLabelText('Run Tpl'))
+    dlg = await screen.findByRole('dialog', {name: 'Run “Tpl”'})
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Use as written'}))
+    expect(typed.text).toEqual(['echo world', 'echo {{name}}\r'])
+  })
+
+  it('cancelling the blanks types nothing', async () => {
+    const be = setup({snippets: [{id: 's9', label: 'Tpl', script: 'echo {{name}}'} as never]})
+    await unlock(be)
+    await userEvent.dblClick(hostCard('web-1'))
+    await userEvent.click(screen.getByRole('tab', {name: 'Vaults'}))
+    await userEvent.click(screen.getByRole('button', {name: 'Snippets'}))
+    await userEvent.click(await screen.findByLabelText('Run Tpl'))
+    const dlg = await screen.findByRole('dialog', {name: 'Run “Tpl”'})
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Cancel'}))
+    expect(typed.text).toEqual([])
+    expect(screen.queryByRole('dialog', {name: 'Run “Tpl”'})).toBeNull()
+  })
+
   it('refuses to run without an open terminal', async () => {
     const be = setup({snippets: [snip]})
     await unlock(be)
