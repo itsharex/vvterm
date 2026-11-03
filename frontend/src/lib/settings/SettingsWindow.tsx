@@ -1,4 +1,4 @@
-import {lazy, PointerEvent as ReactPointerEvent, Suspense, useEffect, useRef, useState} from 'react'
+import {Fragment, lazy, PointerEvent as ReactPointerEvent, Suspense, useEffect, useRef, useState} from 'react'
 import {useBackend, type UpdateInfo} from '../backend'
 import {useToast} from '../ui/Toast'
 import {useConfirm} from '../ui/Confirm'
@@ -7,7 +7,7 @@ import {Select} from '../ui/Select'
 import {biometricName, errMsg} from '../util'
 import {ThemePicker} from './ThemePicker'
 import {resolveTerminalTheme} from '../terminal/themes'
-import {IconArrowUpRight, IconUser} from '../ui/Icons'
+import {IconArrowUpRight, IconCloud, IconEnterKey, IconFolder, IconGear, IconShield, IconSparkle, IconTerminal, IconUser} from '../ui/Icons'
 import {formatBytes} from '../sftp/format'
 import {ShortcutsEditor} from './ShortcutsEditor'
 import {capture, formatCombo, matches} from '../shortcuts/shortcuts'
@@ -28,9 +28,17 @@ const keychainName = () => {
 }
 
 type Cat = 'general' | 'account' | 'terminal' | 'security' | 'assistant' | 'sync' | 'shortcuts' | 'storage'
-const CATS: {id: Cat; label: string}[] = [
-  {id: 'general', label: 'General'}, {id: 'account', label: 'Account'}, {id: 'terminal', label: 'Terminal'},
-  {id: 'security', label: 'Security'}, {id: 'assistant', label: 'AI assistant'}, {id: 'sync', label: 'Sync'}, {id: 'shortcuts', label: 'Shortcuts'}, {id: 'storage', label: 'Storage'},
+interface CatInfo {id: Cat; label: string; icon: () => JSX.Element; desc: string; group: string}
+// the order is the order of the keys (Mod+1…8) and of Ctrl+Tab; the groups only draw the menu
+const CATS: CatInfo[] = [
+  {id: 'general', label: 'General', icon: () => <IconGear size={16} />, group: 'Preferences', desc: 'How the interface looks and behaves.'},
+  {id: 'account', label: 'Account', icon: () => <IconUser size={16} />, group: 'Preferences', desc: 'Your profile and ways to support Vutty.'},
+  {id: 'terminal', label: 'Terminal', icon: () => <IconTerminal size={16} />, group: 'Preferences', desc: 'Theme, font, cursor and how the terminal reacts.'},
+  {id: 'security', label: 'Security', icon: () => <IconShield size={16} />, group: 'Vault and integrations', desc: 'Lock the vault, unlock it faster and change its master password.'},
+  {id: 'assistant', label: 'AI assistant', icon: () => <IconSparkle size={16} />, group: 'Vault and integrations', desc: 'Let an AI command-line tool you already use work in your terminal.'},
+  {id: 'sync', label: 'Sync', icon: () => <IconCloud size={16} />, group: 'Vault and integrations', desc: 'Keep your encrypted hosts and keys in step across machines.'},
+  {id: 'shortcuts', label: 'Shortcuts', icon: () => <IconEnterKey size={16} />, group: 'Advanced', desc: 'Change the keys that drive Vutty.'},
+  {id: 'storage', label: 'Storage', icon: () => <IconFolder size={16} />, group: 'Advanced', desc: 'Clear what Vutty can rebuild, or start the settings over.'},
 ]
 
 const FONTS = [
@@ -210,31 +218,43 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
             <nav className="win-nav" aria-label="Settings menu">
               <div role="tablist" aria-orientation="vertical" className="win-tabs">
                 {CATS.map((c, i) => (
-                  <button key={c.id} role="tab" aria-selected={cat === c.id} className={'settings-tab' + (cat === c.id ? ' active' : '')} onClick={() => { setCat(c.id); setErr('') }}>
-                    <span>{c.label}</span>
-                    <kbd className="settings-key" aria-hidden="true">{formatCombo('Mod+' + (i + 1))}</kbd>
-                  </button>
+                  <Fragment key={c.id}>
+                    {c.group !== CATS[i - 1]?.group && <div className="win-group" aria-hidden="true">{c.group}</div>}
+                    <button role="tab" aria-selected={cat === c.id} className={'settings-tab' + (cat === c.id ? ' active' : '')} onClick={() => { setCat(c.id); setErr('') }}>
+                      <i className="tab-ico" aria-hidden="true">{c.icon()}</i>
+                      <span className="tab-name">{c.label}</span>
+                      <kbd className="settings-key" aria-hidden="true">{formatCombo('Mod+' + (i + 1))}</kbd>
+                    </button>
+                  </Fragment>
                 ))}
               </div>
+              <div className="spacer" />
+              <div className="win-group" aria-hidden="true">Help</div>
+              {LINKS.map(([label, url]) => (
+                <button key={label} className="win-link" onClick={() => be.system.openUrl(url)}>{label}<IconArrowUpRight size={14} /></button>
+              ))}
+              <button className="win-link" onClick={() => setSupportOpen(true)}>Support Vutty</button>
               <div className="win-sep" />
               <div className="win-row">
                 <span>Theme</span>
                 <Select className="inline" label="Theme" value={s.theme} onChange={v => update({theme: v as ThemeMode})} disabled={!ready}
                   options={[{value: 'auto', label: 'Auto'}, {value: 'light', label: 'Light'}, {value: 'dark', label: 'Dark'}]} />
               </div>
-              {LINKS.map(([label, url]) => (
-                <button key={label} className="win-link" onClick={() => be.system.openUrl(url)}>{label}<IconArrowUpRight size={15} /></button>
-              ))}
-              <button className="win-link" onClick={() => setSupportOpen(true)}>Support Vutty</button>
-              <div className="spacer" />
               {newer?.available && (
-                <button className="win-link" onClick={() => be.system.openUrl(newer.url)}>Version {newer.latest} is available<IconArrowUpRight size={15} /></button>
+                <button className="win-link update" onClick={() => be.system.openUrl(newer.url)}>Version {newer.latest} is available<IconArrowUpRight size={14} /></button>
               )}
-              <button className="win-link" disabled={checking} onClick={() => void checkUpdate()}>{checking ? 'Checking…' : 'Check for updates'}</button>
-              <div className="win-row version"><span>Version</span><b data-testid="app-version">{version || '…'}</b></div>
+              <div className="win-row version">
+                <span>Version <b data-testid="app-version">{version || '…'}</b></span>
+                <button className="link" disabled={checking} onClick={() => void checkUpdate()}>{checking ? 'Checking…' : 'Check for updates'}</button>
+              </div>
             </nav>
 
             <div className="win-content">
+              <div className="win-page">
+              <header className="page-head">
+                <h2>{CATS.find(c => c.id === cat)?.label}</h2>
+                <p>{CATS.find(c => c.id === cat)?.desc}</p>
+              </header>
               {!ready ? <Loading /> : <>
               {cat === 'general' && (
                 <>
@@ -465,6 +485,7 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
 
               {err && cat === 'account' && <div className="error" role="alert">{err}</div>}
               </>}
+              </div>
             </div>
           </div>
         )}
