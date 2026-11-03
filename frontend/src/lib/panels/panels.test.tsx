@@ -6,6 +6,8 @@ import {makeFake, Providers} from '../../test/fakeBackend'
 
 const vaultSt = {exists: true, unlocked: true, keychain_enabled: false, auto_lock_minutes: 15}
 
+const tab = (n: string) => userEvent.click(screen.getByRole('tab', {name: n}))
+
 describe('DataPanel', () => {
   it('imports an ssh config and shows the report with warnings', async () => {
     const be = makeFake()
@@ -26,6 +28,7 @@ describe('DataPanel', () => {
   it('warns before exporting private keys', async () => {
     const be = makeFake()
     render(<Providers be={be}><DataPanel onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+    await tab('Export')
     expect(screen.queryByText(/written to disk unencrypted/)).toBeNull()
     await userEvent.click(screen.getByLabelText('Also export private keys'))
     expect(screen.getByText(/written to disk unencrypted/)).toBeInTheDocument()
@@ -36,6 +39,7 @@ describe('DataPanel', () => {
   it('requires an 8+ character backup password', async () => {
     const be = makeFake()
     render(<Providers be={be}><DataPanel onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+    await tab('Backup')
     const exp = screen.getByRole('button', {name: 'Export backup…'})
     expect(exp).toBeDisabled()
     await userEvent.type(screen.getByLabelText('Backup password'), 'short')
@@ -48,9 +52,35 @@ describe('DataPanel', () => {
     await waitFor(() => expect(be.state.calls.some(c => c[0] === 'data.importBackup')).toBe(true))
   })
 
+  it('opens on Import, and tells what is missing instead of only greying the buttons out', async () => {
+    const be = makeFake()
+    render(<Providers be={be}><DataPanel onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+    expect(screen.getByRole('tab', {name: 'Import', selected: true})).toBeInTheDocument()
+    expect(screen.getByText('Choose a file to import.')).toBeInTheDocument()
+    await tab('Backup')
+    expect(screen.getByText(/Type the backup password first/)).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Backup password'), 'abc')
+    expect(screen.getByText(/5 more characters needed/)).toBeInTheDocument()
+    expect(screen.getByText(/not your master password/)).toBeInTheDocument()
+    await tab('Import')
+    await userEvent.type(screen.getByLabelText('Config path'), '/x')
+    expect(screen.queryByText('Choose a file to import.')).toBeNull()
+  })
+
+  it('a message or an error belongs to the tab it came from', async () => {
+    const be = makeFake()
+    render(<Providers be={be}><DataPanel onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+    await tab('Export')
+    await userEvent.click(screen.getByRole('button', {name: /Export host list/}))
+    expect(await screen.findByRole('status')).toHaveTextContent('Host list (no secrets) exported.')
+    await tab('Backup')
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
   it('exports metadata-only JSON', async () => {
     const be = makeFake()
     render(<Providers be={be}><DataPanel onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+    await tab('Export')
     await userEvent.click(screen.getByRole('button', {name: /Export host list/}))
     await waitFor(() => expect(be.state.calls).toContainEqual(['data.exportJSON', '/tmp/vutty-hosts.json']))
   })
@@ -59,6 +89,7 @@ describe('DataPanel', () => {
     const be = makeFake()
     be.data.importBackup = async () => { throw 'Incorrect master password. Please check it and try again.' }
     render(<Providers be={be}><DataPanel onClose={vi.fn()} onChanged={vi.fn()} /></Providers>)
+    await tab('Backup')
     await userEvent.type(screen.getByLabelText('Backup password'), 'whatever1')
     await userEvent.click(screen.getByRole('button', {name: 'Restore backup…'}))
     expect(await screen.findByRole('alert')).toHaveTextContent('Incorrect master password. Please check it and try again.')
