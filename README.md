@@ -14,8 +14,6 @@
 
 ## Why Vutty
 
-> Vutty was called VVTerm and, for a few days, VuTerm until November 2026. It was renamed because another project already used the first name; your data and settings carry over.
-
 - **Your data stays yours.** Hosts, keys and passwords live in one encrypted vault on your computer (AES-256-GCM, a key from your master password). Export to standard formats at any time, and sync between your computers through a private Git repository or a cloud folder you control. Nothing goes to a server of ours, and there is no account.
 - **Everything an SSH client needs, in one app.** Tabs and split panes, jump hosts, port forwards, serial and Telnet, and SFTP with a transfer queue that resumes, syncs folders and saves your edits back.
 - **Careful with secrets.** Private keys and passwords never reach the interface. A changed server key blocks the connection with no override. The optional AI assistant only ever sees the screen with secrets replaced, and only suggests commands: you decide what runs.
