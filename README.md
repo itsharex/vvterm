@@ -17,6 +17,7 @@
 - **Your data stays yours.** Hosts, keys and passwords live in one encrypted vault on your computer (AES-256-GCM, a key from your master password). Export to standard formats at any time, and sync between your computers through a private Git repository or a cloud folder you control. Nothing goes to a server of ours, and there is no account.
 - **Everything an SSH client needs, in one app.** Tabs and split panes, jump hosts, port forwards, serial and Telnet, and SFTP with a transfer queue that resumes, syncs folders and saves your edits back.
 - **Careful with secrets.** Private keys and passwords never reach the interface. A changed server key blocks the connection with no override. The optional AI assistant only ever sees the screen with secrets replaced, and only suggests commands: you decide what runs.
+- **In your language.** The whole interface, the menu bar included, is available in English, Tiếng Việt, 日本語 and 中文: pick one in *Settings → General → Language*, or let it follow your system.
 - **Free and open source.** No licence tiers, nothing to sign up for.
 
 ## What you can do
@@ -25,14 +26,17 @@
 - **Organise hosts** in groups, with tags and a colour per environment (prod / staging / dev). Find anything from one search box, or type `ssh user@host` to connect right away.
 - **Keep secrets safe.** Private keys and passwords are encrypted with your master password. The interface never sees them.
 - **Work in tabs and split panes**, through one or more jump hosts, with keep-alive and one-key reconnect. Drag tabs to order them, drag a tab onto a pane to split it (sessions keep running), open a host in a **new window**, and see at a glance which tabs are connected.
+- **Run one command on several hosts** at once, each on its own connection, with the exit code and output of every host, a timeout and *Cancel*. Snippets can have blanks (`{{name}}`, `{{name|default}}`) that are asked for when they run.
+- **Careful with production.** Hosts marked *prod* get a red frame and a PROD badge, and Vutty asks before text with a line break is pasted there or a snippet is run. Servers that ask for more than a password (a verification code, Duo) are answered in a *Sign in* box over the terminal.
 - **A sidebar beside every terminal**: hosts, snippets (run or paste), command history, and terminal themes and font.
 - **More than SSH**: a shell on this computer, serial ports and Telnet (with its own login), a *Choose protocol* and connecting screen, Known Hosts and Logs pages.
 - **Browse and transfer files with SFTP** in a tab of its own (and in the terminal sidebar): two panes, several files and folders at once, drag and drop, and a **transfer queue** with pause, resume (a copy is continued from the bytes already sent, also after a lost connection), cancel and retry. Compare and **sync folders** (nothing is ever deleted), **edit a remote file** and have it saved back when you save, and a right-click menu with permissions. Nothing is replaced without asking.
 - **Ask an AI about your terminal** with the official CLI you already use (Claude Code, Codex CLI, Gemini CLI; Antigravity CLI is experimental): the screen is sent with every secret replaced by `*******`, the assistant only suggests commands, and you decide what runs. Add MCP servers for extra tools. See the [user guide](docs/UserGuide.md#22-ai-assistant) and the [design](docs/AIAssistant.md).
 - **Save snippets** of commands you run often and type them into any terminal with a click.
-- **Make it yours**: 26 terminal colour themes, light / dark / auto appearance, font, cursor and scrollback, interface zoom, your own keyboard shortcuts, all in a Settings window of its own.
+- **Make it yours**: four languages, 26 terminal colour themes, light / dark / auto appearance, font, cursor and scrollback, interface zoom, your own keyboard shortcuts, all in a Settings window of its own.
 - **Forward ports**: local, remote and SOCKS5 proxy.
-- **Stay in control.** Import and export your `~/.ssh/config`, share a host list without secrets, make encrypted backups, or sync between your Macs through a private Git repository.
+- **Stay in control.** Import and export your `~/.ssh/config`, import hosts from a listing you made with `aws`, `gcloud` or `ansible-inventory` (or a CSV; Vutty never contacts a cloud), share a host list without secrets, make encrypted backups, or sync between your computers through a private Git repository. The vault locks by itself when the computer sleeps.
+- **Heavy output stays smooth.** Output waits for the terminal to draw it, so `cat` of a huge file or a busy `tail -f` slows down instead of freezing the window ([measurements](docs/Assessment.md#terminal-performance-with-heavy-output-g4)).
 
 <table>
   <tr>
@@ -65,7 +69,7 @@
 
 > **First launch.** Beta builds are not signed with a developer certificate yet. On macOS, open the app, then **System Settings → Privacy & Security → Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/vutty.app`); step by step in [Installing on macOS](docs/InstallMac.md). On Windows, SmartScreen may warn: choose **More info → Run anyway**.
 
-**Updates:** **Settings → Check for updates** tells you when a newer release is out and opens its page; replace the old app with the new one and your data is kept. Once a day, when the app opens, Vutty asks GitHub for the latest release (a plain request that sends nothing about you or your data); switch it off in **Settings → General → Check for updates automatically**.
+**Updates:** **Help → About → Check for updates** tells you when a newer release is out. On a Mac with Apple silicon, **Install and restart** downloads it, checks that the release's checksum list is signed with the project's key and that the file matches, replaces the app and restarts it ([how](docs/ReleaseSigning.md)); version 1.3.0 has to be installed by hand once, as earlier versions do not carry the key. On Windows, Linux and Intel Macs the release page opens: replace the old app with the new one and your data is kept. Once a day, when the app opens, Vutty asks GitHub for the latest release (a plain request that sends nothing about you or your data); switch it off in **Settings → General → Check for updates automatically**.
 
 ### 2. First five minutes
 
@@ -104,6 +108,7 @@ Back up regularly with **Import / Export → Encrypted backup**.
 
 ## Known limitations of this beta
 
+- The translations (Tiếng Việt, 日本語, 中文) were written with an AI model and have not been read by native speakers yet: please report what sounds wrong. What servers and the backend say (error messages from a connection, for example) stays in English.
 - Windows and Linux builds are new and less tested than macOS. On Windows the **terminal on this computer** is not available yet (SSH, SFTP and the rest work). Touch ID and the macOS-specific window features exist only on a Mac.
 - "Keychain unlock" stores the vault key in the macOS Keychain; it does **not** require Touch ID yet.
 - Locking the vault when the computer sleeps works on a Mac as the system announces it (and when the screen is locked); on Windows and Linux it locks when the computer wakes up, and a sleep of a few seconds is not noticed.
