@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -243,11 +244,13 @@ func TestLockingTheVaultClosesTheSettingsWindow(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.Vault.Lock()
-	done := make(chan struct{})
-	go func() { _ = cmd.Wait(); close(done) }()
-	select {
-	case <-done:
-	case <-time.After(5 * time.Second):
+	// the launcher is the one that waits for the process: here it is only asked whether it is still alive (a second Wait would race with it)
+	alive := func(c *exec.Cmd) bool { return c.Process.Signal(syscall.Signal(0)) == nil }
+	deadline := time.Now().Add(5 * time.Second)
+	for alive(cmd) && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if alive(cmd) {
 		_ = cmd.Process.Kill()
 		t.Fatal("the Settings window must end when the vault locks")
 	}
@@ -263,7 +266,7 @@ func TestLockingTheVaultClosesTheSettingsWindow(t *testing.T) {
 	}
 	a.closeSettingsWhenLocked("hosts:changed")
 	time.Sleep(200 * time.Millisecond)
-	if cmd.ProcessState != nil {
+	if !alive(cmd) {
 		t.Fatal("an unrelated event must not close Settings")
 	}
 	_ = cmd.Process.Kill()

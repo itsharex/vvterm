@@ -1,5 +1,7 @@
 # Installing on macOS: opening a beta that is not notarized
 
+You only have to do this **once**, for the first install. After that, newer versions install from inside Vutty (**Help → About → Check for updates → Install and restart**): the app downloads the update itself, checks its signature and checksum, and restarts, and macOS does not ask again (see [Release signing](ReleaseSigning.md)). It needs Vutty to be in your Applications folder, not running from the disk image.
+
 Vutty betas are not signed with an Apple Developer ID and not notarized yet, so macOS **Gatekeeper** blocks the first launch with a message such as *"vutty" can't be opened because Apple cannot check it for malicious software.* Nothing is wrong with the download; Apple simply has not seen this build. You only do this once.
 
 ## 1. Check your download (recommended)

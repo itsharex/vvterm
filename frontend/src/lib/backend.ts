@@ -11,6 +11,10 @@ import type {ExecRun, ExecSpec, InventoryOptions, SSHLink, VaultHealth,
  * Wails bindings; tests provide a fake. No method ever returns a secret.
  */
 export interface UpdateInfo {current: string; latest: string; available: boolean; url: string; notes: string}
+/** whether this copy of the app can replace itself with a newer release, and if not, why */
+export interface SelfUpdateStatus {supported: boolean; reason?: string}
+/** what an update that installs itself is doing (the `update:progress` event) */
+export interface UpdateProgress {stage: 'checking' | 'downloading' | 'verifying' | 'installing' | 'restarting'; done?: number; total?: number}
 
 export interface Backend {
   vault: {
@@ -226,6 +230,9 @@ export interface Backend {
     info(): Promise<{version: string}>
     /** Asks GitHub for the latest release and compares it with this build. */
     checkUpdate(): Promise<UpdateInfo>
+    selfUpdateStatus(): Promise<SelfUpdateStatus>
+    /** downloads the latest release, checks its signature and checksum, replaces this app with it and restarts: returns only when that failed (with the reason) */
+    installUpdate(): Promise<void>
     /** Opens the Settings window (a second native window). Rejects where none exists: the UI then shows its in-app window. */
     openSettings(): Promise<void>
     /** the window is in full screen (the macOS window buttons are gone then) */
@@ -459,6 +466,8 @@ export function wailsBackend(): Backend {
       },
       info: () => call('app', 'SystemService', 'Info'),
       checkUpdate: () => call('app', 'SystemService', 'CheckUpdate'),
+      selfUpdateStatus: async () => { try { return await call<SelfUpdateStatus>('app', 'SystemService', 'SelfUpdateStatus') } catch { return {supported: false} } },
+      installUpdate: () => call('app', 'SystemService', 'InstallUpdate'),
       openSettings: () => call('app', 'SystemService', 'OpenSettings'),
       openWindow: (h, t) => call('app', 'SystemService', 'OpenWindow', h, t),
       openPath: p => call('app', 'SystemService', 'OpenPath', p),

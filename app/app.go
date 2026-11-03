@@ -171,6 +171,8 @@ func (a *App) Startup(ctx context.Context) {
 		a.closeSettingsWhenLocked(event)
 	})
 	a.startSleepLock(ctx) // the vault locks when the computer sleeps
+	a.System.updateDir = filepath.Join(a.dir, "updates")
+	CleanUpAfterUpdate(a.System.updateDir) // what the last update left behind
 	// The AI tools are looked for when something first asks for them (the assistant panel, Settings → AI assistant): starting
 	// each CLI takes seconds of CPU, which would compete with a Settings window opened right after the app started.
 

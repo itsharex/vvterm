@@ -86,6 +86,21 @@ jobs:
           merge-multiple: true
       - name: Checksums
         run: cd dist && rm -f *.sha256 && sha256sum * > SHA256SUMS
+      # The app updates itself only to a release whose checksum list is signed with the maintainer's key (docs/ReleaseSigning.md).
+      # Without the secret the release is still published, just not signed: the app then offers the release page instead.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+      - name: Sign the checksums
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            echo "::warning::UPDATE_SIGNING_KEY is not set: this release is not signed, so installed copies cannot update themselves to it"
+            exit 0
+          fi
+          go run ./tools/updatesign sign - dist/SHA256SUMS
+          go run ./tools/updatesign verify "$(sed -n 's/.*PublicKeyBase64 = "\(.*\)"/\1/p' internal/updater/pubkey.go)" dist/SHA256SUMS
       - name: Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -22,6 +22,7 @@ type SystemService struct {
 	menuFor      func(shortcuts map[string]string) *menu.Menu
 	menuKeys     map[string]string
 	links        sshLinks
+	updateDir    string // where an update is unpacked (inside the data folder)
 }
 
 func NewSystemService() *SystemService { return &SystemService{} }

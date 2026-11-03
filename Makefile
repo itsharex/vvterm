@@ -50,6 +50,10 @@ package:
 release: test build
 	@shasum -a 256 build/bin/vutty.app/Contents/MacOS/vutty
 
+# Sign the checksums of a release that is already published (the key is in ~/.config/vutty/update-signing.key): make sign-release TAG=v1.3.0
+sign-release:
+	./scripts/sign-release.sh $(TAG)
+
 deploy-dev:
 	./scripts/deploy.sh dev
 

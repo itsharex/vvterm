@@ -184,6 +184,7 @@ CRYPTO-DONATE end -->
 | [Development guide](docs/Development.md) | build, test, Docker, deploy |
 | [Architecture](docs/CleanArchitecture.md) | layers, decisions, technical debt |
 | [Installing on macOS](docs/InstallMac.md) | opening a beta that is not notarized (Gatekeeper) |
+| [Release signing](docs/ReleaseSigning.md) | how updates are signed, and how the app installs them itself |
 | [Comparison](docs/Comparison.md) | short table against Termius, Tabby and WindTerm |
 | [Assessment](docs/Assessment.md) | honest comparison with the original design |
 

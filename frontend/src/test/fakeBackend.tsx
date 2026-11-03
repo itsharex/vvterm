@@ -40,6 +40,10 @@ export interface Fake extends Backend {
     testResult: ConnectionTest
     /** what the vault health check finds (default: nothing wrong) */
     health?: VaultHealth
+    /** what Install and restart is told (default: this copy cannot update itself) */
+    selfUpdate?: {supported: boolean; reason?: string}
+    /** the reason installUpdate fails with, when a test wants it to */
+    installError?: string
     /** an ssh:// link that arrived before the screen looked (taking it empties this) */
     pendingSSHLink?: SSHLink
     /** runs of a command on several hosts: a test moves them along by emitting `exec:update:<id>` */
@@ -548,6 +552,8 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       openUrl: async u => { rec('system.openUrl', u) },
       info: async () => ({version: '1.1.0-test'}),
       checkUpdate: async () => { rec('system.checkUpdate'); const latest = state.latest ?? '1.1.0-test'; return {current: '1.1.0-test', latest, available: latest !== '1.1.0-test', url: 'https://github.com/vunguyenvu35/vutty/releases/tag/v' + latest, notes: ''} },
+      selfUpdateStatus: async () => state.selfUpdate ?? {supported: false, reason: 'this copy of Vutty is not an installed application (a development build)'},
+      installUpdate: async () => { rec('system.installUpdate'); if (state.installError) throw state.installError },
       toggleMaximise: async () => { rec('system.toggleMaximise') },
       readClipboard: async () => { rec('system.readClipboard'); return state.clipboard },
       takePendingSSHLink: async () => { const l = state.pendingSSHLink ?? null; state.pendingSSHLink = undefined; return l },
