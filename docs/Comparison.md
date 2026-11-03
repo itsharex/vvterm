@@ -10,7 +10,7 @@ A short table, limited to what could be checked. Vutty's column comes from this 
 | SSH and SFTP | Yes | Yes, in the free plan | SSH yes; SFTP not listed in the README (a third-party plugin exists) | Yes (SSH, integrated SFTP and SCP client) |
 | Port forwarding | Local, remote, SOCKS5 | Yes, in the free plan | Yes (with X11 forwarding) | Local, remote, dynamic |
 | Serial and Telnet | Yes | Listed on the pricing page; plan not stated | Yes | Yes |
-| X11 forwarding | No | not stated | Yes | Yes |
+| X11 forwarding | Coming soon | not stated | Yes | Yes |
 | tmux integration | No | not stated | not stated | Yes |
 | Mosh | No (shown as unsupported) | Listed on the pricing page; plan not stated | not stated | not stated |
 | Encrypted store for secrets | Yes (AES-256-GCM, key from your master password) | Local vault in the free plan | Yes ("encrypted container for SSH secrets") | not stated |
@@ -19,7 +19,7 @@ A short table, limited to what could be checked. Vutty's column comes from this 
 
 ## Where Vutty is behind
 
-- No X11 forwarding, tmux integration or Mosh (Tabby and WindTerm have the first; WindTerm has tmux).
+- No tmux integration or Mosh yet (WindTerm has tmux). X11 forwarding is coming soon (Tabby and WindTerm have it).
 - No mobile apps (Termius has them).
 - The Windows and Linux builds are new and not signed; macOS is the most tested. See [Installing on macOS](InstallMac.md) for the macOS warning.
 
