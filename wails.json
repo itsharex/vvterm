@@ -6,6 +6,11 @@
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
+  "info": {
+    "protocols": [
+      {"scheme": "ssh", "description": "SSH link", "role": "Viewer"}
+    ]
+  },
   "author": {
     "name": "vu nguyen vu",
     "email": "vunguyenvu35@gmail.com"

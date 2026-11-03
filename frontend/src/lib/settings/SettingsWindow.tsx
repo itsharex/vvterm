@@ -289,6 +289,10 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                       <Switch label="Confirm before closing a tab" checked={s.confirm_tab_close} onChange={v => update({confirm_tab_close: v})} />
                     </div>
                     <div className="setting-row">
+                      <div><b>Be careful on production hosts</b><div className="muted">In the terminal of a host marked <i>prod</i>, ask before text with a line break is pasted (the line would run at once) and before a snippet or a history command is run. Terminals of production hosts also carry a red PROD badge.</div></div>
+                      <Switch label="Be careful on production hosts" checked={s.confirm_prod} onChange={v => update({confirm_prod: v})} />
+                    </div>
+                    <div className="setting-row">
                       <div><b>Check for updates automatically</b><div className="muted">When Vutty opens, ask GitHub (at most once a day) whether a newer release exists. Only the release information is read; nothing about you is sent.</div></div>
                       <Switch label="Check for updates automatically" checked={s.auto_update_check} onChange={v => update({auto_update_check: v})} />
                     </div>

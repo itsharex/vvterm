@@ -2,7 +2,7 @@ import {ReactNode} from 'react'
 import {BackendContext, Backend} from '../lib/backend'
 import {ToastProvider} from '../lib/ui/Toast'
 import {DEFAULT_SETTINGS} from '../lib/settings/defaults'
-import type {ExecRun, VaultHealth, ActivityEntry, KnownHost, QueueJob, RemoteEntry, SyncDiff, TransferResult, ConnectionTest, ForwardStatus, Group, Host, Identity, PortForward, Settings, Snippet, VaultStatus,
+import type {ExecRun, SSHLink, VaultHealth, ActivityEntry, KnownHost, QueueJob, RemoteEntry, SyncDiff, TransferResult, ConnectionTest, ForwardStatus, Group, Host, Identity, PortForward, Settings, Snippet, VaultStatus,
   CacheReport, AiCommandCheck, AiModelList, AiPreview, AiProvider, AiReply, AiSessionState, AiSettings, McpImportItem, McpServer, McpTool} from '../lib/types'
 
 export interface Fake extends Backend {
@@ -40,6 +40,8 @@ export interface Fake extends Backend {
     testResult: ConnectionTest
     /** what the vault health check finds (default: nothing wrong) */
     health?: VaultHealth
+    /** an ssh:// link that arrived before the screen looked (taking it empties this) */
+    pendingSSHLink?: SSHLink
     /** runs of a command on several hosts: a test moves them along by emitting `exec:update:<id>` */
     execRuns: Record<string, ExecRun>
     calls: Array<[string, ...unknown[]]>
@@ -546,6 +548,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       checkUpdate: async () => { rec('system.checkUpdate'); const latest = state.latest ?? '1.1.0-test'; return {current: '1.1.0-test', latest, available: latest !== '1.1.0-test', url: 'https://github.com/vunguyenvu35/vutty/releases/tag/v' + latest, notes: ''} },
       toggleMaximise: async () => { rec('system.toggleMaximise') },
       readClipboard: async () => { rec('system.readClipboard'); return state.clipboard },
+      takePendingSSHLink: async () => { const l = state.pendingSSHLink ?? null; state.pendingSSHLink = undefined; return l },
       writeClipboard: async t => { rec('system.writeClipboard', t); state.clipboard = t },
       openWindow: async (h, t) => { rec('system.openWindow', h, t) },
       openPath: async p => { rec('system.openPath', p) },

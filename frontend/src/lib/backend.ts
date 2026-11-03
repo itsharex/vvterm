@@ -1,5 +1,5 @@
 import {createContext, useContext} from 'react'
-import type {ExecRun, ExecSpec, VaultHealth, 
+import type {ExecRun, ExecSpec, SSHLink, VaultHealth, 
   CacheReport, ConnectionTest, ExportReport, ForwardStatus, Group, Host, HostFilter, Identity, ImportReport, PortForward, Settings,
   ActivityEntry, KnownHost, QueueJob, QueueSpec, RemoteEntry, SftpInfo, SyncDiff, Snippet, SyncStatus, TransferResult, VaultStatus,
   AiAskOptions, AiAttachment, AiCommandCheck, AiCustomProvider, AiModelList, AiPolicy, AiPreview, AiProvider, AiSessionState, AiSettings,
@@ -239,6 +239,8 @@ export interface Backend {
     /** The system clipboard: through the native runtime (a webview often refuses to read it), else the browser. */
     readClipboard(): Promise<string>
     writeClipboard(text: string): Promise<void>
+    /** the ssh:// link the system handed to the app that has not been looked at yet (null when none); also announced as `app:open-ssh` */
+    takePendingSSHLink(): Promise<SSHLink | null>
   }
   /** Subscribe to a backend event; returns an unsubscribe function. */
   on(event: string, cb: (data: any) => void): () => void
@@ -462,6 +464,12 @@ export function wailsBackend(): Backend {
       },
       writeClipboard: async text => {
         try { await call('app', 'SystemService', 'SetClipboardText', text) } catch { await navigator.clipboard.writeText(text) }
+      },
+      takePendingSSHLink: async () => {
+        try {
+          const l = await call<SSHLink>('app', 'SystemService', 'TakePendingSSHLink')
+          return l?.hostname ? l : null
+        } catch { return null } // a browser has no system to hand it a link
       },
     },
     on: (event, cb) => {

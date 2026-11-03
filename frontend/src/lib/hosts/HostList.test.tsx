@@ -169,6 +169,14 @@ describe('quick connect', () => {
     expect(connectTarget(text, [], true) !== null).toBe(yes)
   })
 
+  it('an ssh:// link typed or pasted in the bar is a complete address, like ssh user@host', async () => {
+    const cb = setup()
+    await userEvent.type(screen.getByLabelText('Search hosts'), 'ssh://deploy@new.example.org:2200/{Enter}')
+    expect(cb.onQuickConnect).toHaveBeenCalledWith({username: 'deploy', hostname: 'new.example.org', port: 2200})
+    expect(connectTarget('ssh://nas', [], true)).toEqual({quick: {username: '', hostname: 'nas', port: 22}}) // the prefix says it is meant
+    expect(connectTarget('ssh://alice@10.1.1.1', [hosts[3]], true)).toEqual({host: hosts[3]}) // a saved host, named in full
+  })
+
   it('connectTarget never starts a new host while saved hosts still match, or when new hosts are not offered', () => {
     expect(connectTarget('ssh root@10.0.0.1', [hosts[3]], true)).toBeNull()
     expect(connectTarget('10.0.0.1', [], false)).toBeNull()
@@ -184,6 +192,9 @@ describe('quick connect', () => {
     ['host.example.com', {username: '', hostname: 'host.example.com', port: 22}],
     ['u@h:2222', {username: 'u', hostname: 'h', port: 2222}],
     ['SSH   u@h', {username: 'u', hostname: 'h', port: 22}],
+    ['ssh://deploy@new.example.org:2200', {username: 'deploy', hostname: 'new.example.org', port: 2200}],
+    ['SSH://root@10.0.0.5/', {username: 'root', hostname: '10.0.0.5', port: 22}],
+    ['ssh://host.example', {username: '', hostname: 'host.example', port: 22}],
   ])('parses %s', (text, want) => expect(parseQuickConnect(text)).toEqual(want))
 
   it.each(['', 'a b c', 'h:99999', '@h', 'user@'])('rejects %j', text => expect(parseQuickConnect(text)).toBeNull())

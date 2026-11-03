@@ -84,3 +84,44 @@ func TestClearCacheWithoutAFolderIsFine(t *testing.T) {
 		t.Fatalf("%+v %v", r, err)
 	}
 }
+
+func TestConfirmProdIsOnByDefaultAndTheChoiceSurvivesARestartAndAReset(t *testing.T) {
+	h := newHarness(t).unlocked(t)
+	if !h.app.Settings.Get().ConfirmProd {
+		t.Fatal("the production check must be on to begin with")
+	}
+	in := h.app.Settings.Get()
+	in.ConfirmProd = false
+	if _, err := h.app.Settings.Save(in); err != nil {
+		t.Fatal(err)
+	}
+	c2, err := testCore(t, h.core.Dir, nil) // a restart: settings.json is read again
+	if err != nil {
+		t.Fatal(err)
+	}
+	if New(c2).Settings.Get().ConfirmProd {
+		t.Fatal("an off switch came back on after a restart")
+	}
+	got, err := h.app.Settings.ResetSettings()
+	if err != nil || !got.ConfirmProd {
+		t.Fatalf("a reset goes back to the default (on): %+v %v", got, err)
+	}
+}
+
+func TestSettingsWrittenByAnOlderVersionGetTheProductionCheckOn(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "data"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "data", "settings.json"), []byte(`{"theme":"light","zoom":110}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	c, err := testCore(t, dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := New(c).Settings.Get()
+	if got.Theme != "light" || got.Zoom != 110 || !got.ConfirmProd {
+		t.Fatalf("%+v", got)
+	}
+}

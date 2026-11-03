@@ -104,6 +104,8 @@ export interface Settings {
   sync_url: string
   zoom: number // interface scale in percent
   confirm_tab_close: boolean
+  /** ask before pasting text with a line break, or running a snippet or a history command, in a production host's terminal */
+  confirm_prod: boolean
   /** a host opens on a Choose protocol screen first */
   ask_protocol: boolean
   /** the lock screen asks for Touch ID / Windows Hello by itself, without a click */
@@ -203,6 +205,13 @@ export interface ExecRun {
   id: string
   done: boolean
   results: ExecResult[]
+}
+
+/** Where an ssh:// link points. A password, a path and a query are dropped before it gets here. */
+export interface SSHLink {
+  username: string
+  hostname: string
+  port: number
 }
 
 export interface HostKeyPrompt {

@@ -1215,3 +1215,8 @@ input[type='password']::-webkit-credentials-auto-fill-button { visibility: hidde
 .xr-result.canceled { opacity: .6; }
 .xr-spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #2f7bf566; border-top-color: #2f7bf5; animation: connect-spin .9s linear infinite; }
 .xr-out { margin: 0; padding: 10px 14px 12px 40px; max-height: 260px; overflow: auto; font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--term-bg); color: var(--text); border-top: 1px solid var(--line); }
+
+/* ---------- production hosts ---------- */
+.pane.prod { box-shadow: inset 0 0 0 2px #e5484d88; }
+.pane.prod.focused { box-shadow: inset 0 0 0 2px var(--env-prod); }
+.prod-badge { position: absolute; top: 6px; right: 14px; z-index: 3; padding: 1px 8px; border-radius: 6px; background: var(--env-prod); color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .1em; pointer-events: none; opacity: .92; }

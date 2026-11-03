@@ -39,7 +39,7 @@ import {useToast} from './lib/ui/Toast'
 import {useConfirm} from './lib/ui/Confirm'
 import {DragBar} from './lib/ui/DragBar'
 import type {DropSide, Leaf} from './lib/layout'
-import type {ForwardType, Group, PortForward, Host, Identity, Settings, Snippet, VaultStatus} from './lib/types'
+import type {ForwardType, Group, PortForward, Host, Identity, Settings, Snippet, SSHLink, VaultStatus} from './lib/types'
 
 type Dialog =
   | {k: 'host'; host?: Host; prefill?: QuickConnect}
@@ -114,6 +114,14 @@ export default function App({initial}: {/** an app window opened for this place 
     setTabs(ts => [...ts, {...t, title: uniqueTitle(ts, initial.title)}])
     setActive(t.id)
   }, [initial, vault?.unlocked, hosts])
+
+  // an ssh:// link: the system hands it to the app, the app asks before it opens anything (see sshLinkHandler)
+  const sshLinkHandler = useRef<(l: SSHLink) => void>(() => {})
+  const takeLink = useCallback(() => { void be.system.takePendingSSHLink().then(l => { if (l?.hostname) sshLinkHandler.current(l) }).catch(() => {}) }, [be])
+  useEffect(() => { if (vault?.unlocked) takeLink() }, [vault?.unlocked, takeLink]) // one that came while the vault was locked
+  const unlockedRef = useRef(false)
+  unlockedRef.current = !!vault?.unlocked
+  useEffect(() => be.on('app:open-ssh', () => { if (unlockedRef.current) takeLink() }), [be, takeLink])
 
   const refreshDataRef = useRef<() => Promise<void> | void>(() => {})
   refreshDataRef.current = () => { if (vault?.unlocked) return refreshData() }
@@ -250,6 +258,20 @@ export default function App({initial}: {/** an app window opened for this place 
     setTabs(ts => [...ts, {...t, title: uniqueTitle(ts, h.label), choose: !!h.telnet_enabled || settings.ask_protocol}])
     setActive(t.id)
   }
+  // what an ssh:// link does: never connects by itself. A saved host it names is opened after a yes; any other address only
+  // opens the New host form, filled in, and nothing happens until Connect is pressed (the host key is asked about as always).
+  sshLinkHandler.current = async (l: SSHLink) => {
+    const all = (await be.hosts.listHosts({})) ?? []
+    const same = all.filter(h => h.hostname.toLowerCase() === l.hostname.toLowerCase() && h.port === l.port)
+    const match = l.username ? same.find(h => h.username === l.username) : same[0]
+    const target = `${l.username ? l.username + '@' : ''}${l.hostname}${l.port !== 22 ? ':' + l.port : ''}`
+    if (match) {
+      if (await confirm(`A link wants to open ${match.label} (${target}). Connect?`, {confirmLabel: 'Connect'})) connect(match)
+    } else if (await confirm(`A link points to ${target}, which is not one of your hosts. Add it as a new host? Nothing connects until you press Connect.`, {confirmLabel: 'Add host'})) {
+      goHome('hosts')
+      setDialog({k: 'host', prefill: {username: l.username, hostname: l.hostname, port: l.port}})
+    }
+  }
   // a host card dropped on a group card
   const moveHost = (h: Host, groupId: string) => {
     be.hosts.saveHost({...h, group_id: groupId})
@@ -366,15 +388,30 @@ export default function App({initial}: {/** an app window opened for this place 
     setTabs(remaining)
     if (!remaining.some(t => t.id === tabId) && active === tabId) setActive(fallbackTab(remaining))
   }
+  /** the production host the focused pane of a tab is on, when "be careful on production hosts" is on */
+  const prodHostOf = (tab: {root: Parameters<typeof leaves>[0]; activePane: string}): Host | undefined => {
+    if (!settings.confirm_prod) return undefined
+    const id = leaves(tab.root).find(l => l.id === tab.activePane)?.hostId
+    const h = hosts.find(x => x.id === id)
+    return h?.env === 'prod' ? h : undefined
+  }
+  /** what is typed runs lines at once: on a production host that is asked about first (a paste with line breaks counts too) */
+  const okOnProd = async (tab: Parameters<typeof prodHostOf>[0], text: string, run: boolean, what: string): Promise<boolean> => {
+    const h = prodHostOf(tab)
+    if (!h || !(run || /[\r\n]/.test(text.replace(/[\r\n]+$/, '')))) return true
+    return confirm(`${what} on the PRODUCTION host ${h.label}? ${run ? 'It runs at once.' : 'Its lines run as soon as they are typed.'}`, {confirmLabel: run ? 'Run' : 'Paste', danger: true})
+  }
   /** types text into the focused pane (the sidebar's snippets and history); `run` presses Enter too */
-  const insertIntoTerminal = (text: string, run: boolean) => {
+  const insertIntoTerminal = async (text: string, run: boolean) => {
     const tab = tabs.find(t => t.id === (tabs.some(x => x.id === active) ? active : lastTerm))
     if (!tab || !isTerminalTab(tab)) return toast.error('Open a terminal first.')
+    if (!(await okOnProd(tab, text, run, run ? 'Run this command' : 'Paste this text'))) return
     writeToPane(tab.activePane, toTerminalInput(text, run)) // a terminal that is still connecting takes nothing: no message for that
   }
-  const sendSnippet = (s: Snippet, script: string, execute: boolean) => {
+  const sendSnippet = async (s: Snippet, script: string, execute: boolean) => {
     const tab = tabs.find(t => t.id === (tabs.some(x => x.id === active) ? active : lastTerm))
     if (!tab) return toast.error('Open a terminal first: the snippet is typed into the focused pane.')
+    if (isTerminalTab(tab) && !(await okOnProd(tab, script, execute, `${execute ? 'Run' : 'Paste'} “${s.label}”`))) return
     if (!writeToPane(tab.activePane, toTerminalInput(script, execute))) return // still connecting: nothing to say about it
     setActive(tab.id)
     toast.info(execute ? `Ran “${s.label}”` : `Pasted “${s.label}”`)

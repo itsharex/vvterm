@@ -253,7 +253,7 @@ When Vutty opens it also looks by itself, at most once a day (switch it off with
 
 **Help → About Vutty** and **Help → Check for Updates…** open the same window, also while the vault is locked.
 
-- **General:** **Zoom** makes the whole interface larger or smaller (80 % to 160 %, also with the zoom shortcuts), **Reduce motion** turns animations off, and **Confirm before closing a tab** asks before ending a terminal or SFTP connection.
+- **General:** **Zoom** makes the whole interface larger or smaller (80 % to 160 %, also with the zoom shortcuts), **Reduce motion** turns animations off, **Confirm before closing a tab** asks before ending a terminal or SFTP connection, and **Be careful on production hosts** (on by default) is described in [section 17](#17-connecting-protocol-progress-and-errors).
 - **Account:** a local profile (display name and email, stored only in your settings file), your plan, and a disabled **Sign in** for the cloud features planned for later. Nothing is sent anywhere. The **Donate** card links to Ko-fi if you want to support the project.
 
 <!-- CRYPTO-DONATE: screenshot shows the USDT addresses, hidden for now
@@ -361,6 +361,25 @@ Then the **connecting screen** shows who you are connecting to and a line from t
 **Servers that ask for a code.** A bastion or a company server often wants a second step after the password or the key: a verification code from an authenticator app, a Duo choice, a one-time password. When the server asks, a **Sign in to <host>** box appears over the terminal (or in the SFTP pane, the sidebar, the port forward and the host form's **Test connection**) with the server's own questions: type the code and press **Continue**, or **Cancel** to stop. A box that asks for a code hides what you type, unless the server says it may be shown. A saved password answers the question that asks for the password by itself, so you are only asked for what is left. Nothing you type here is saved or written to the logs, and you have three minutes to answer. If a host asks for a code, a connection that starts by itself (a port forward that starts with the app) has nobody to answer it: it waits the three minutes and then fails; start it from the Port Forwarding page instead.
 
 The state of every tab is a small badge on its icon: a spinner while connecting, a **green** dot while connected, a **red** dot when the connection is lost (press Enter in the pane, or Retry, to reconnect: Vutty never reconnects by itself).
+
+### Production hosts
+
+A host whose environment is **prod** is marked in its terminal: a red frame and a red **PROD** badge, so you know where you are typing. With **Settings → General → Be careful on production hosts** on (the default), Vutty also asks before:
+
+- **pasting text with a line break** into that terminal (the line would run as soon as it arrives; a single line that ends with Enter counts, a line without one does not), whether you paste with the keyboard, the right click or the menu;
+- **running a snippet** or a command from the history there, and **pasting a snippet that has several lines**, since all its lines but the last run as they are typed;
+- **running a command on several hosts** when one of them is prod (see *Run on hosts* in [section 7](#7-snippets)): that question is always asked.
+
+Say no and nothing is typed. Turn the setting off if you would rather not be asked; the red mark stays.
+
+### ssh:// links
+
+Vutty can open `ssh://[user@]host[:port]` links (on macOS it is registered for them: the first time you click one, macOS may ask which app should open it, and you can pick Vutty). On Windows and Linux the link is passed to the app as an argument when the system is set up to do so. **A link never connects by itself.** Vutty first says what the link points to and asks:
+
+- a link to a **saved host** (same address, same port, and the same user name if the link has one) asks *Connect?*;
+- a link to an **address you do not have** only opens the **New host** form, filled in; nothing happens until you press Connect, and an unknown server key is asked about as always.
+
+A password in the link is ignored, and so is anything after the address (a path, a query), because a link from a web page or a chat must not carry a secret in or a command. A link that has no usable host name is ignored. If the vault is locked, the link waits and is asked about right after you unlock. The same `ssh://user@host:2222` written in the search box of the Hosts page works like `ssh user@host:2222`.
 
 ## 18. Tabs: order, split, new window
 

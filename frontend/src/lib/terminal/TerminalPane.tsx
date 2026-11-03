@@ -15,10 +15,15 @@ import {createHighlighter, HighlightTerm} from './highlight'
 import {matches} from '../shortcuts/shortcuts'
 import {IconArrowDown, IconArrowUp} from '../ui/Icons'
 import {AuthPrompt} from '../ui/AuthPrompt'
+import {useConfirm} from '../ui/Confirm'
 import type {AuthChallenge, ClosedInfo, HostKeyPrompt} from '../types'
 
 interface Props {
   hostId: string
+  /** the host is marked prod: the pane says so, and (with confirmProd) asks before text with a line break is pasted */
+  prod?: boolean
+  /** the "be careful on production hosts" setting (default on) */
+  confirmProd?: boolean
   /** identifies the pane so other parts of the UI (snippets) can type into it */
   paneId?: string
   visible: boolean
@@ -153,6 +158,19 @@ export function TerminalPane(p: Props) {
   copyOnSelect.current = p.copyOnSelect ?? true
   rightClick.current = p.rightClick ?? 'paste'
   const [menu, setMenu] = useState<{x: number; y: number} | null>(null)
+  const confirm = useConfirm()
+  const confirmRef = useRef(confirm)
+  confirmRef.current = confirm
+  const guarded = useRef(false)
+  guarded.current = !!p.prod && (p.confirmProd ?? true)
+  /** text with a line break runs as soon as it arrives: in a production terminal it is asked about first */
+  const okToPaste = async (text: string): Promise<boolean> => {
+    if (!guarded.current || !/[\r\n]/.test(text)) return true
+    const lines = text.replace(/[\r\n]+$/, '').split(/\r\n|\r|\n/).length
+    return confirmRef.current(
+      lines === 1 ? 'Paste a line that ends with Enter into a PRODUCTION terminal? It runs at once.' : `Paste ${lines} lines into a PRODUCTION terminal? Each line runs as soon as it arrives.`,
+      {confirmLabel: 'Paste', danger: true})
+  }
   const focusedRef = useRef(p.focused && p.visible)
   focusedRef.current = p.focused && p.visible
   const suggestOn = useRef(p.suggest ?? true)
@@ -191,7 +209,7 @@ export function TerminalPane(p: Props) {
     try {
       const text = await be.system.readClipboard()
       // the terminal turns it into bracketed paste when the shell asks for that, and the keys go out in order
-      if (text && stateRef.current === 'ready') term.current?.paste(text)
+      if (text && stateRef.current === 'ready' && await okToPaste(text)) term.current?.paste(text)
     } catch { /* clipboard not available */ }
   }
 
@@ -209,6 +227,16 @@ export function TerminalPane(p: Props) {
     fit.current = f
     search.current = s
     t.open(host.current!)
+    // a paste made by the browser itself (Cmd+V) is asked about too, before xterm sees it
+    const pasteEl = host.current!
+    const onPasteCapture = (e: ClipboardEvent) => {
+      const text = e.clipboardData?.getData('text/plain') ?? ''
+      if (!guarded.current || !/[\r\n]/.test(text)) return
+      e.preventDefault()
+      e.stopPropagation()
+      void okToPaste(text).then(ok => { if (ok && stateRef.current === 'ready') t.paste(text) })
+    }
+    pasteEl.addEventListener('paste', onPasteCapture, true)
     imeColours(host.current, p.termTheme)
     const unfollowIme = followReplacements(t as unknown as ComposingTerm)
     try { f.fit() } catch { /* hidden */ }
@@ -357,6 +385,7 @@ export function TerminalPane(p: Props) {
 
     return () => {
       disposed = true
+      pasteEl.removeEventListener('paste', onPasteCapture, true)
       window.clearTimeout(hlTimer)
       window.clearTimeout(selTimer)
       hlSub?.dispose()
@@ -440,8 +469,9 @@ export function TerminalPane(p: Props) {
   }
 
   return (
-    <div className={'pane' + (p.focused ? ' focused' : '')} onMouseDown={p.onFocus} onContextMenu={onContextMenu} data-testid="pane" style={{background: p.termTheme.background}}>
+    <div className={'pane' + (p.focused ? ' focused' : '') + (p.prod ? ' prod' : '')} onMouseDown={p.onFocus} onContextMenu={onContextMenu} data-testid="pane" style={{background: p.termTheme.background}}>
       <div ref={host} style={{height: '100%', background: p.termTheme.background}} />
+      {p.prod && <div className="prod-badge" title="This host is marked production" aria-label="Production host">PROD</div>}
       {menu && (
         <div className="ctx-menu" role="menu" aria-label="Terminal" style={{left: menu.x, top: menu.y}} onMouseDown={e => e.stopPropagation()} onContextMenu={e => e.preventDefault()}>
           <button role="menuitem" disabled={!hasSelection} onClick={() => { copyText(term.current?.getSelection() ?? ''); setMenu(null); term.current?.focus() }}>Copy</button>

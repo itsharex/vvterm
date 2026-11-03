@@ -330,6 +330,47 @@ describe('App snippets', () => {
     expect(screen.queryByRole('dialog', {name: 'Run “Tpl”'})).toBeNull()
   })
 
+  describe('on a production host', () => {
+    const prod = () => host({id: 'h1', label: 'web-1', env: 'prod'})
+    async function openProd(settings?: object) {
+      const be = setup({hosts: [prod()], snippets: [snip], ...(settings ? {settings: {...DEFAULT_SETTINGS, ...settings}} : {})})
+      await unlock(be)
+      await userEvent.dblClick(hostCard('web-1'))
+      await userEvent.click(screen.getByRole('tab', {name: 'Vaults'}))
+      await userEvent.click(screen.getByRole('button', {name: 'Snippets'}))
+      return be
+    }
+
+    it('asks before a snippet runs, and types nothing when the answer is no', async () => {
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+      await openProd()
+      await userEvent.click(await screen.findByLabelText('Run Disk'))
+      await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+      expect(confirm.mock.calls[0][0]).toMatch(/Run “Disk” on the PRODUCTION host web-1\? It runs at once\./)
+      expect(typed.text).toEqual([])
+      confirm.mockReturnValue(true)
+      await userEvent.click(await screen.findByLabelText('Run Disk'))
+      await waitFor(() => expect(typed.text).toEqual(['df -h\ruptime\r']))
+    })
+
+    it('asks about a multi-line Paste too, since its lines run as they are typed', async () => {
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+      await openProd()
+      await userEvent.click(await screen.findByLabelText('Paste Disk'))
+      await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+      expect(confirm.mock.calls[0][0]).toMatch(/Paste “Disk” on the PRODUCTION host web-1\? Its lines run as soon as they are typed/)
+      await waitFor(() => expect(typed.text).toEqual(['df -h\ruptime']))
+    })
+
+    it('does not ask when the setting is off', async () => {
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+      await openProd({confirm_prod: false})
+      await userEvent.click(await screen.findByLabelText('Run Disk'))
+      expect(typed.text).toEqual(['df -h\ruptime\r'])
+      expect(confirm).not.toHaveBeenCalled()
+    })
+  })
+
   it('refuses to run without an open terminal', async () => {
     const be = setup({snippets: [snip]})
     await unlock(be)
@@ -1461,5 +1502,82 @@ describe('App: dragging a tab onto a pane', () => {
     const after = screen.getAllByTestId('terminal')
     expect(before.every(el => after.includes(el) && document.body.contains(el))).toBe(true) // the same panes: no reconnect
     void be
+  })
+})
+
+describe('App: ssh:// links', () => {
+  // the link opens a terminal as soon as the vault is open, so the Hosts list never shows: unlock by hand
+  const unlockOnly = async (be: ReturnType<typeof makeFake>) => {
+    await userEvent.type(await screen.findByLabelText('Master password'), be.state.password)
+    await userEvent.click(screen.getByRole('button', {name: 'Unlock'}))
+  }
+  const link = (over: Partial<{username: string; hostname: string; port: number}> = {}) => ({username: '', hostname: 'web.example.com', port: 22, ...over})
+  const saved = () => host({id: 'h1', label: 'web-1', hostname: 'web.example.com', username: 'root'})
+
+  it('a link that came before the vault was unlocked is asked about once it is, and a yes opens the saved host', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const be = setup({hosts: [saved()], pendingSSHLink: link({username: 'root'})})
+    await unlockOnly(be)
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    expect(confirm.mock.calls[0][0]).toBe('A link wants to open web-1 (root@web.example.com). Connect?')
+    await waitFor(() => expect(screen.getAllByTestId('terminal')).toHaveLength(1))
+    expect(screen.getByTestId('terminal')).toHaveAttribute('data-host', 'h1')
+    expect(be.state.pendingSSHLink).toBeUndefined() // taken: it will not come back
+  })
+
+  it('a no connects to nothing', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const be = setup({hosts: [saved()], pendingSSHLink: link()})
+    await unlock(be)
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    await new Promise(r => setTimeout(r, 30))
+    expect(screen.queryAllByTestId('terminal')).toHaveLength(0)
+  })
+
+  it('an address that is not a saved host only opens the New host form, filled in: it never connects by itself', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const be = setup({hosts: [saved()], pendingSSHLink: link({username: 'deploy', hostname: 'new.example.org', port: 2200})})
+    await unlock(be)
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    expect(confirm.mock.calls[0][0]).toMatch(/new\.example\.org:2200, which is not one of your hosts\. Add it as a new host\? Nothing connects until you press Connect\./)
+    const dlg = await screen.findByRole('dialog', {name: 'New host'})
+    expect(within(dlg).getByLabelText('Hostname')).toHaveValue('new.example.org')
+    expect(within(dlg).getByLabelText('Port')).toHaveValue('2200')
+    expect(within(dlg).getByLabelText('Username')).toHaveValue('deploy')
+    expect(screen.queryAllByTestId('terminal')).toHaveLength(0)
+    expect(be.state.calls.some(c => c[0] === 'session.open')).toBe(false)
+  })
+
+  it('a user name that differs from the saved host is a different host, not a match', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const be = setup({hosts: [saved()], pendingSSHLink: link({username: 'someone-else'})})
+    await unlock(be)
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    expect(confirm.mock.calls[0][0]).toMatch(/not one of your hosts/)
+    expect(screen.queryAllByTestId('terminal')).toHaveLength(0)
+  })
+
+  it('a link that arrives while the app is open is handled at once, and a link that is not a host in this list never matches by name only', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const be = setup({hosts: [saved()]})
+    await unlock(be)
+    expect(confirm).not.toHaveBeenCalled()
+    be.state.pendingSSHLink = link({port: 2222}) // the same name on another port is another host
+    act(() => be.emit('app:open-ssh', link({port: 2222})))
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
+    expect(confirm.mock.calls[0][0]).toMatch(/web\.example\.com:2222, which is not one of your hosts/)
+  })
+
+  it('an event while the vault is locked leaves the link for after the unlock', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const be = setup({hosts: [saved()]})
+    await screen.findByLabelText('Master password')
+    be.state.pendingSSHLink = link({username: 'root'})
+    act(() => be.emit('app:open-ssh', link({username: 'root'})))
+    await new Promise(r => setTimeout(r, 30))
+    expect(confirm).not.toHaveBeenCalled()
+    expect(be.state.pendingSSHLink).toBeDefined() // still waiting
+    await unlockOnly(be)
+    await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1))
   })
 })

@@ -42,9 +42,9 @@ interface Props {
 const ENVS: Env[] = ['prod', 'staging', 'dev']
 export const HOST_DRAG = 'application/x-vutty-host'
 
-/** Parses "ssh user@host:2222", "user@host" or "host". */
+/** Parses "ssh user@host:2222", "ssh://user@host:2222/", "user@host" or "host". */
 export function parseQuickConnect(text: string): QuickConnect | null {
-  const m = text.trim().replace(/^ssh\s+/i, '').match(/^(?:([^\s@]+)@)?([A-Za-z0-9_.\-[\]:]+?)(?::(\d{1,5}))?$/)
+  const m = text.trim().replace(/^ssh(?:\s+|:\/\/)/i, '').replace(/\/+$/, '').match(/^(?:([^\s@]+)@)?([A-Za-z0-9_.\-[\]:]+?)(?::(\d{1,5}))?$/)
   if (!m) return null
   const port = m[3] ? Number(m[3]) : 22
   if (port < 1 || port > 65535) return null
@@ -53,7 +53,7 @@ export function parseQuickConnect(text: string): QuickConnect | null {
 
 /** A bare name or a half-typed address is still a search; these look like somewhere to connect to. */
 function looksComplete(text: string, q: QuickConnect): boolean {
-  if (/^ssh\s/i.test(text.trim()) || q.username !== '' || /:\d+$/.test(text.trim())) return true // ssh …, user@host, host:port
+  if (/^ssh(\s|:\/\/)/i.test(text.trim()) || q.username !== '' || /:\d+$/.test(text.trim())) return true // ssh …, user@host, host:port
   const h = q.hostname
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return h.split('.').every(o => Number(o) <= 255) // 10.0.0.1, not 10.0
   return /\.[A-Za-z]{2,}$/.test(h) || h.includes(':') || h.toLowerCase() === 'localhost'
@@ -65,7 +65,7 @@ function looksComplete(text: string, q: QuickConnect): boolean {
  * new host from. A partial name ("54", "web") that matches some hosts just filters them.
  */
 export function connectTarget(text: string, matches: Host[], allowNew: boolean): {host: Host} | {quick: QuickConnect} | null {
-  const needle = text.trim().replace(/^ssh\s+/i, '').toLowerCase()
+  const needle = text.trim().replace(/^ssh(?:\s+|:\/\/)/i, '').replace(/\/+$/, '').toLowerCase()
   if (!needle) return null
   const same = matches.filter(h => [h.label, h.hostname, `${h.hostname}:${h.port}`, `${h.username}@${h.hostname}`, `${h.username}@${h.hostname}:${h.port}`].some(a => a.toLowerCase() === needle))
   if (same.length === 1) return {host: same[0]}

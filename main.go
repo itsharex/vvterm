@@ -5,6 +5,7 @@ import (
 	"embed"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -39,6 +40,11 @@ func main() {
 		log.Fatalf("open data: %v", err)
 	}
 
+	for _, arg := range os.Args[1:] { // Windows and Linux hand a clicked ssh:// link over as an argument
+		if strings.HasPrefix(strings.ToLower(arg), "ssh://") {
+			a.System.OpenSSHLink(arg)
+		}
+	}
 	slimFullScreenBar() // a low bar with the app's name when macOS slides it over the page in full screen
 	err = wails.Run(&options.App{
 		Title:     "Vutty",
@@ -54,8 +60,9 @@ func main() {
 		OnShutdown:       a.Shutdown,
 		Menu:             a.Menu(),
 		Mac: &mac.Options{
-			TitleBar: mac.TitleBarHiddenInset(),
-			About:    &mac.AboutInfo{Title: "Vutty", Message: "SSH client with an encrypted vault.\nVersion " + app.Version, Icon: appIcon},
+			TitleBar:  mac.TitleBarHiddenInset(),
+			About:     &mac.AboutInfo{Title: "Vutty", Message: "SSH client with an encrypted vault.\nVersion " + app.Version, Icon: appIcon},
+			OnUrlOpen: a.System.OpenSSHLink, // an ssh:// link: the window asks before it opens anything
 		},
 		Bind: []interface{}{
 			a.Host, a.Vault, a.Session, a.Forward, a.Sync, a.ImportExp, a.Settings, a.Snippet, a.Sftp, a.Local, a.Serial, a.Log, a.KnownHost, a.Assistant, a.Exec, a.System,

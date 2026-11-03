@@ -24,6 +24,16 @@ function setup(over: Partial<Settings> = {}, vault = vaultSt) {
 }
 const tab = (n: string) => userEvent.click(screen.getByRole('tab', {name: n}))
 
+describe('SettingsWindow: production hosts', () => {
+  it('has the switch for being careful on production hosts, on to begin with, and saves it', async () => {
+    const {be} = setup()
+    const sw = await screen.findByRole('switch', {name: 'Be careful on production hosts'})
+    expect(sw).toBeChecked()
+    await userEvent.click(sw)
+    await waitFor(() => expect(be.state.settings.confirm_prod).toBe(false))
+  })
+})
+
 describe('SettingsWindow', () => {
   it('is a window with a title bar, not a page', () => {
     setup()

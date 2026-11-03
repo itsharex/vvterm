@@ -21,6 +21,7 @@ type SystemService struct {
 	openWindow   func(hostID, title string) error
 	menuFor      func(shortcuts map[string]string) *menu.Menu
 	menuKeys     map[string]string
+	links        sshLinks
 }
 
 func NewSystemService() *SystemService { return &SystemService{} }
