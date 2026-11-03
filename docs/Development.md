@@ -110,6 +110,7 @@ Nothing leaves your machine by default. `--tag` creates a local annotated tag; `
    git push origin vX.Y.Z
    ```
 3. About three minutes later the release has: `vutty-X.Y.Z-macos.dmg` and `.zip`, `vutty-X.Y.Z-windows-amd64.exe`, `vutty-X.Y.Z-linux-amd64.tar.gz` and `SHA256SUMS`.
+   The workflow also attaches a copy of each file without the version in its name (`vutty-macos.dmg`, `vutty-macos.zip`, `vutty-windows-amd64.exe`, `vutty-linux-amd64.tar.gz`), which `SHA256SUMS` lists too. The download links of the README (`releases/latest/download/vutty-macos.dmg`) rely on them, so keep these names; the self-update looks its file up by the name with the version.
 
 Notes:
 

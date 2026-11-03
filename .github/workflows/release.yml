@@ -84,6 +84,15 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      # A copy of every file without the version in its name (vutty-macos.dmg), so that the links of the README never change:
+      # https://github.com/<owner>/vutty/releases/latest/download/vutty-macos.dmg is always the newest release. They are in
+      # SHA256SUMS too; the app that updates itself looks its file up by the name with the version, so the extra lines do no harm.
+      - name: Names without a version
+        run: |
+          VERSION="$(cat VERSION)"
+          cd dist
+          for f in vutty-"$VERSION"-*; do cp "$f" "${f/-$VERSION/}"; done
+          ls
       - name: Checksums
         run: cd dist && rm -f *.sha256 && sha256sum * > SHA256SUMS
       # The app updates itself only to a release whose checksum list is signed with the maintainer's key (docs/ReleaseSigning.md).

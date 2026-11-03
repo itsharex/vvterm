@@ -57,13 +57,13 @@
 
 - **From a release (recommended):** download the file for your system from the [Releases](../../releases) page:
 
-  | System | File | How to install |
+  | System | Download (always the newest release) | How to install |
   | --- | --- | --- |
-  | macOS | `vutty-<version>-macos.dmg` (or `.zip`) | open the DMG and drag **vutty.app** to *Applications* |
-  | Windows | `vutty-<version>-windows-amd64.exe` | run it, no installer needed |
-  | Linux | `vutty-<version>-linux-amd64.tar.gz` | `tar xzf` it and run `./vutty` (needs GTK 3 and WebKitGTK 4.0, for example `libgtk-3-0` and `libwebkit2gtk-4.0-37` on Ubuntu 22.04) |
+  | macOS | [`vutty-macos.dmg`](https://github.com/vunguyenvu35/vutty/releases/latest/download/vutty-macos.dmg) (or [`.zip`](https://github.com/vunguyenvu35/vutty/releases/latest/download/vutty-macos.zip)) | open the DMG and drag **vutty.app** to *Applications* |
+  | Windows | [`vutty-windows-amd64.exe`](https://github.com/vunguyenvu35/vutty/releases/latest/download/vutty-windows-amd64.exe) | run it, no installer needed |
+  | Linux | [`vutty-linux-amd64.tar.gz`](https://github.com/vunguyenvu35/vutty/releases/latest/download/vutty-linux-amd64.tar.gz) | `tar xzf` it and run `./vutty` (needs GTK 3 and WebKitGTK 4.0, for example `libgtk-3-0` and `libwebkit2gtk-4.0-37` on Ubuntu 22.04) |
 
-  Each release also lists `SHA256SUMS` so you can check your download.
+  The links always point to the newest release. A release also has the same files with the version in their name (`vutty-<version>-macos.dmg`), for an older version, and lists `SHA256SUMS` so you can check your download.
 - **macOS with Homebrew:** `brew install --cask vunguyenvu35/vutty/vutty` (the first run adds the tap `vunguyenvu35/vutty`; update later with `brew upgrade --cask vutty`). The cask clears the quarantine flag for you, so the first-launch warning below does not apply.
 - **From source:** see the [Development guide](docs/Development.md) (three commands).
 
