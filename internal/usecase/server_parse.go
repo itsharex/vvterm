@@ -47,12 +47,13 @@ type ServerUnit struct {
 
 // ServerContainer is a Docker container.
 type ServerContainer struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Image  string `json:"image"`
-	State  string `json:"state"` // running, exited, paused…
-	Status string `json:"status"`
-	Ports  string `json:"ports"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Image   string `json:"image"`
+	State   string `json:"state"` // running, exited, paused…
+	Status  string `json:"status"`
+	Ports   string `json:"ports"`
+	Project string `json:"project"` // the Docker Compose project it belongs to ("" when Compose did not start it)
 }
 
 // ServerContainers is the Docker section: Installed is false when the server has no docker command.
@@ -179,7 +180,16 @@ func parseOverview(out string) (o ServerOverview, rx, tx uint64) {
 
 func round1(f float64) float64 { return float64(int(f*10+0.5)) / 10 }
 
-// parseProcesses reads `ps -eo pid=,user=,pcpu=,pmem=,args=` and returns the busiest first.
+// psCommand is what Processes runs. ps reports the CPU of a process as time used / time alive, so the ps that lists the
+// processes always shows as busy (near 100%) for the instant it lives: it and the shell that started it are left out.
+const psCommand = "ps -eo pid=,user=,pcpu=,pmem=,args="
+
+// ownCommand is the ps of the panel itself, or the shell that runs it (see run).
+func ownCommand(cmd string) bool {
+	return cmd == psCommand || (strings.HasSuffix(cmd, "; "+psCommand) && strings.Contains(cmd, "LC_ALL"))
+}
+
+// parseProcesses reads the output of psCommand and returns the busiest first.
 func parseProcesses(out string, max int) []ServerProcess {
 	var ps []ServerProcess
 	for _, ln := range strings.Split(out, "\n") {
@@ -194,6 +204,9 @@ func parseProcesses(out string, max int) []ServerProcess {
 		cpu, _ := strconv.ParseFloat(f[2], 64)
 		mem, _ := strconv.ParseFloat(f[3], 64)
 		cmd := strings.Join(f[4:], " ")
+		if ownCommand(cmd) {
+			continue
+		}
 		if len(cmd) > 200 {
 			cmd = cmd[:200]
 		}
@@ -262,11 +275,11 @@ func parseContainers(out string) ServerContainers {
 		if !strings.HasPrefix(ln, "{") {
 			continue
 		}
-		var j struct{ ID, Names, Image, State, Status, Ports string }
+		var j struct{ ID, Names, Image, State, Status, Ports, Labels string }
 		if json.Unmarshal([]byte(ln), &j) != nil {
 			continue
 		}
-		res.Containers = append(res.Containers, ServerContainer{ID: j.ID, Name: j.Names, Image: j.Image, State: j.State, Status: j.Status, Ports: j.Ports})
+		res.Containers = append(res.Containers, ServerContainer{ID: j.ID, Name: j.Names, Image: j.Image, State: j.State, Status: j.Status, Ports: j.Ports, Project: composeProject(j.Labels)})
 	}
 	sort.SliceStable(res.Containers, func(i, j int) bool {
 		a, b := res.Containers[i], res.Containers[j]
