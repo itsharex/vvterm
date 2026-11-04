@@ -198,7 +198,11 @@ func (s *SyncService) doSync() error {
 	if err != nil {
 		return err
 	}
-	local := syncgit.Bundle{Data: s.c.Store.Snapshot(), Secrets: s.c.Vault.Secrets()}
+	// only what the user ticked goes out, and only that is brought in: of an unticked kind, this machine keeps what it has
+	what := s.c.syncWhat()
+	own, ownSecrets := s.c.Store.Snapshot(), s.c.Vault.Secrets()
+	sent, sentSecrets := selectData(own, ownSecrets, what)
+	local := syncgit.Bundle{Data: sent, Secrets: sentSecrets, Prefs: s.c.outgoingPrefs()}
 	var res syncgit.Result
 	if f, ok := s.folder(); ok {
 		res, err = f.Sync(local, hdr, s.c.Vault)
@@ -212,10 +216,15 @@ func (s *SyncService) doSync() error {
 	if err != nil {
 		return err
 	}
-	if err = s.c.Store.Replace(res.Merged.Data); err != nil {
+	data, secrets := keepUnticked(res.Merged.Data, own, res.Merged.Secrets, ownSecrets, what)
+	if err = s.c.Store.Replace(data); err != nil {
 		return err
 	}
-	return s.c.Vault.ReplaceSecrets(res.Merged.Secrets)
+	if err = s.c.Vault.ReplaceSecrets(secrets); err != nil {
+		return err
+	}
+	s.c.applyPrefs(res.Merged.Prefs)
+	return nil
 }
 
 // remote reads the header and the encrypted bundle that the repository or folder holds (nothing is changed).
@@ -303,7 +312,8 @@ func (s *SyncService) ReplaceRemote() (err error) {
 			return fmt.Errorf("could not save a copy of what the repository holds first, nothing was changed: %w", err)
 		}
 	}
-	local := syncgit.Bundle{Data: s.c.Store.Snapshot(), Secrets: s.c.Vault.Secrets()}
+	sent, sentSecrets := selectData(s.c.Store.Snapshot(), s.c.Vault.Secrets(), s.c.syncWhat()) // what is not ticked is not sent here either
+	local := syncgit.Bundle{Data: sent, Secrets: sentSecrets, Prefs: s.c.outgoingPrefs()}
 	if f, ok := s.folder(); ok {
 		return f.Replace(local, hdr, s.c.Vault)
 	}
@@ -406,5 +416,9 @@ func (s *SyncService) JoinExisting(masterPassword string) (err error) {
 	if err = s.c.Store.Replace(b.Data); err != nil {
 		return err
 	}
-	return s.c.Vault.ReplaceSecrets(b.Secrets)
+	if err = s.c.Vault.ReplaceSecrets(b.Secrets); err != nil {
+		return err
+	}
+	s.c.applyPrefs(b.Prefs) // a new machine takes the look and the shortcuts of the others
+	return nil
 }

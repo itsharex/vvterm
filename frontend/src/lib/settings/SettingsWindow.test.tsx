@@ -746,6 +746,67 @@ describe('SettingsWindow: Highlight output', () => {
   })
 })
 
+describe('SettingsWindow: Fast drawing', () => {
+  it('is on by default in the Terminal tab and can be switched off', async () => {
+    const {be} = setup()
+    await tab('Terminal')
+    const sw = screen.getByRole('switch', {name: 'Fast drawing (WebGL)'})
+    expect(sw).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(sw)
+    await waitFor(() => expect(be.state.settings.gpu_renderer).toBe(false))
+  })
+})
+
+describe('SettingsWindow: What to sync', () => {
+  it('lists the groups of preferences, all ticked by default, and saves what is ticked and unticked', async () => {
+    const {be} = setup()
+    await tab('Sync')
+    const language = await screen.findByRole('checkbox', {name: /Language/})
+    const account = screen.getByRole('checkbox', {name: /Account/})
+    expect(language).toBeChecked()
+    expect(account).toBeChecked()
+    await userEvent.click(account)
+    await waitFor(() => expect(be.state.settings.sync_what).not.toContain('account'))
+    expect(be.state.settings.sync_what).toContain('language')
+    await userEvent.click(screen.getByRole('checkbox', {name: /Account/}))
+    await waitFor(() => expect(be.state.settings.sync_what).toContain('account'))
+  })
+})
+
+describe('SettingsWindow: What to sync, data', () => {
+  it('lists hosts, keys, port forwards and snippets ticked by default; unticking Hosts also takes Port forwards off', async () => {
+    const {be} = setup()
+    await tab('Sync')
+    for (const n of [/^Hosts and groups/, /^Keys and passwords/, /^Port forwards/, /^Snippets/]) expect(await screen.findByRole('checkbox', {name: n})).toBeChecked()
+    await userEvent.click(screen.getByRole('checkbox', {name: /^Hosts and groups/}))
+    await waitFor(() => expect(be.state.settings.sync_what).not.toContain('hosts'))
+    expect(be.state.settings.sync_what).not.toContain('forwards')
+    expect(be.state.settings.sync_what).toContain('snippets')
+    expect(screen.getByRole('checkbox', {name: /^Port forwards/})).toBeDisabled()
+    await userEvent.click(screen.getByRole('checkbox', {name: /^Keys and passwords/}))
+    await userEvent.click(screen.getByRole('checkbox', {name: /^Hosts and groups/}))
+    expect(await screen.findByText('Hosts that use a saved key or password will not find it on the other machines.')).toBeInTheDocument()
+  })
+})
+
+describe('SettingsWindow: What to sync can be folded', () => {
+  beforeEach(() => localStorage.removeItem('vutty.sync.whatOpen'))
+  afterEach(() => localStorage.removeItem('vutty.sync.whatOpen'))
+
+  it('folds to a header that says how many are ticked, and opens again', async () => {
+    setup()
+    await tab('Sync')
+    const head = await screen.findByRole('button', {name: /What to sync/})
+    expect(head).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(head)
+    expect(screen.queryByRole('checkbox', {name: /Language/})).not.toBeInTheDocument()
+    expect(screen.getByRole('button', {name: /What to sync/})).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByText('10 of 10 selected')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', {name: /What to sync/}))
+    expect(await screen.findByRole('checkbox', {name: /Language/})).toBeChecked()
+  })
+})
+
 describe('SettingsWindow: Storage', () => {
   afterEach(() => vi.restoreAllMocks())
 

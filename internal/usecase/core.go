@@ -17,7 +17,7 @@ import (
 	"vutty/internal/sshx"
 )
 
-// Settings is persisted in settings.json and never synced.
+// Settings is persisted in settings.json. Only the part listed in domain.Preferences is synced, and only while SyncPreferences is on.
 type Settings struct {
 	Theme         string `json:"theme"`          // app appearance: auto | light | dark
 	TerminalTheme string `json:"terminal_theme"` // "auto" (follow the app) or a theme id from the UI catalogue
@@ -48,9 +48,11 @@ type Settings struct {
 	// LockOnSleep locks the vault when the computer goes to sleep, and on a Mac when the screen is locked (on by default).
 	LockOnSleep bool `json:"lock_on_sleep"`
 	// Language is the language of the interface: auto (the language of the system) | en | vi | ja | zh
-	Language     string `json:"language"`
-	Highlight    bool   `json:"highlight"`     // colour URLs, IPs, paths and error/warning/success words in terminal output
-	ReduceMotion bool   `json:"reduce_motion"` // turn animations off
+	Language  string `json:"language"`
+	Highlight bool   `json:"highlight"` // colour URLs, IPs, paths and error/warning/success words in terminal output
+	// GpuRenderer draws the terminal that has the focus with WebGL, which stays fast on a screen redrawn with every cell coloured (on by default)
+	GpuRenderer  bool `json:"gpu_renderer"`
+	ReduceMotion bool `json:"reduce_motion"` // turn animations off
 	// AutoUpdateCheck: look for a newer release on GitHub when the app opens, at most once a day (on by default)
 	AutoUpdateCheck bool `json:"auto_update_check"`
 	// BiometricOnOpen: the lock screen asks for Touch ID / Windows Hello by itself (on by default)
@@ -67,12 +69,19 @@ type Settings struct {
 	// Shortcuts holds only the user's overrides (action id -> combo such as "Mod+Shift+K"); an action
 	// without an entry uses its default, which lives with the UI that implements it.
 	Shortcuts map[string]string `json:"shortcuts"`
+
+	// SyncWhat is what the user chose to sync (all by default): the kinds of data (hosts, keys, forwards, snippets) and the
+	// preference groups (see prefGroups). Of the preferences, the values go into the sync
+	// bundle and newer ones are taken from it. PrefsUpdated is when each group was last changed here or taken from the bundle;
+	// the UI cannot set it.
+	SyncWhat     []string             `json:"sync_what"`
+	PrefsUpdated map[string]time.Time `json:"prefs_updated"`
 }
 
 func defaultSettings() Settings {
 	return Settings{Theme: "dark", TerminalTheme: "auto", FontSize: 13, FontFamily: "Menlo, Monaco, 'Courier New', monospace",
 		CursorStyle: "block", CursorBlink: true, CopyOnSelect: true, RightClick: "paste", Scrollback: 10000, AutoLockMinutes: 15,
-		Language: "auto", Zoom: 100, ConfirmProd: true, LockOnSleep: true, SessionLog: SessionLogOff, Highlight: true, AskProtocol: true, BiometricOnOpen: true, AutoUpdateCheck: true, Suggest: true, Shortcuts: map[string]string{}}
+		Language: "auto", Zoom: 100, ConfirmProd: true, LockOnSleep: true, SessionLog: SessionLogOff, Highlight: true, GpuRenderer: true, AskProtocol: true, BiometricOnOpen: true, AutoUpdateCheck: true, Suggest: true, SyncWhat: allSyncWhat(), Shortcuts: map[string]string{}}
 }
 
 // Core wires the packages together; the services below share one instance.

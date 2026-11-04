@@ -24,6 +24,23 @@ const loadSync = () => import('../panels/SyncPanel').then(m => ({default: m.Sync
 const loadAssistant = () => import('./AssistantSettings').then(m => ({default: m.AssistantSettings}))
 const SupportPanel = lazy(loadSupport)
 const SyncPanel = lazy(loadSync)
+
+/** what can be synced; the ids are the backend's (usecase.allSyncWhat). Port forwards point at hosts, so they need Hosts. */
+const SYNC_DATA: {id: string; label(t: TFn): string; what(t: TFn): string}[] = [
+  {id: 'hosts', label: t => t('Hosts and groups'), what: t => t('your servers and the folders they are in')},
+  {id: 'keys', label: t => t('Keys and passwords'), what: t => t('the ones saved in Keychain; hosts that use one need it on the other machine')},
+  {id: 'forwards', label: t => t('Port forwards'), what: t => t('they point at hosts, so they need Hosts and groups')},
+  {id: 'snippets', label: t => t('Snippets'), what: t => t('your saved scripts')},
+]
+const SYNC_PREFS: {id: string; label(t: TFn): string; what(t: TFn): string}[] = [
+  {id: 'appearance', label: t => t('Appearance'), what: t => t('theme and terminal theme')},
+  {id: 'terminal', label: t => t('Terminal'), what: t => t('font, cursor and scrollback')},
+  {id: 'language', label: t => t('Language'), what: t => t('language of the interface')},
+  {id: 'shortcuts', label: t => t('Keyboard shortcuts'), what: t => t('the ones you changed')},
+  {id: 'behaviour', label: t => t('Behaviour'), what: t => t('Highlight output and Suggest commands')},
+  {id: 'account', label: t => t('Account'), what: t => t('name and email')},
+]
+const SYNC_ALL = [...SYNC_DATA, ...SYNC_PREFS]
 const AssistantSettings = lazy(loadAssistant)
 /**
  * The popup is sized from the window it opens in: nearly all of it (an inset around it shows the app behind, and it sits below
@@ -144,6 +161,20 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
   const [name, setName] = useState(s.account_name)
   const [email, setEmail] = useState(s.account_email)
   const [err, setErr] = useState('')
+  // the What to sync box can be folded; the choice is remembered on this machine only
+  const [syncOpen, setSyncOpen] = useState(() => { try { return localStorage.getItem('vutty.sync.whatOpen') !== '0' } catch { return true } })
+  const toggleSyncOpen = () => setSyncOpen(o => { try { localStorage.setItem('vutty.sync.whatOpen', o ? '0' : '1') } catch { /* private window */ } return !o })
+  const setSyncWhat = (id: string, on: boolean) => {
+    let next = on ? [...s.sync_what, id] : s.sync_what.filter(x => x !== id)
+    if (!on && id === 'hosts') next = next.filter(x => x !== 'forwards') // a forward points at a host
+    void update({sync_what: next})
+  }
+  const syncRow = (g: {id: string; label(t: TFn): string; what(t: TFn): string}, disabled: boolean) => (
+    <label key={g.id} className="check" style={{paddingTop: 11, paddingBottom: 11, opacity: disabled ? 0.55 : 1}}>
+      <input type="checkbox" checked={s.sync_what.includes(g.id) && !disabled} disabled={disabled} onChange={e => setSyncWhat(g.id, e.target.checked)} />
+      <span><b>{g.label(t)}</b><span className="muted"> — {g.what(t)}</span></span>
+    </label>
+  )
   const [maximized, setMaximized] = useState(false)
   const backdrop = useRef<HTMLDivElement>(null)
   // the window the popup is in, measured on its own backdrop (the interface zoom changes what a pixel is, so window.innerWidth would be wrong)
@@ -486,6 +517,10 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
                       <Switch label={t('Highlight output')} checked={s.highlight} onChange={v => update({highlight: v})} />
                     </div>
                     <div className="setting-row">
+                      <div><b>{t('Fast drawing (WebGL)')}</b><div className="muted">{t('Draw the terminal you are typing in with the graphics card. Screens that redraw with many colours (htop, mc, vim) stay smooth. Turn it off if text looks wrong; it also turns itself off for a terminal where the graphics card cannot be used.')}</div></div>
+                      <Switch label={t('Fast drawing (WebGL)')} checked={s.gpu_renderer} onChange={v => update({gpu_renderer: v})} />
+                    </div>
+                    <div className="setting-row">
                       <div><b>{t('Suggest commands')}</b><div className="muted">{t('While you type, a list of the commands that match appears under the cursor (↓ ↑ choose a row, Enter or Tab put it on the line, Esc closes it), and ⌘⇧J (Ctrl+Shift+J elsewhere) opens it by hand. It uses the commands you ran in Vutty, the shell history of this computer (~/.zsh_history, ~/.bash_history) in the local terminal, and your Snippets of one line; it is not offered in vim or at a password prompt, and a line that looks like a secret is never suggested.')}</div></div>
                       <Switch label={t('Suggest commands')} checked={s.suggest} onChange={v => update({suggest: v})} />
                     </div>
@@ -585,7 +620,26 @@ export function SettingsWindow({settings: s, appearance, vault, onSettings, onVa
 
               {cat === 'assistant' && <Suspense fallback={<Loading />}><AssistantSettings /></Suspense>}
 
-              {cat === 'sync' && <Suspense fallback={<Loading />}><SyncPanel page vault={vault} onClose={() => {}} onChanged={onChanged} /></Suspense>}
+              {cat === 'sync' && (
+                <>
+                  <section className="card-section" aria-label={t('What to sync')}>
+                    <h4>
+                      <button type="button" className="collapse-head" aria-expanded={syncOpen} onClick={toggleSyncOpen}>
+                        <svg className="chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        <span>{t('What to sync')}</span>
+                        {!syncOpen && <span className="count">{t('{n} of {total} selected', {n: s.sync_what.length, total: SYNC_ALL.length})}</span>}
+                      </button>
+                    </h4>
+                    {syncOpen && <p className="muted">{t('Choose what is kept in step between your machines. It all travels in the same encrypted bundle; the newest change of each item wins. What you untick is neither sent nor taken: this machine keeps what it has, and the repository keeps what the other machines put there. Zoom, folders, auto-lock, Touch ID and the other settings of one machine never leave it.')}</p>}
+                    {syncOpen && <div className="muted sync-sub">{t('Data')}</div>}
+                    {syncOpen && SYNC_DATA.map(g => syncRow(g, g.id === 'forwards' && !s.sync_what.includes('hosts')))}
+                    {syncOpen && s.sync_what.includes('hosts') && !s.sync_what.includes('keys') && <div className="muted">{t('Hosts that use a saved key or password will not find it on the other machines.')}</div>}
+                    {syncOpen && <div className="muted sync-sub">{t('Preferences')}</div>}
+                    {syncOpen && SYNC_PREFS.map(g => syncRow(g, false))}
+                  </section>
+                  <Suspense fallback={<Loading />}><SyncPanel page vault={vault} onClose={() => {}} onChanged={onChanged} /></Suspense>
+                </>
+              )}
 
               {cat === 'shortcuts' && <ShortcutsEditor overrides={s.shortcuts ?? {}} onChange={shortcuts => update({shortcuts})} />}
 
