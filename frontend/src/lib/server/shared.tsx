@@ -3,11 +3,22 @@ import {useBackend} from '../backend'
 import type {TFn} from '../i18n'
 import {useT} from '../i18n'
 import {AuthPrompt} from '../ui/AuthPrompt'
-import {IconRefresh} from '../ui/Icons'
+import {IconChevron, IconRefresh} from '../ui/Icons'
 import {useMinBusy} from '../ui/useMinBusy'
 import {authenticity} from '../sftp/RemotePane'
 import {errMsg} from '../util'
 import type {AuthChallenge, Host, HostKeyPrompt} from '../types'
+
+/** A filter box with a × that empties it (only while there is something to clear) */
+export function FilterInput({value, onChange, label, placeholder, invalid, className = ''}: {value: string; onChange(v: string): void; label: string; placeholder?: string; invalid?: boolean; className?: string}) {
+  const t = useT()
+  return (
+    <span className={'sp-filter sp-filter-box ' + className}>
+      <input aria-label={label} placeholder={placeholder} aria-invalid={invalid || undefined} value={value} onChange={e => onChange(e.target.value)} />
+      {value !== '' && <button type="button" className="sp-filter-clear" aria-label={t('Clear filter')} title={t('Clear filter')} onClick={e => { onChange(''); e.currentTarget.previousElementSibling instanceof HTMLInputElement && e.currentTarget.previousElementSibling.focus() }}>×</button>}
+    </span>
+  )
+}
 
 let seq = 0
 
@@ -101,23 +112,26 @@ export function useLoad<T>(load: () => Promise<T>, ms: number | null): {data: T 
   const [busy, setBusy] = useState(true)
   const alive = useRef(true)
   const latest = useRef(0)
+  const pending = useRef(false) // a load is on its way: the timer waits for it (asking again would make its answer stale, and a slow one would never show)
   const loadRef = useRef(load)
   loadRef.current = load
   const reload = useCallback(() => {
     const mine = ++latest.current
+    pending.current = true
     setBusy(true)
     loadRef.current().then(d => {
       if (alive.current && mine === latest.current) { setData(d); setError('') }
     }, e => {
       if (alive.current && mine === latest.current) setError(errMsg(e))
     }).finally(() => {
+      if (mine === latest.current) pending.current = false
       if (alive.current && mine === latest.current) setBusy(false)
     })
   }, [])
   useEffect(() => {
     alive.current = true
     reload()
-    const timer = ms ? window.setInterval(() => { if (!document.hidden) reload() }, ms) : 0
+    const timer = ms ? window.setInterval(() => { if (!document.hidden && !pending.current) reload() }, ms) : 0
     return () => { alive.current = false; if (timer) window.clearInterval(timer) }
   }, [reload, ms])
   return {data, error, busy, reload}
@@ -150,13 +164,34 @@ export function stackQuestion(t: TFn, action: StackAction, name: string): {messa
 }
 
 /** The bar above a table: what is on the left, and the refresh button at the right. */
-export function Toolbar({busy, onReload, children}: {busy: boolean; onReload(): void; children?: ReactNode}) {
+/** The refresh button alone: for a screen that has nothing else for a bar, it goes in the head of its first box instead of making a row of its own. */
+export function RefreshButton({busy, onReload}: {busy: boolean; onReload(): void}) {
   const t = useT()
   const spinning = useMinBusy(busy)
+  return <button className="icon ghost" aria-label={t('Refresh')} title={t('Refresh')} aria-busy={spinning} onClick={onReload}><IconRefresh size={14} /></button>
+}
+
+export function Toolbar({busy, onReload, children}: {busy: boolean; onReload(): void; children?: ReactNode}) {
   return (
     <div className="sp-bar">
       {children}
-      <button className="icon ghost" aria-label={t('Refresh')} title={t('Refresh')} aria-busy={spinning} onClick={onReload}><IconRefresh size={14} /></button>
+      <RefreshButton busy={busy} onReload={onReload} />
+    </div>
+  )
+}
+
+/**
+ * What a screen shows while its first answer is on the way: a small ring turning in the middle and a line that says what is being loaded.
+ * It fades in after a moment, so an answer that comes at once is not preceded by a flash; the ring stands still for a person who asked
+ * for less motion. `lines` is the small form, in the line, for a dialog.
+ */
+export function Loading({kind = 'table', what}: {kind?: 'table' | 'overview' | 'detail' | 'lines'; what?: string}) {
+  const t = useT()
+  const text = what ?? (kind === 'overview' ? t('Loading the overview…') : kind === 'detail' ? t('Loading the details…') : t('Loading…'))
+  return (
+    <div className={'ld' + (kind === 'lines' ? ' ld-inline' : '')} role="status" aria-busy="true" aria-live="polite" data-kind={kind}>
+      <span className="ld-ring" aria-hidden="true" />
+      <span className="ld-text">{text}</span>
     </div>
   )
 }
@@ -164,11 +199,34 @@ export function Toolbar({busy, onReload, children}: {busy: boolean; onReload(): 
 export const Err = ({error}: {error: string}) => (error ? <div className="error" role="alert">{error}</div> : null)
 
 /** A box of the page with a title: the unit of every section that has more than one thing to show. */
-export function Card({title, children, right}: {title: string; children: ReactNode; right?: ReactNode}) {
+export function Card({title, children, right, collapsible = false, closed: closedProp, onToggle, count, filter}: {
+  title: string; children: ReactNode; right?: ReactNode
+  /** the title closes and opens the box (a long list can be put away) */
+  collapsible?: boolean
+  /** the screen keeps whether the box is closed (so it stays closed when the screen is built again); without it the box keeps it itself */
+  closed?: boolean
+  onToggle?(): void
+  /** shown beside the title: how many there are, or "shown of all" while a search is on */
+  count?: string | number
+  /** a search box in the head that keeps only what contains what is typed; the box owns no text, the screen filters its own rows */
+  filter?: {value: string; onChange(v: string): void; label: string}
+}) {
+  const t = useT()
+  const [own, setClosed] = useState(false)
+  const closed = closedProp ?? own
+  const toggle = onToggle ?? (() => setClosed(c => !c))
   return (
     <section className="sp-card sp-wide">
-      <div className="sp-card-head"><h3>{title}</h3>{right}</div>
-      {children}
+      <div className="sp-card-head">
+        {collapsible
+          ? <button className="sp-card-fold" aria-expanded={!closed} aria-label={title} onClick={toggle}>
+              <span className={'k8s-chev' + (closed ? '' : ' open')}><IconChevron size={12} /></span><h3>{title}</h3>{count !== undefined && <small className="sp-count">{count}</small>}
+            </button>
+          : <h3>{title}</h3>}
+        {filter && !closed && <FilterInput className="sp-card-filter" label={filter.label} placeholder={t('Search')} value={filter.value} onChange={filter.onChange} />}
+        {right}
+      </div>
+      {!closed && children}
     </section>
   )
 }
