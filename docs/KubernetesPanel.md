@@ -33,7 +33,7 @@ A second way in, for someone who was given a kubeconfig by an administrator and 
 
 - **The same tab.** Every read of the host path is `kubectl get ... -o json`; here the same JSON is asked of the API server (`k8s_direct.go` turns the fixed argument shapes into requests and puts the `kind` on list items, as kubectl does), so the parsers and screens are shared. Every change is a request (scale and pause are merge patches, restart a template annotation then a wait for the rollout, rollback a JSON patch with the template of that revision, drain is cordon then Eviction requests that retry while a disruption budget says no, `auth can-i` is a SelfSubjectAccessReview).
 - **Shell** is a terminal tab (`kubeexec:<id>`, like a serial port or Telnet: it shares the buffering, resize, reconnect with Enter and session log of every terminal) that runs `sh -c 'bash || sh'` through the API's exec WebSocket (`v4.channel.k8s.io`; `internal/kubeapi/stream.go`). It is kept for as long as the cluster's tab is open; a production cluster's shell keeps the red frame and is session-logged under the same setting as a prod host.
-- **What it cannot do:** Port-forward (it needs a stream per connection on a host with `kubectl`). Its button says so; a later version can add it with the API's `portforward` WebSocket.
+- **Port-forward** goes through the API server too (`internal/kubeapi/portforward.go`, the same `v4.channel.k8s.io` WebSocket as the shell: channel 0 is the data, channel 1 the errors, and the first frame of each is the port). The API forwards to a pod, not to a Service, so a Service is turned into what kubectl does: its selector picks a pod that is running and ready (not one that is going away), and the Service port becomes the `targetPort` (a number, or the name of a container port). Each connection to the local port is a call of its own, made to the pod chosen at that moment, so a pod that was replaced does not end the forward; a first connection is made before the forward is said to run, so a pod or a port that cannot be reached says why at once. Tried on a real cluster (kind, Kubernetes 1.37).
 - **A login that may not list the cluster** (one Rancher project) has no *All namespaces* and no namespace list. The tab lets the person add namespaces by name; a list of them (`a,b`, only for reads) is asked one namespace after the other and put together, and a namespace that is refused is left out while another answers. The Overview of a namespace says when the nodes (cluster-wide) cannot be read.
 - **The kubeconfig is a vault secret** (`SecretKubeconfig`); the record (`Cluster`) holds only the name, group, environment, default context and the approved login programs. It is decrypted into memory for the life of the session and never sent to the interface: the file is read by the backend from the path picked in the native dialog (pasting the text is the fallback).
 - **A kubeconfig from someone else is code of a kind.** It is checked when added, not at the first call: a `tokenFile` is refused (it would send a file of this computer to the server the file names), so are the removed `auth-provider` and relative file paths (a vault has no folder to resolve them against). A login plugin (`exec`) runs on this computer: the well-known helpers (`aws`, `gcloud`, `gke-gcloud-auth-plugin`, `az`, `kubelogin`, `kubectl-oidc_login`, ...) run at once, any other program is shown and runs only after the person approves that exact command line, kept with the cluster; replacing the kubeconfig drops the approvals. What the screen sends to approve is checked against the saved kubeconfig, not trusted.
@@ -107,6 +107,8 @@ The screens of each step:
 
 ## 14 · Port-forward
 
+Both ways in: a host with `kubectl` (a `kubectl port-forward` on the host, reached through the SSH connection) and a cluster opened with a kubeconfig (through the API server, no `kubectl`).
+
 ![Port-forward](screenshots/k8s/20-port-forward.png)
 
 ## 15 · Nodes
@@ -166,6 +168,26 @@ The **Files** section of the terminal sidebar also works for a shell in a pod of
 - **Read only.** There is no upload, rename, delete, new folder or permissions here; those are step 2, if they are wanted.
 - **Limits.** A file up to 256 MB; a folder cannot be copied out yet (open it and copy its files); a copy never replaces a file that is there (`name (1)`), is readable by this user only, and a half copy is removed. A link is shown as what it points to, and a link that points nowhere is not listed.
 - **Tried on real pods** (busybox from Alpine, GNU from Debian) with names that hold spaces, `|` and accents, a folder called `..hidden_dir`, links, an empty file and a 3 MB file; 5000 files list in about a tenth of a second.
+
+## 25 · Security (read only)
+
+The **Security** tab reads the pods, services and ingresses of the namespace (or all of them) and lists what is worth a second look. It works for a host with kubectl and for a cluster opened with a kubeconfig, and installs nothing.
+
+- **Pods:** privileged containers, the host network, process space or IPC, host paths (the Docker socket, `/etc`, `/proc` and the like are high, others medium), dangerous capabilities (`ALL`, `SYS_ADMIN`, `NET_ADMIN`…), user 0, a variable with a name like password, token or key written in plain (a `secretKeyRef` is fine), and an image with no tag, `latest` and no digest.
+- **Network:** NodePort and LoadBalancer services, and an Ingress with no TLS.
+- **The replicas of one workload are one finding** ("2 pods"), named by the Deployment, StatefulSet or DaemonSet; Low findings are hidden until they are switched on.
+- **No Secret is read, and a value of a variable is never shown**, only its name. It is a hint, not a verdict: a network plugin has good reasons to be privileged.
+
+**Copy kubectl** (Pod and Deployment pages, Nodes rows) copies the kubectl line that does what the screen does (get as YAML, describe, follow the logs, shell, port-forward, rollout status, top, the pods of a node, `ssh` to a node, through the host as a jump host when there is one), with `--context` and `-n` in it. Nothing is run and nothing changes.
+
+## 26 · Debug container
+
+A pod whose image has no shell (distroless, `scratch`) cannot be entered, so **Debug** on the pod page adds an **ephemeral container** to it (a tool box: `nicolaka/netshoot` by default, or `busybox`, `alpine`, or any image the node can pull) and opens a shell in it. The tool box shares the network of the pod, and with *See the processes of* also the processes of one container.
+
+- **Asks first**, and says that the container cannot be removed: Kubernetes drops it only with the pod. The audit log records the image, the pod and the cluster.
+- **A cluster opened with a kubeconfig:** the container is added with a patch on `pods/ephemeralcontainers`, Vutty waits until it runs (an image that cannot be pulled, or a container that ends at once, is said with the cluster's own words), and the shell is a terminal tab in that container. **A host:** the line `kubectl debug -it … --image=… --target=…` is typed into a tab of the host.
+- **Right:** `patch pods/ephemeralcontainers`; without it the button is locked with the reason (it is one of the rows on the page of rights).
+- Tried on a real cluster (kind, Kubernetes 1.37) by both ways in.
 
 ## Command map
 

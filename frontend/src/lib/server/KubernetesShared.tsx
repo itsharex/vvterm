@@ -6,7 +6,7 @@ import {useBackend, type Backend} from '../backend'
 import {useLoad} from './shared'
 import type {Host, K8sResRef} from '../types'
 
-export type K8sView = 'overview' | 'pods' | 'workloads' | 'network' | 'config' | 'apps' | 'resources' | 'nodes' | 'events'
+export type K8sView = 'overview' | 'pods' | 'workloads' | 'network' | 'config' | 'apps' | 'resources' | 'security' | 'nodes' | 'events'
 /** a page that takes the place of a view (with a way back): a pod, a deployment, a YAML, a drain */
 export type K8sPage =
   | {k: 'pod'; ns: string; name: string}
@@ -23,7 +23,7 @@ export interface K8sApi {
   be: Backend
   sid: string
   host: Host
-  /** a cluster opened with a kubeconfig: no host to run kubectl on, so no Shell and no Port-forward */
+  /** a cluster opened with a kubeconfig: no host to run kubectl on: the shell and the port-forward go through the API server */
   direct: boolean
   ctx: string
   /** '' = all namespaces */
@@ -84,11 +84,11 @@ export function useRunner(onDone: () => void) {
 
 /** why a button is locked: the right this login lacks */
 export function lockText(t: TFn, right: string, direct = false): string {
-  if (direct && right === 'portforward') return t('Needs kubectl on a server: not available for a cluster opened with a kubeconfig')
   switch (right) {
     case 'logs': return t('This login may not read logs')
     case 'exec': return t('This login may not open a shell in pods')
     case 'portforward': return t('This login may not forward ports')
+    case 'debug': return t('This login may not add a debug container to pods')
     case 'scale': return t('This login may not scale Deployments')
     case 'edit': return t('This login may not edit this workload')
     case 'restart': return t('This login may not restart or roll back Deployments')

@@ -688,7 +688,7 @@ export interface ServerFleetHost {
 }
 
 /** The Kubernetes tab of the Panel: kubectl run on the host over SSH (see usecase.ServerService, K8s*). */
-/** direct: a cluster opened with a kubeconfig, with no host and no kubectl (so no Shell and no Port-forward) */
+/** direct: a cluster opened with a kubeconfig, with no host and no kubectl (the shell and the port-forward go through the API server) */
 export interface K8sDetect {found: boolean; cmd: string; path: string; client_version: string; tried: string[]; direct?: boolean}
 export type KubeAuth = 'token' | 'certificate' | 'exec' | 'password' | 'none'
 /** auth and exec say how a kubeconfig signs in, and the login program it runs (the whole command line) */
@@ -707,6 +707,9 @@ export interface K8sObjList {namespaced: boolean; columns: string[]; rows: K8sOb
 export interface K8sMultiLogs {text: string; pods: number; skipped: number; failed: string[]}
 export interface K8sHelmRelease {name: string; namespace: string; revision: number; status: string; age_sec: number}
 export interface K8sHelmDetail {release: K8sHelmRelease; chart: string; chart_version: string; app_version: string; description: string; notes: string; manifest: string; has_values: boolean; history: K8sHelmRelease[]}
+export interface K8sDebug {container: string; command: string}
+export interface K8sFinding {severity: 'high' | 'medium' | 'low'; rule: string; kind: string; namespace: string; name: string; container?: string; detail: string; count: number}
+export interface K8sSecurity {findings: K8sFinding[]; pods: number; services: number}
 export interface K8sEvent {age_sec: number; type: 'Normal' | 'Warning'; reason: string; object: string; namespace: string; message: string; count: number}
 export interface K8sPodContainer {name: string; image: string; init: boolean; ready: boolean; running: boolean; state: string; restarts: number; resources: string; probes: string}
 export interface K8sPod {name: string; namespace: string; status: string; tone: 'ok' | 'warn' | 'bad' | ''; ready: string; restarts: number; node: string; age_sec: number; why: string; owner: string; containers: K8sPodContainer[]}
