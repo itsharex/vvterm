@@ -244,3 +244,107 @@ To                         Action      From
 		t.Fatalf("%+v", r)
 	}
 }
+
+func TestDockerParsers(t *testing.T) {
+	st := parseDockerStats(`{"Name":"db","CPUPerc":"0.50%","MemPerc":"10.00%","MemUsage":"200MiB / 2GiB"}
+{"Name":"api","CPUPerc":"12.30%","MemPerc":"3.10%","MemUsage":"60MiB / 2GiB"}
+`)
+	if len(st) != 2 || st[0].Name != "api" || st[0].CPU != 12.3 || st[1].MemUsage != "200MiB" {
+		t.Fatalf("%+v", st)
+	}
+	in, err := parseDockerInspect(`[{"Name":"/api","Created":"2026-01-01","Path":"node","Args":["app.js"],"State":{"Status":"running"},
+"Config":{"Image":"api:1","Env":["A=1","TOKEN=x=y"],"Labels":{"k":"v"}},"HostConfig":{"RestartPolicy":{"Name":""}},
+"Mounts":[{"Type":"volume","Source":"/v","Destination":"/data","RW":true}],
+"NetworkSettings":{"Ports":{"3000/tcp":[{"HostIp":"0.0.0.0","HostPort":"3000"}],"9229/tcp":null},"Networks":{"bridge":{}}}}]`)
+	if err != nil || in.Name != "api" || in.Restart != "no" || in.Command != "node app.js" || len(in.Env) != 2 || in.Env[1].Value != "x=y" || len(in.Ports) != 2 || in.Mounts[0].Dest != "/data" {
+		t.Fatalf("%+v %v", in, err)
+	}
+	if _, err := parseDockerInspect("Error: No such object"); err == nil {
+		t.Fatal("no JSON was accepted")
+	}
+	o := parseDockerObjects(`##used
+{"Image":"api:1","Mounts":"pgdata,/etc/x"}
+##images
+{"ID":"aa11bb22","Repository":"api","Tag":"1","Size":"100MB","CreatedSince":"2 days ago"}
+{"ID":"cc33dd44","Repository":"<none>","Tag":"<none>","Size":"5MB","CreatedSince":"1 month ago"}
+##volumes
+{"Name":"pgdata","Driver":"local"}
+{"Name":"old","Driver":"local"}
+##networks
+{"ID":"n1","Name":"bridge","Driver":"bridge","Scope":"local"}
+`)
+	if len(o.Images) != 2 || !o.Images[1].InUse && o.Images[1].Name == "api:1" || o.Images[0].Name != "<none>" || o.Images[0].InUse {
+		t.Fatalf("%+v", o.Images)
+	}
+	if !o.Volumes[1].InUse || o.Volumes[0].InUse || len(o.Networks) != 1 {
+		t.Fatalf("%+v", o)
+	}
+}
+
+func TestDockerCommandsRefuseOddNames(t *testing.T) {
+	h := newHarness(t).unlocked(t)
+	sid, cmds := h.serverSession(t, func(cmd string) (string, string, int) { return "", "", 0 })
+	before := len(*cmds)
+	for _, bad := range []string{"", "a b", "x;reboot", "$(id)", "-rf"} {
+		if _, err := h.app.Server.DockerShellCommand(sid, bad); err == nil {
+			t.Fatalf("%q was accepted for a shell", bad)
+		}
+		if _, err := h.app.Server.DockerInspect(sid, bad); err == nil {
+			t.Fatalf("%q was accepted for inspect", bad)
+		}
+		if err := h.app.Server.DockerRemove(sid, "volume", bad); err == nil {
+			t.Fatalf("%q was accepted as a volume", bad)
+		}
+		if err := h.app.Server.DockerRemove(sid, "image", bad); err == nil {
+			t.Fatalf("%q was accepted as an image", bad)
+		}
+	}
+	if err := h.app.Server.DockerRemove(sid, "network", "bridge"); err == nil {
+		t.Fatal("an unknown kind was accepted")
+	}
+	if len(*cmds) != before {
+		t.Fatalf("a refused call reached the server: %v", (*cmds)[before:])
+	}
+	line, err := h.app.Server.DockerShellCommand(sid, "api")
+	if err != nil || !strings.Contains(line, "exec -it api sh -c") {
+		t.Fatalf("%q %v", line, err)
+	}
+}
+
+func TestParseUsers(t *testing.T) {
+	out := `##passwd
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+deploy:x:1001:1001::/home/deploy:/bin/bash
+ubuntu:x:1000:1000:Ubuntu:/home/ubuntu:/bin/bash
+www:x:1002:1002::/var/www:/usr/sbin/nologin
+nobody:x:65534:65534:nobody:/nonexistent:/bin/bash
+##groups
+sudo:x:27:ubuntu
+admin:x:110:
+##keys
+root 1
+ubuntu 2
+deploy -1
+##who
+ubuntu   pts/0        2026-11-05 10:11 (203.0.113.7)
+root     tty1         2026-11-05 09:00
+##last
+root                             pts/0    1.2.3.4          Thu Nov  5 09:00:00 +0700 2026
+ubuntu                           pts/1    1.2.3.4          Wed Nov  4 20:10:11 +0700 2026
+deploy                                                     **Never logged in**
+`
+	u := parseUsers(out)
+	if len(u.Users) != 3 || u.Users[0].Name != "root" || u.Users[1].Name != "ubuntu" || u.Users[2].Name != "deploy" {
+		t.Fatalf("%+v", u.Users)
+	}
+	if !u.Users[0].Sudo || !u.Users[1].Sudo || u.Users[2].Sudo || u.Users[1].Keys != 2 || u.Users[2].Keys != -1 {
+		t.Fatalf("%+v", u.Users)
+	}
+	if u.Users[1].Login == "" || u.Users[2].Login != "" {
+		t.Fatalf("login: %+v", u.Users)
+	}
+	if len(u.Sessions) != 2 || u.Sessions[0].From != "203.0.113.7" || u.Sessions[1].From != "" || u.Sessions[1].Since != "2026-11-05 09:00" {
+		t.Fatalf("%+v", u.Sessions)
+	}
+}

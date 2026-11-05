@@ -10,15 +10,18 @@ import {errMsg} from '../util'
 import {actionQuestion, Err, stackQuestion, Toolbar, useLoad, useServerConnection, type ServerAction, type StackAction, FilterInput} from './shared'
 import {ansiSpans, stripAnsi} from '../ansi'
 import {backupLevel, certLevel, formatRate, formatUptime, level, logLevel, pct} from './format'
+import {Docker} from './Docker'
+import {addSample, bucketSeries, loadHistory, MINUTE, saveHistory, type HistPoint, type Series} from './history'
 import {Web} from './Web'
 import {Maintenance} from './Maintenance'
 import {Security} from './Security'
+import {Users} from './Users'
 import {Schedule} from './Schedule'
 import {Kubernetes} from './Kubernetes'
 import type {K8sLogTarget} from './KubernetesShared'
 import type {Host, K8sMultiLogs, K8sPod, K8sPodDetail, ServerBackup, ServerCerts, ServerContainer, ServerContainers, ServerOverview, ServerPorts, ServerProcess, ServerUnit, ServerUpdates} from '../types'
 
-type Section = 'overview' | 'processes' | 'services' | 'docker' | 'kubernetes' | 'logs' | 'ports' | 'web' | 'maintenance' | 'security' | 'schedule'
+type Section = 'overview' | 'processes' | 'services' | 'docker' | 'kubernetes' | 'logs' | 'ports' | 'web' | 'maintenance' | 'security' | 'schedule' | 'users'
 /** kind 'pod' is a pod of the Kubernetes tab: name is `namespace/pod`; container and previous say which log of it */
 /** kind 'workload': every pod of a workload or Service, the name being ns/kind/name */
 export interface LogSource {kind: '' | 'service' | 'container' | 'stack' | 'web' | 'pod' | 'workload'; name: string; container?: string; previous?: boolean}
@@ -32,16 +35,21 @@ const FOLLOW_MS = 2000
 const HISTORY = 360
 
 /** The overview of the server, asked again every few seconds while the tab is shown (whatever section is open) and the samples kept for the charts. */
-function useOverviewFeed(sid: string, visible: boolean) {
+function useOverviewFeed(sid: string, hostId: string, visible: boolean) {
   const be = useBackend()
+  const points = useRef<HistPoint[]>(loadHistory(hostId)) // a point for each minute of the last day, kept on this computer
+  const [saved, setSaved] = useState(points.current)
   const [hist, setHist] = useState<{cpu: number[]; mem: number[]; disk: number[]; net: number[]}>({cpu: [], mem: [], disk: [], net: []})
   const load = useCallback(async () => {
     const o = await be.server.overview(sid)
     const keep = (h: number[], v: number) => [...h, v].slice(-HISTORY)
+    const prev = points.current[points.current.length - 1]
+    points.current = addSample(points.current, {cpu: o.cpu_pct, mem: pct(o.mem_used, o.mem_total), disk: pct(o.disk_used, o.disk_total), net: o.net_rx + o.net_tx})
+    if (!prev || prev.t !== points.current[points.current.length - 1].t) { saveHistory(hostId, points.current); setSaved(points.current) } // once a minute
     setHist(h => ({cpu: keep(h.cpu, o.cpu_pct), mem: keep(h.mem, pct(o.mem_used, o.mem_total)), disk: keep(h.disk, pct(o.disk_used, o.disk_total)), net: keep(h.net, o.net_rx + o.net_tx)}))
     return o
-  }, [be, sid])
-  return {...useLoad<ServerOverview>(load, visible ? POLL_MS : null), hist}
+  }, [be, sid, hostId])
+  return {...useLoad<ServerOverview>(load, visible ? POLL_MS : null), hist, saved}
 }
 type Feed = ReturnType<typeof useOverviewFeed>
 
@@ -55,7 +63,7 @@ export function ServerPanel({host, visible, onAccess, onShell}: {host: Host; vis
   const {phase, sid, notice} = useServerConnection(host)
   const [section, setSection] = useState<Section>('overview')
   const [source, setSource] = useState<LogSource>({kind: '', name: ''})
-  const sections: [Section, string][] = [['overview', t('Overview')], ['processes', t('Processes')], ['services', t('Services')], ['docker', t('Docker')], ['kubernetes', t('Kubernetes')], ['web', t('Web')], ['logs', t('Logs')], ['ports', t('Ports & firewall')], ['maintenance', t('Maintenance')], ['security', t('Security')], ['schedule', t('Schedule')]]
+  const sections: [Section, string][] = [['overview', t('Overview')], ['processes', t('Processes')], ['services', t('Services')], ['docker', t('Docker')], ['kubernetes', t('Kubernetes')], ['web', t('Web')], ['logs', t('Logs')], ['ports', t('Ports & firewall')], ['maintenance', t('Maintenance')], ['security', t('Security')], ['users', t('Users')], ['schedule', t('Schedule')]]
   const showLogs = (s: LogSource) => { setSource(s); setSection('logs') }
   return (
     <div className="sp" role="region" aria-label={t('Server panel of {name}', {name: host.label})}>
@@ -74,7 +82,7 @@ export function ServerPanel({host, visible, onAccess, onShell}: {host: Host; vis
 /** The part of the panel that needs the connection: the section tabs and the open section. */
 function Ready({sid, host, visible, onAccess, onShell, section, setSection, source, setSource, sections, showLogs}: {sid: string; host: Host; visible: boolean; onAccess?(): void; onShell?(host: Host, command: string, title: string): void; section: Section; setSection(s: Section): void; source: LogSource; setSource(s: LogSource): void; sections: [Section, string][]; showLogs(s: LogSource): void}) {
   const t = useT()
-  const feed = useOverviewFeed(sid, visible)
+  const feed = useOverviewFeed(sid, host.id, visible)
   const [k8sCtx, setK8sCtx] = useState('') // the cluster the Kubernetes tab uses: the Logs tab lists its pods
   const [k8sNs, setK8sNs] = useState('') // and the namespaces it shows: a login that may not list the cluster has pods only there
   // once opened, the Kubernetes tab stays (hidden) while another section is open: its connection steps, view and filters are not done again
@@ -91,20 +99,21 @@ function Ready({sid, host, visible, onAccess, onShell, section, setSection, sour
             {section === 'overview' && <Overview sid={sid} host={host} feed={feed} onGo={setSection} />}
             {section === 'processes' && <Processes sid={sid} visible={visible} />}
             {section === 'services' && <Services sid={sid} onLogs={name => showLogs({kind: 'service', name})} />}
-            {section === 'docker' && <Docker sid={sid} onLogs={showLogs} />}
+            {section === 'docker' && <Docker sid={sid} host={host} onLogs={showLogs} onShell={onShell} />}
             {k8sOpened && <div className="sp-keep" hidden={section !== 'kubernetes'}><Kubernetes sid={sid} host={host} visible={visible && section === 'kubernetes'} onShell={onShell} onAccess={onAccess} onContext={setK8sCtx} onNamespace={setK8sNs} onLogs={p => showLogs(logSourceOf(p))} /></div>}
             {section === 'web' && <Web sid={sid} onLogs={(kind, name) => showLogs({kind, name})} />}
             {section === 'logs' && <Logs sid={sid} visible={visible} source={source} onSource={setSource} k8sCtx={k8sCtx} k8sNs={k8sNs} />}
             {section === 'ports' && <Ports sid={sid} sshPort={host.port} />}
             {section === 'maintenance' && <Maintenance sid={sid} />}
             {section === 'security' && <Security sid={sid} />}
+            {section === 'users' && <Users sid={sid} />}
             {section === 'schedule' && <Schedule sid={sid} host={host} onLogs={(kind, name) => showLogs({kind, name})} />}
           </div>
         </>
   )
 }
 
-function Bar({label, value, note, data}: {label: string; value: number; note: string; data?: number[]}) {
+function Bar({label, value, note, data}: {label: string; value: number; note: string; data?: (number | null)[]}) {
   return (
     <div className="sp-card">
       <h3>{label}</h3>
@@ -116,17 +125,24 @@ function Bar({label, value, note, data}: {label: string; value: number; note: st
   )
 }
 
-function Spark({data, max}: {data: number[]; max: number}) {
-  if (data.length < 2) return <div className="sp-spark" aria-hidden="true" />
+/** a chart of readings; a null is a time nothing was read, and the line stops there */
+function Spark({data, max}: {data: (number | null)[]; max: number}) {
+  const known = data.filter((v): v is number => v !== null)
+  if (known.length < 2) return <div className="sp-spark" aria-hidden="true" />
   const w = 240, h = 44
-  const top = Math.max(max, ...data, 1)
-  const pts = data.map((v, i) => [(i / (data.length - 1)) * w, h - 3 - (v / top) * (h - 8)] as const)
-  const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ')
-  const last = pts[pts.length - 1]
+  const top = Math.max(max, ...known, 1)
+  const xy = (v: number, i: number) => [(i / (data.length - 1)) * w, h - 3 - (v / top) * (h - 8)] as const
+  const runs: (readonly [number, number])[][] = []
+  data.forEach((v, i) => { if (v === null) return; if (i > 0 && data[i - 1] !== null) runs[runs.length - 1].push(xy(v, i)); else runs.push([xy(v, i)]) })
+  const line = (r: (readonly [number, number])[]) => r.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ')
   return (
     <svg className="sp-spark" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
-      <path d={`${line} L${last[0].toFixed(1)} ${h} L${pts[0][0].toFixed(1)} ${h}Z`} fill="currentColor" fillOpacity=".12" />
-      <path d={line} fill="none" stroke="currentColor" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+      {runs.map((r, i) => r.length > 1 ? (
+        <g key={i}>
+          <path d={`${line(r)} L${r[r.length - 1][0].toFixed(1)} ${h} L${r[0][0].toFixed(1)} ${h}Z`} fill="currentColor" fillOpacity=".12" />
+          <path d={line(r)} fill="none" stroke="currentColor" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+        </g>
+      ) : <circle key={i} cx={r[0][0]} cy={r[0][1]} r="1.5" fill="currentColor" />)}
     </svg>
   )
 }
@@ -137,7 +153,9 @@ function Overview({sid, host, feed, onGo}: {sid: string; host: Host; feed: Feed;
   const be = useBackend()
   const t = useT()
   const tn = useTn()
-  const {data: o, error, busy, reload, hist} = feed
+  const {data: o, error, busy, reload, hist: live, saved} = feed
+  const [span, setSpan] = useState<'30m' | '6h' | '24h'>('30m')
+  const hist: {cpu: (number | null)[]; mem: (number | null)[]; disk: (number | null)[]; net: (number | null)[]} = useMemo<Series>(() => (span === '30m' ? live : bucketSeries(saved, (span === '6h' ? 6 : 24) * 60 * MINUTE, 120)), [span, live, saved])
   // what else may need attention: asked once, and left out quietly when the login cannot ask
   const loadUnits = useCallback(() => be.server.services(sid), [be, sid])
   const {data: units} = useLoad<ServerUnit[]>(loadUnits, null)
@@ -151,7 +169,7 @@ function Overview({sid, host, feed, onGo}: {sid: string; host: Host; feed: Feed;
   if (!o) return <><Err error={error} /><div className="muted">{t('Loading…')}</div></>
   const ram = pct(o.mem_used, o.mem_total), disk = pct(o.disk_used, o.disk_total)
   const failed = (units ?? []).filter(u => u.active === 'failed')
-  const minutes = Math.max(1, Math.round((hist.cpu.length * POLL_MS) / 60000))
+  const minutes = Math.max(1, Math.round((live.cpu.length * POLL_MS) / 60000))
   const expiring = (certs?.certs ?? []).filter(c => certLevel(c.days_left) !== 'ok')
   const attention: {key: string; tone: 'bad' | 'warn'; text: string; go: Section}[] = [
     ...failed.map(u => ({key: 'u' + u.name, tone: 'bad' as const, text: t('{name} has failed', {name: u.name}), go: 'services' as const})),
@@ -172,7 +190,12 @@ function Overview({sid, host, feed, onGo}: {sid: string; host: Host; feed: Feed;
         <Bar label={t('Disk /')} value={disk} data={hist.disk} note={`${formatBytes(o.disk_used)} / ${formatBytes(o.disk_total)}`} />
         <div className="sp-card"><h3>{t('Network')}</h3><div className="sp-big sp-big-sm">↓ {formatRate(o.net_rx)}</div><div className="sp-note">↑ {formatRate(o.net_tx)}</div><Spark data={hist.net} max={1024} /></div>
       </div>
-      <div className="sp-note">{t('The charts show the last {n} min while this tab is open.', {n: minutes})}</div>
+      <div className="sp-bar">
+        <div className="segmented" role="group" aria-label={t('Chart range')}>
+          {([['30m', t('30 min')], ['6h', t('6 hours')], ['24h', t('24 hours')]] as const).map(([k, label]) => <button key={k} aria-pressed={span === k} className={span === k ? 'on' : ''} onClick={() => setSpan(k)}>{label}</button>)}
+        </div>
+        <div className="sp-note">{span === '30m' ? t('The charts show the last {n} min while this tab is open.', {n: minutes}) : t('Read while this tab is open; a gap is a time it was closed.')}</div>
+      </div>
       <div className="sp-grid sp-grid-2">
         <div className="sp-card">
           <h3>{t('Needs attention')}</h3>
@@ -311,86 +334,6 @@ function Services({sid, onLogs}: {sid: string; onLogs(name: string): void}) {
           })}
         </tbody>
       </table>{data && shown.length === 0 && <div className="sp-empty">{t('No service matches.')}</div>}</div>
-    </div>
-  )
-}
-
-function Docker({sid, onLogs}: {sid: string; onLogs(s: LogSource): void}) {
-  const be = useBackend()
-  const t = useT()
-  const tn = useTn()
-  const toast = useToast()
-  const confirm = useConfirm()
-  const [working, setWorking] = useState('')
-  const load = useCallback(() => be.server.containers(sid), [be, sid])
-  const {data, error, busy, reload} = useLoad<ServerContainers>(load, null)
-  const act = async (name: string, action: ServerAction) => {
-    const q = actionQuestion(t, 'container', action, name)
-    if (!(await confirm(q.message, {confirmLabel: q.label, danger: action !== 'start'}))) return
-    setWorking(name)
-    try { await be.server.containerAction(sid, name, action); toast.info(t('{name}: done', {name})) } catch (e) { toast.error(errMsg(e)) }
-    setWorking('')
-    reload()
-  }
-  const stack = async (project: string, action: StackAction) => {
-    const q = stackQuestion(t, action, project)
-    if (!(await confirm(q.message, {confirmLabel: q.label, danger: action === 'stop'}))) return
-    setWorking('stack:' + project)
-    try { await be.server.stackAction(sid, project, action); toast.info(t('{name}: done', {name: project})) } catch (e) { toast.error(errMsg(e)) }
-    setWorking('')
-    reload()
-  }
-  // the containers of a Compose project together, the others after them
-  const groups = useMemo(() => {
-    const by = new Map<string, ServerContainer[]>()
-    for (const c of data?.containers ?? []) by.set(c.project, [...(by.get(c.project) ?? []), c])
-    const projects = [...by.keys()].filter(p => p !== '').sort()
-    return [...projects.map(p => ({project: p, items: by.get(p)!})), ...(by.has('') ? [{project: '', items: by.get('')!}] : [])]
-  }, [data])
-  const row = (c: ServerContainer) => (
-    <tr key={c.id}>
-      <td><b>{c.name}</b><div className="sp-note m">{c.image}</div></td>
-      <td>{c.state === 'running' ? <span className="sp-pill ok" title={c.status}>{t('Running')}</span> : <span className="sp-pill" title={c.status}>{t('Stopped')}</span>}</td>
-      <td className="m">{c.ports || '–'}</td>
-      <td><div className="sp-acts">
-        {c.state === 'running' ? (
-          <>
-            <button aria-busy={working === c.name} disabled={working === c.name} onClick={() => void act(c.name, 'restart')}>{t('Restart')}</button>
-            <button className="danger" aria-busy={working === c.name} disabled={working === c.name} onClick={() => void act(c.name, 'stop')}>{t('Stop')}</button>
-          </>
-        ) : <button className="primary" aria-busy={working === c.name} disabled={working === c.name} onClick={() => void act(c.name, 'start')}>{t('Start')}</button>}
-        <button onClick={() => onLogs({kind: 'container', name: c.name})}>{t('Logs')}</button>
-      </div></td>
-    </tr>
-  )
-  return (
-    <div className="sp-view">
-      <Bar2 busy={busy} onReload={reload} />
-      <Err error={error} />
-      {data && !data.installed && <div className="sp-empty">{t('Docker is not installed on this server.')}</div>}
-      {data?.installed && data.containers.length === 0 && <div className="sp-empty">{t('No containers.')}</div>}
-      {data?.installed && groups.map(g => (
-        <section key={g.project || '-'} className="sp-card sp-wide" aria-label={g.project || t('Other containers')}>
-          <div className="sp-card-head">
-            <h3>{g.project ? t('Stack {name}', {name: g.project}) : t('Other containers')}</h3>
-            {g.project && (
-              <div className="sp-acts">
-                <span className="sp-note">{t('{n} running', {n: g.items.filter(c => c.state === 'running').length})} / {tn(g.items.length, '{n} container', '{n} containers')}</span>
-                <button className="primary" aria-busy={working === 'stack:' + g.project} disabled={working === 'stack:' + g.project} onClick={() => void stack(g.project, 'update')}>{t('Update')}</button>
-                <button aria-busy={working === 'stack:' + g.project} disabled={working === 'stack:' + g.project} onClick={() => void stack(g.project, 'restart')}>{t('Restart')}</button>
-                {g.items.some(c => c.state === 'running')
-                  ? <button className="danger" aria-busy={working === 'stack:' + g.project} disabled={working === 'stack:' + g.project} onClick={() => void stack(g.project, 'stop')}>{t('Stop')}</button>
-                  : <button aria-busy={working === 'stack:' + g.project} disabled={working === 'stack:' + g.project} onClick={() => void stack(g.project, 'start')}>{t('Start')}</button>}
-                <button onClick={() => onLogs({kind: 'stack', name: g.project})}>{t('Logs')}</button>
-              </div>
-            )}
-          </div>
-          <div className="sp-table"><table>
-            <thead><tr><th>{t('Container')}</th><th>{t('Status')}</th><th>{t('Ports')}</th><th /></tr></thead>
-            <tbody>{g.items.map(row)}</tbody>
-          </table></div>
-        </section>
-      ))}
     </div>
   )
 }
