@@ -547,9 +547,21 @@ export interface ServerContainers {
   containers: ServerContainer[]
 }
 export interface ServerUsers {
-  users: {name: string; uid: number; home: string; shell: string; sudo: boolean; keys: number; login: string}[]
+  users: {name: string; uid: number; home: string; shell: string; sudo: boolean; keys: number; login: string; /** the password is locked (and the account has ended) */ locked?: boolean}[]
   sessions: {user: string; tty: string; since: string; from: string}[]
   me: string // the account this connection is logged in as
+}
+/** What one saved host answered to an action the Fleet page does on many hosts. */
+export interface ServerFleetResult {
+  host_id: string
+  /** empty when the host answered and the action worked */
+  error: string
+  output: string
+  /** updates: apt, dnf, yum or '' */
+  manager: string
+  count: number
+  security: number
+  reboot_required: boolean
 }
 export interface UserKey {type: string; fingerprint: string; comment: string; options: boolean}
 export interface DockerStat {name: string; cpu: number; mem_pct: number; mem_usage: string}
@@ -558,6 +570,20 @@ export interface DockerObjects {
   images: {id: string; name: string; size: string; created: string; in_use: boolean}[]
   volumes: {name: string; driver: string; in_use: boolean}[]
   networks: {id: string; name: string; driver: string; scope: string}[]
+}
+/** The System box of Maintenance: hostname, time zone and swap. Sizes are bytes. */
+export interface ServerSystem {
+  hostname: string
+  timezone: string
+  /** hostnamectl and timedatectl are there */
+  systemd: boolean
+  swap_total: number
+  /** the size of /swapfile when it is in use, else 0 */
+  swap_file: number
+  /** some swap that is not /swapfile (a partition): shown, never touched */
+  swap_other: boolean
+  ram: number
+  disk_free: number
 }
 export interface ServerPort {
   port: number
@@ -594,6 +620,11 @@ export interface ServerCerts {
   /** /etc/letsencrypt was found (and could be read) */
   found: boolean
   certs: ServerCert[]
+}
+/** A file of /etc/nginx/sites-available, and whether sites-enabled links to it. */
+export interface WebSiteFile {
+  name: string
+  enabled: boolean
 }
 /** One server { } block of nginx, or one site of a Caddyfile. */
 export interface ServerSite {
@@ -663,6 +694,43 @@ export interface ServerSecurity {
   /** failed SSH logins in the last 24 hours, by address, most first; known is false when there is no log to read */
   failed: {known: boolean; total: number; top: Array<{ip: string; count: number}>}
 }
+/** How far an upgrade started from the panel is (it runs on the server, in the background). */
+export interface ServerUpgrade {
+  running: boolean
+  /** it has ended */
+  done: boolean
+  /** it ended with exit code 0 */
+  ok: boolean
+  code: number
+  /** the end of what it printed */
+  log: string
+  /** there is a log of an upgrade at all */
+  started: boolean
+}
+/** What the Security check reads besides ServerSecurity. */
+export interface ServerAudit {
+  /** ufw, firewalld, nft (on); ufw-off, firewalld-off, none */
+  firewall: string
+  /** yes, no (installed, not scheduled), none (not installed) */
+  auto_updates: string
+  /** accounts other than root with user id 0 */
+  uid0: string[]
+  empty_passwords: string[]
+  /** the login could read /etc/shadow */
+  passwords_known: boolean
+  /** sudoers rules that need no password; -1 when unknown */
+  nopasswd: number
+  reboot_required: boolean
+}
+/** A login that worked (one line of last). */
+export interface ServerLogin {
+  user: string
+  tty: string
+  from: string
+  when: string
+  /** "still logged in", or how it ended */
+  status: string
+}
 export interface ServerTimer {
   /** the timer unit, e.g. backup.timer */
   name: string
@@ -707,6 +775,8 @@ export interface ServerFleetHost {
   failed_units: number
   /** how long the SSH connection took, in milliseconds */
   latency_ms: number
+  /** days left of the Let's Encrypt certificate that ends first (negative: it has ended); null or absent when there is none or it cannot be read */
+  cert_days?: number | null
 }
 
 /** The Kubernetes tab of the Panel: kubectl run on the host over SSH (see usecase.ServerService, K8s*). */

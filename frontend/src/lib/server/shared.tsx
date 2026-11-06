@@ -138,11 +138,14 @@ export function useLoad<T>(load: () => Promise<T>, ms: number | null): {data: T 
 }
 
 export type ServerAction = 'start' | 'stop' | 'restart'
+export type ServiceAction = ServerAction | 'enable' | 'disable'
 
 /** The question asked before a service or container is started, stopped or restarted: nothing the panel does to a server runs unasked. */
-export function actionQuestion(t: TFn, kind: 'service' | 'container', action: ServerAction, name: string): {message: string; label: string} {
+export function actionQuestion(t: TFn, kind: 'service' | 'container', action: ServiceAction, name: string): {message: string; label: string} {
   const p = {name}
   if (kind === 'service') {
+    if (action === 'enable') return {message: t('Start the service {name} every time the server boots?', p), label: t('Enable')}
+    if (action === 'disable') return {message: t('Stop starting the service {name} when the server boots? It keeps running until you stop it.', p), label: t('Disable')}
     if (action === 'start') return {message: t('Start the service {name}?', p), label: t('Start')}
     if (action === 'restart') return {message: t('Restart the service {name}? Its connections drop for a moment.', p), label: t('Restart')}
     return {message: t('Stop the service {name}?', p), label: t('Stop')}
@@ -152,11 +155,13 @@ export function actionQuestion(t: TFn, kind: 'service' | 'container', action: Se
   return {message: t('Stop the container {name}?', p), label: t('Stop')}
 }
 
-export type StackAction = ServerAction | 'update'
+export type StackAction = ServerAction | 'update' | 'up' | 'down'
 
 /** The question asked before a Compose project is started, stopped, restarted or updated. */
 export function stackQuestion(t: TFn, action: StackAction, name: string): {message: string; label: string} {
   const p = {name}
+  if (action === 'up') return {message: t('Bring the stack {name} up? It creates the containers that are missing and recreates the ones whose configuration changed.', p), label: t('Up')}
+  if (action === 'down') return {message: t('Take the stack {name} down? Its containers and network are removed; the volumes stay. This panel cannot bring it back: run docker compose up in its folder.', p), label: t('Down')}
   if (action === 'update') return {message: t('Update the stack {name}? It pulls the new images and recreates the containers that changed.', p), label: t('Update')}
   if (action === 'start') return {message: t('Start all containers of {name}?', p), label: t('Start')}
   if (action === 'restart') return {message: t('Restart all containers of {name}? Their connections drop for a moment.', p), label: t('Restart')}
@@ -199,9 +204,30 @@ export function Loading({kind = 'table', what}: {kind?: 'table' | 'overview' | '
 export const Err = ({error}: {error: string}) => (error ? <div className="error" role="alert">{error}</div> : null)
 
 /** A box of the page with a title: the unit of every section that has more than one thing to show. */
-export function Card({title, children, right, collapsible = false, closed: closedProp, onToggle, count, filter}: {
+const FOLD_KEY = 'vutty.panel.folded'
+const readFolded = (): string[] => { try { const v = JSON.parse(localStorage.getItem(FOLD_KEY) ?? '[]'); return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [] } catch { return [] } }
+
+/** Which boxes of the panel are put away, remembered for next time (a convenience: if storage fails they just start open). */
+export function useFolded(): [(key: string) => boolean, (key: string) => void] {
+  const [set, setSet] = useState<string[]>(readFolded)
+  const toggle = (key: string) => {
+    // read again before writing: another box may have changed it since this one was built
+    const cur = readFolded()
+    const next = cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key]
+    try { localStorage.setItem(FOLD_KEY, JSON.stringify(next)) } catch { /* not remembered */ }
+    setSet(next)
+  }
+  return [key => set.includes(key), toggle]
+}
+
+/** A click on the empty part of a box's head folds it too; a click on a control in the head (a button, a box to type in) is that control's own. */
+export const onHeadClick = (fold: () => void) => (e: {target: EventTarget}) => {
+  if (!(e.target as Element).closest?.('button, input, select, textarea, a, label, [role=menuitem]')) fold()
+}
+
+export function Card({title, children, right, collapsible = true, closed: closedProp, onToggle, count, filter}: {
   title: string; children: ReactNode; right?: ReactNode
-  /** the title closes and opens the box (a long list can be put away) */
+  /** the title closes and opens the box (a long list can be put away); every box does, unless it is told not to */
   collapsible?: boolean
   /** the screen keeps whether the box is closed (so it stays closed when the screen is built again); without it the box keeps it itself */
   closed?: boolean
@@ -212,12 +238,12 @@ export function Card({title, children, right, collapsible = false, closed: close
   filter?: {value: string; onChange(v: string): void; label: string}
 }) {
   const t = useT()
-  const [own, setClosed] = useState(false)
-  const closed = closedProp ?? own
-  const toggle = onToggle ?? (() => setClosed(c => !c))
+  const [isFolded, fold] = useFolded()
+  const closed = closedProp ?? isFolded(title)
+  const toggle = onToggle ?? (() => fold(title))
   return (
     <section className="sp-card sp-wide">
-      <div className="sp-card-head">
+      <div className={'sp-card-head' + (collapsible ? ' foldable' : '')} onClick={collapsible ? onHeadClick(toggle) : undefined}>
         {collapsible
           ? <button className="sp-card-fold" aria-expanded={!closed} aria-label={title} onClick={toggle}>
               <span className={'k8s-chev' + (closed ? '' : ' open')}><IconChevron size={12} /></span><h3>{title}</h3>{count !== undefined && <small className="sp-count">{count}</small>}

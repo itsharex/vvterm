@@ -34,12 +34,14 @@ import {SIDE_DEFAULT, SIDE_MAX, SIDE_MIN, SidebarTab, TerminalSidebar} from './l
 import {DEFAULT_SETTINGS} from './lib/settings/defaults'
 import {Nav, Page} from './lib/shell/Nav'
 import {FleetPage} from './lib/server/FleetPage'
+import {FleetMonitor} from './lib/server/FleetMonitor'
 import {ClustersPage} from './lib/server/ClustersPage'
 import {ClusterAddForm, ClusterEditForm} from './lib/server/ClusterForm'
 import {TopBar} from './lib/shell/TopBar'
 import {IconPlus, IconSerial, IconTerminal} from './lib/ui/Icons'
 import {recordRecent} from './lib/hosts/recent'
 import type {Protocol} from './lib/terminal/ProtocolScreen'
+import {OPEN_IN_SFTP} from './lib/sftp/openRequest'
 import {closePane, connectBlankTab, graftTab, moveTab, movePane, popPane, duplicateOf, hasPane, isTerminalTab, newBlankTab, leaves, MAX_TAB_TITLE, newPodShellTab, newShellTab, newTab, pinnedSftpTab, SETTINGS_TAB_ID, settingsTab, SFTP_TAB_ID, splitPane, Tab, toggleBroadcast, toggleZoom, uniqueTitle} from './lib/layout'
 import {capture, effective, formatCombo, isChord, keyOf, matches, sameStep, stepMatches, stepsOf} from './lib/shortcuts/shortcuts'
 import {errMsg} from './lib/util'
@@ -263,6 +265,12 @@ export default function App({initial}: {/** an app window opened for this place 
   }
   const aboutOnly = dialog?.k === 'about' ? <AboutPanel onClose={() => setDialog(null)} checkNow={dialog.check} />
     : dialog?.k === 'support' ? <SupportPanel onClose={() => setDialog(null)} /> : null
+  // a Server panel's Files button, or "Open in SFTP" next to a folder: show the SFTP tab (it opens the host in a tab of its own)
+  useEffect(() => {
+    const show = () => setActive(SFTP_TAB_ID)
+    window.addEventListener(OPEN_IN_SFTP, show)
+    return () => window.removeEventListener(OPEN_IN_SFTP, show)
+  }, [])
   if (!vault) return <div className="gate"><DragBar /><div className="muted">{t('Loading…')}</div>{aboutOnly}</div>
   if (!vault.unlocked) {
     return <><UnlockScreen status={vault} autoBiometric={settings.biometric_on_open} onDone={() => { void refreshVault() }} />{aboutOnly}</>
@@ -621,6 +629,7 @@ export default function App({initial}: {/** an app window opened for this place 
         onSplit={split} onSettings={() => openSettings()} onToggleMaximise={() => void be.system.toggleMaximise()} onRename={renameTab} onMoveTab={moveTabTo} onDuplicate={duplicateTab} onDuplicateWindow={duplicateWindow} onSplitTab={splitTab} snippets={snippets} hosts={hosts} onRunSnippet={runSnippet}
         sidebarOpen={sidebarOpen} onToggleSidebar={toggleSidebar} updateVersion={newVersion} onUpdate={() => setDialog({k: 'about', check: true})} />
       {chordHint && <div className="chord-hint" role="status"><kbd className="keycap">{chordHint}</kbd> was pressed. Waiting for the next key… (Esc to cancel)</div>}
+      <FleetMonitor hosts={hosts} fleetShown={page === 'fleet'} />
       <div className="body">
         <div className="home" style={{display: onHome ? 'flex' : 'none'}}>
           <Nav page={page} onPage={p => { if (p === 'hosts' && page === 'hosts') { setHostsReset(n => n + 1); setDialog(null) } else changePage(p) }} shortcuts={bindings} onData={() => setDialog({k: 'data'})} settingsOpen={settingsOpen} onSettings={() => openSettings()} onLock={() => { void be.vault.lock().then(refreshVault) }} />

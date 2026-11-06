@@ -1,4 +1,4 @@
-import {act, render, screen, waitFor, within} from '@testing-library/react'
+import {act, cleanup, render, screen, waitFor, within} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {ServerPanel} from './ServerPanel'
 import {FleetPage} from './FleetPage'
@@ -7,6 +7,8 @@ import {host, makeFake, Providers} from '../../test/fakeBackend'
 
 type Fake = ReturnType<typeof makeFake>
 const web = host({id: 'h1', label: 'web-1', hostname: 'w1.example.com', username: 'ubuntu', port: 22})
+// what a box put away is remembered in localStorage: one test must not leave it to the next
+beforeEach(() => localStorage.clear())
 const calls = (be: Fake, n: string) => be.state.calls.filter(c => c[0] === n)
 
 function setup(h = web) {
@@ -111,6 +113,109 @@ describe('Web tab', () => {
   })
 })
 
+describe('Every box of the panel can be put away', () => {
+
+  it('remembers what was put away for the next time the panel is opened', async () => {
+    setup()
+    await open('Security')
+    await userEvent.click(await screen.findByRole('button', {name: 'Recent logins'}))
+    expect(JSON.parse(localStorage.getItem('vutty.panel.folded')!)).toEqual(['Recent logins'])
+    cleanup()
+    setup()
+    await open('Security')
+    expect(await screen.findByRole('button', {name: 'Recent logins'})).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Logged in now')).toBeNull()
+    expect(screen.getByRole('button', {name: 'SSH settings'})).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('folds and opens a box of a tab', async () => {
+    setup()
+    await open('Security')
+    expect(await screen.findByText('SSH settings')).toBeInTheDocument()
+    expect(screen.getByText('Recent logins')).toBeInTheDocument()
+    const fold = screen.getByRole('button', {name: 'Recent logins'})
+    expect(screen.getByText('Logged in now')).toBeInTheDocument()
+    await userEvent.click(fold)
+    expect(fold).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Logged in now')).toBeNull()
+    await userEvent.click(fold)
+    expect(screen.getByText('Logged in now')).toBeInTheDocument()
+  })
+
+  it('folds when the empty part of the head is clicked, but not when a control in it is', async () => {
+    setup()
+    await open('Security')
+    const head = (await screen.findByRole('button', {name: 'Recent logins'})).closest('.sp-card-head') as HTMLElement
+    await userEvent.click(head)
+    expect(screen.queryByText('Logged in now')).toBeNull()
+    await userEvent.click(head)
+    expect(screen.getByText('Logged in now')).toBeInTheDocument()
+    // the refresh button of another box is its own: it does not fold that box
+    const check = (screen.getByRole('button', {name: 'Security check'})).closest('.sp-card-head') as HTMLElement
+    await userEvent.click(within(check).getByRole('button', {name: 'Refresh'}))
+    expect(screen.getByRole('button', {name: 'Security check'})).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('folds a Docker stack and keeps the others open', async () => {
+    setup()
+    await open('Docker')
+    const stack = (await screen.findByText('Stack shop')).closest('section') as HTMLElement
+    expect(within(stack).getByText('api')).toBeInTheDocument()
+    await userEvent.click(within(stack).getByRole('button', {name: 'Stack shop'}))
+    expect(within(stack).queryByText('api')).toBeNull()
+    expect(within(screen.getByRole('region', {name: 'Other containers'})).getByText('old-batch')).toBeInTheDocument()
+  })
+})
+
+describe('Web and Services changes', () => {
+  it('switches a site off after asking, and renews a certificate', async () => {
+    const ask = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const {be} = setup()
+    await open('Web')
+    await userEvent.click(await screen.findByRole('button', {name: 'Switch off the site shop.conf'}))
+    await waitFor(() => expect(calls(be, 'server.webSiteSet')).toEqual([['server.webSiteSet', 'shop.conf', false]]))
+    await userEvent.click(await screen.findByRole('button', {name: 'Renew the certificate example.com'}))
+    await waitFor(() => expect(calls(be, 'server.certRenew')).toEqual([['server.certRenew', 'example.com', false]]))
+    expect(await screen.findByText(/all renewals succeeded/)).toBeInTheDocument()
+    ask.mockRestore()
+  })
+
+  it('does nothing when the question is answered No', async () => {
+    const ask = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const {be} = setup()
+    await open('Web')
+    await userEvent.click(await screen.findByRole('button', {name: 'Renew example.com now'}))
+    await userEvent.click(screen.getByRole('button', {name: 'Switch off the site shop.conf'}))
+    expect(calls(be, 'server.certRenew')).toHaveLength(0)
+    expect(calls(be, 'server.webSiteSet')).toHaveLength(0)
+    ask.mockRestore()
+  })
+
+  it('gets a certificate for the domains of the form', async () => {
+    const {be} = setup()
+    await open('Web')
+    await userEvent.click(await screen.findByRole('button', {name: 'Get certificate'}))
+    const dlg = await screen.findByRole('dialog')
+    await userEvent.type(within(dlg).getByPlaceholderText(/example.com www/), 'a.example.com b.example.com')
+    await userEvent.type(within(dlg).getByPlaceholderText('you@example.com'), 'me@example.com')
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Get certificate'}))
+    await waitFor(() => expect(calls(be, 'server.certRequest')).toEqual([['server.certRequest', 'a.example.com,b.example.com', 'me@example.com']]))
+  })
+
+  it('turns the start on boot of a service off after asking', async () => {
+    const ask = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const {be} = setup()
+    await open('Services')
+    await userEvent.click(await screen.findByRole('button', {name: 'More actions for nginx'}))
+    expect(within(screen.getByRole('menu')).getByRole('menuitem', {name: 'Stop'})).toBeInTheDocument()
+    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', {name: 'Disable on boot'}))
+    await waitFor(() => expect(calls(be, 'server.serviceAction')).toEqual([['server.serviceAction', 'nginx', 'disable']]))
+    await userEvent.click(await screen.findByRole('button', {name: 'More actions for nginx'}))
+    expect(within(screen.getByRole('menu')).getByRole('menuitem', {name: 'Enable on boot'})).toBeInTheDocument()
+    ask.mockRestore()
+  })
+})
+
 describe('Docker stacks', () => {
   it('groups containers by Compose project, and asks before an action on the whole stack', async () => {
     const ask = vi.spyOn(window, 'confirm').mockReturnValue(false)
@@ -139,11 +244,48 @@ describe('Docker stacks', () => {
     expect(await head().findByRole('button', {name: 'Start'})).toBeInTheDocument()
   })
 
+  it('brings a stack up, and takes it down only after asking', async () => {
+    const ask = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const {be} = setup()
+    await open('Docker')
+    const stack = (await screen.findByText('Stack shop')).closest('section') as HTMLElement
+    const menuItem = async (name: string) => {
+      await userEvent.click(within(stack).getByRole('button', {name: 'More actions for shop'}))
+      await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', {name}))
+    }
+    await menuItem('Down')
+    expect(ask).toHaveBeenLastCalledWith(expect.stringContaining('Take the stack shop down?'))
+    expect(calls(be, 'server.stackAction')).toHaveLength(0)
+    ask.mockReturnValue(true)
+    await menuItem('Up')
+    await menuItem('Down')
+    await waitFor(() => expect(calls(be, 'server.stackAction')).toEqual([['server.stackAction', 'shop', 'up'], ['server.stackAction', 'shop', 'down']]))
+    await waitFor(() => expect(screen.queryByText('Stack shop')).toBeNull())
+    ask.mockRestore()
+  })
+
+  it('pulls an image by name and pulls a listed one again', async () => {
+    const ask = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const {be} = setup()
+    await open('Docker')
+    await userEvent.click(await screen.findByRole('tab', {name: 'Images'}))
+    await userEvent.click(await screen.findByRole('button', {name: 'Pull image'}))
+    const dlg = await screen.findByRole('dialog')
+    expect(within(dlg).getByRole('button', {name: 'Pull'})).toBeDisabled()
+    await userEvent.type(within(dlg).getByPlaceholderText('nginx:1.27'), 'nginx:1.27')
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Pull'}))
+    await waitFor(() => expect(calls(be, 'server.dockerPull')).toEqual([['server.dockerPull', 'nginx:1.27']]))
+    await userEvent.click(await screen.findByRole('button', {name: 'Pull registry/api:1.8 again'}))
+    await waitFor(() => expect(calls(be, 'server.dockerPull')).toHaveLength(2))
+    ask.mockRestore()
+  })
+
   it('opens the log of a stack', async () => {
     const {be} = setup()
     await open('Docker')
     const stack = (await screen.findByText('Stack shop')).closest('section') as HTMLElement
-    await userEvent.click(within(stack.querySelector('.sp-card-head') as HTMLElement).getByRole('button', {name: 'Logs'}))
+    await userEvent.click(within(stack).getByRole('button', {name: 'More actions for shop'}))
+    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', {name: 'Logs'}))
     await waitFor(() => expect(calls(be, 'server.logs').at(-1)).toEqual(['server.logs', 'stack', 'shop']))
   })
 })
@@ -218,6 +360,65 @@ describe('Logs follow', () => {
       await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
       expect(n()).toBe(afterOff)
     } finally { vi.useRealTimers() }
+  })
+})
+
+describe('System box of Maintenance', () => {
+  it('renames, sets the time zone and creates then removes a swap file, each after asking', async () => {
+    const ask = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const {be} = setup()
+    await open('Maintenance')
+    const host = await screen.findByLabelText('Hostname')
+    await userEvent.clear(host)
+    await userEvent.type(host, 'web-2')
+    await userEvent.click(screen.getByRole('button', {name: 'Rename'}))
+    expect(calls(be, 'server.setHostname')).toHaveLength(0)
+    ask.mockReturnValue(true)
+    await userEvent.click(screen.getByRole('button', {name: 'Rename'}))
+    await waitFor(() => expect(calls(be, 'server.setHostname')).toEqual([['server.setHostname', 'web-2']]))
+    const zone = screen.getByLabelText('Time zone')
+    await userEvent.clear(zone)
+    await userEvent.type(zone, 'Asia/Ho_Chi_Minh')
+    await userEvent.click(screen.getByRole('button', {name: 'Change'}))
+    await waitFor(() => expect(calls(be, 'server.setTimezone')).toEqual([['server.setTimezone', 'Asia/Ho_Chi_Minh']]))
+    expect(screen.getByRole('button', {name: 'Create swap file'})).toBeDisabled()
+    await userEvent.type(screen.getByLabelText('Swap file size in MB'), '2048')
+    await userEvent.click(screen.getByRole('button', {name: 'Create swap file'}))
+    await waitFor(() => expect(calls(be, 'server.swapCreate')).toEqual([['server.swapCreate', 2048]]))
+    await userEvent.click(await screen.findByRole('button', {name: 'Remove swap file'}))
+    await waitFor(() => expect(calls(be, 'server.swapRemove')).toHaveLength(1))
+    ask.mockRestore()
+  })
+})
+
+describe('Installing updates', () => {
+  it('asks, starts the upgrade, follows its log and reloads the updates when it ends', async () => {
+    const ask = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const {be} = setup()
+    await open('Maintenance')
+    await userEvent.click(await screen.findByRole('button', {name: 'Install updates'}))
+    expect(ask).toHaveBeenLastCalledWith(expect.stringContaining('Install 12 updates?'))
+    expect(calls(be, 'server.updatesInstall')).toHaveLength(0)
+    ask.mockReturnValue(true)
+    await userEvent.click(screen.getByRole('button', {name: 'Install updates'}))
+    await waitFor(() => expect(calls(be, 'server.updatesInstall')).toHaveLength(1))
+    const dlg = await screen.findByRole('dialog', {name: 'Installing updates'})
+    expect(await within(dlg).findByText('Running')).toBeInTheDocument()
+    expect(within(dlg).getByRole('log')).toHaveTextContent('Reading package lists...')
+    expect(await within(dlg).findByText('Finished', {}, {timeout: 6000})).toBeInTheDocument()
+    expect(within(dlg).getByRole('log')).toHaveTextContent('12 upgraded')
+    await userEvent.click(within(dlg).getAllByRole('button', {name: 'Close'}).find(b => b.textContent === 'Close')!) // the footer one, not the × of the title
+    expect(await screen.findByText('Up to date')).toBeInTheDocument()
+    ask.mockRestore()
+  }, 15000)
+
+  it('picks an upgrade that is already running up again when the tab is opened', async () => {
+    const be = makeFake({hosts: [web]})
+    be.state.server.upgrade = {started: true, running: true, done: false, ok: false, code: 0, log: 'Unpacking openssl'}
+    render(<Providers be={be}><ServerPanel host={web} visible /></Providers>)
+    await screen.findByText(/up 41d 0h/)
+    await userEvent.click(screen.getByRole('tab', {name: 'Maintenance'}))
+    expect(await screen.findByRole('dialog', {name: 'Installing updates'})).toBeInTheDocument()
   })
 })
 
@@ -299,6 +500,48 @@ describe('Security tab', () => {
     await userEvent.click(screen.getByRole('button', {name: 'Unban 203.0.113.5'}))
     await waitFor(() => expect(calls(be, 'server.unban')).toEqual([['server.unban', 'sshd', '203.0.113.5']]))
     await waitFor(() => expect(screen.queryByText('203.0.113.5')).toBeNull())
+  })
+
+  it('shows the security check, the recent logins, and bans a failing address after asking', async () => {
+    const ask = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const {be} = setup()
+    await open('Security')
+    expect(await screen.findByText(/checks pass/)).toBeInTheDocument()
+    expect(screen.getByText('Root can log in over SSH')).toBeInTheDocument()
+    expect(screen.getByText('The firewall is installed but off')).toBeInTheDocument()
+    expect(screen.getByText('203.0.113.7')).toBeInTheDocument()
+    expect(screen.getByText('Logged in now')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', {name: 'Ban 203.0.113.9'}))
+    expect(calls(be, 'server.ban')).toHaveLength(0)
+    ask.mockReturnValue(true)
+    await userEvent.click(screen.getByRole('button', {name: 'Ban 203.0.113.9'}))
+    await waitFor(() => expect(calls(be, 'server.ban')).toEqual([['server.ban', 'sshd', '203.0.113.9']]))
+    ask.mockRestore()
+  })
+
+  it('turns password login off only after asking', async () => {
+    const ask = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const {be} = setup()
+    await open('Security')
+    const row = (await screen.findByText('Password login')).closest('tr') as HTMLElement
+    await userEvent.click(within(row).getByRole('button', {name: 'Turn off'}))
+    expect(calls(be, 'server.sshSet')).toHaveLength(0)
+    ask.mockReturnValue(true)
+    await userEvent.click(within(row).getByRole('button', {name: 'Turn off'}))
+    await waitFor(() => expect(calls(be, 'server.sshSet')).toEqual([['server.sshSet', 'password_auth', 'no']]))
+    await waitFor(() => expect(within(row).queryByRole('button', {name: 'Turn off'})).toBeNull())
+    ask.mockRestore()
+  })
+
+  it('bans an address from the form', async () => {
+    const {be} = setup()
+    await open('Security')
+    await userEvent.click(await screen.findByRole('button', {name: 'Ban address'}))
+    const dlg = await screen.findByRole('dialog')
+    await userEvent.type(within(dlg).getByPlaceholderText('203.0.113.7'), '192.0.2.44')
+    await userEvent.click(within(dlg).getByRole('button', {name: 'Ban'}))
+    await waitFor(() => expect(calls(be, 'server.ban')).toEqual([['server.ban', 'sshd', '192.0.2.44']]))
+    expect(await screen.findByText('192.0.2.44')).toBeInTheDocument()
   })
 
   it('says when fail2ban or the SSH log is not there', async () => {

@@ -58,9 +58,10 @@
 .sp-log-line.warn { color: var(--warn); }
 @media (prefers-reduced-motion: reduce) { .sp-track i { transition: none; } }
 .sp-view.fill { flex: 1; min-height: 0; }
-.sp-head .sp-reboot { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font: inherit; font-size: 13px; color: var(--bad, #e5484d); }
-.sp-head .sp-reboot + .sp-access { margin-left: 0; }
-.sp-head .sp-access { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font: inherit; font-size: 13px; color: var(--text); }
+.sp-head .sp-reboot { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font: inherit; font-size: 13px; color: var(--bad, #e5484d); }
+.sp-head .sp-access { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font: inherit; font-size: 13px; color: var(--text); }
+/* the buttons of the head sit together at the right: the first one pushes them there */
+.sp-head > span + .sp-reboot, .sp-head > span + .sp-access { margin-left: auto; }
 
 /* the tabs that hold several boxes (Web, Maintenance, Security, Schedule) and the stacks of the Docker tab */
 .sp-wide { gap: 10px; }
@@ -127,3 +128,37 @@ button[aria-busy=true]:disabled { opacity: .7; cursor: progress; }
 .sp-keys-add label.field { margin-bottom: 12px; }
 .sp-keys-add label.field > span { margin-bottom: 8px; font-size: 12px; }
 .sp-keys-add textarea { width: 100%; box-sizing: border-box; resize: vertical; font: 12px ui-monospace, Menlo, monospace; }
+
+/* a small number box inside a sentence of the Fleet alert limits */
+.sp-num { width: 5em; min-width: 5em; box-sizing: border-box; padding-left: 8px; padding-right: 8px; text-align: center; margin: 0 2px; }
+.sp-alerts { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sp-alerts li { display: flex; align-items: center; gap: 8px; }
+.sp-alerts li { flex-wrap: wrap; }
+
+/* a labelled box or checkbox in a bar: the words and the control on one line, centred */
+.sp-opt { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; color: var(--muted); font-size: 12.5px; }
+.sp-opt input[type=checkbox] { margin: 0; flex: none; }
+.sp-opt .sp-num { margin: 0; }
+
+/* room between the filter bar of Fleet and the box under it */
+.hosts-page > .sp-bar + .sp-card { margin-top: 12px; }
+
+/* the buttons of a view sit at the right end of the row of its switch */
+.sp-slot { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
+
+/* the Security check: a pill and what it says, one line each */
+.sp-checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sp-checks li { display: flex; align-items: flex-start; gap: 10px; }
+.sp-checks li .sp-pill { flex: none; min-width: 44px; text-align: center; }
+
+/* the head of a box that can be folded: the empty part of it folds the box too */
+.sp-card-head.foldable { cursor: pointer; }
+.sp-card-head.foldable button, .sp-card-head.foldable input, .sp-card-head.foldable select, .sp-card-head.foldable label { cursor: default; }
+.sp-card-head.foldable .sp-card-fold { cursor: pointer; }
+.sp-opt b { color: var(--text); }
+.hosts-page > .sp-card + .sp-card { margin-top: 12px; }
+.hosts-page > .sp-card + .sec-title { margin-top: 16px; }
+
+/* the state of the upgrade, with room before the log under it */
+.sp-upgrade-head { margin-bottom: 12px; }
+.sp-upgrade-head + .error, .sp-upgrade-head + .sp-pre { margin-top: 0; }

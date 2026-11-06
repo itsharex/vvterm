@@ -5,7 +5,7 @@ import type {ServerUsers, UserKey, DockerInspect, DockerObjects, DockerStat, Exe
   CacheReport, ConnectionTest, ExportReport, ForwardStatus, Group, Host, HostFilter, Identity, ImportReport, PortForward, Settings,
   ActivityEntry, KnownHost, QueueJob, QueueSpec, RemoteEntry, SftpInfo, SyncDiff, Snippet, SyncStatus, TransferResult, VaultStatus,
   AiAskOptions, AiAttachment, AiCommandCheck, AiCustomProvider, AiModelList, AiPolicy, AiPreview, AiProvider, AiSessionState, AiSettings,
-  McpImportItem, McpServer, McpServerInput, McpTool, FirewallRule, ServerBackup, ServerCerts, ServerCleanup, ServerContainers, ServerFleetHost, ServerFolder, ServerInfo, ServerOverview, ServerPorts, ServerProcess, ServerSchedule, ServerSecurity, ServerUnit, ServerUpdates, ServerWeb, ServerWebResult,
+  McpImportItem, McpServer, McpServerInput, McpTool, FirewallRule, ServerBackup, ServerCerts, ServerCleanup, ServerContainers, ServerFleetHost, ServerFolder, ServerInfo, ServerOverview, ServerPorts, ServerProcess, ServerSchedule, ServerAudit, ServerFleetResult, ServerUpgrade, ServerLogin, ServerSecurity, ServerSystem, ServerUnit, ServerUpdates, ServerWeb, ServerWebResult, WebSiteFile,
 } from './types'
 
 /**
@@ -232,16 +232,37 @@ export interface Backend {
     /** the last lines of a log; opts is for another number of lines (100, 300, 1000, 5000) and a time (15m, 1h, 24h) */
     logs(sid: string, kind: '' | 'service' | 'container' | 'stack' | 'web', name: string, opts?: {lines: number; since: '' | '15m' | '1h' | '24h'}): Promise<string>
     /** start, stop or restart every container of a Compose project, or 'update' it (pull the images, then up -d) */
-    stackAction(sid: string, project: string, action: 'start' | 'stop' | 'restart' | 'update'): Promise<void>
+    stackAction(sid: string, project: string, action: 'start' | 'stop' | 'restart' | 'update' | 'up' | 'down'): Promise<void>
+    /** download an image (or the newest of a tag); returns what Docker printed */
+    dockerPull(sid: string, image: string): Promise<string>
     certificates(sid: string): Promise<ServerCerts>
     web(sid: string): Promise<ServerWeb>
     /** nginx -t / caddy validate: changes nothing */
+    /** the nginx site files that can be switched on or off ([] when the server has no sites-available) */
+    webSites(sid: string): Promise<WebSiteFile[]>
+    /** link or unlink a site; the configuration is tested and put back if it fails. Does not reload. */
+    webSiteSet(sid: string, name: string, enabled: boolean): Promise<void>
+    /** renew one certificate; returns what certbot said. force renews it whatever its age. */
+    certRenew(sid: string, name: string, force: boolean): Promise<string>
+    /** a trial renewal of every certificate: changes nothing */
+    certRenewTest(sid: string): Promise<string>
+    /** get a new certificate with the nginx plug-in of certbot */
+    certRequest(sid: string, domains: string[], email: string): Promise<string>
     webTest(sid: string, kind: 'nginx' | 'caddy'): Promise<ServerWebResult>
     /** tests the configuration and reloads only when it passed */
     webReload(sid: string, kind: 'nginx' | 'caddy'): Promise<ServerWebResult>
     updates(sid: string): Promise<ServerUpdates>
+    system(sid: string): Promise<ServerSystem>
+    setHostname(sid: string, name: string): Promise<void>
+    setTimezone(sid: string, zone: string): Promise<void>
+    /** create /swapfile of this many MB, turn it on and keep it for the next boot */
+    swapCreate(sid: string, mb: number): Promise<void>
+    swapRemove(sid: string): Promise<void>
     /** refreshes the package lists (apt-get update, dnf makecache) */
     updatesRefresh(sid: string): Promise<void>
+    /** start installing every waiting update (apt, dnf, yum) in the background on the server */
+    updatesInstall(sid: string): Promise<void>
+    updatesInstallStatus(sid: string): Promise<ServerUpgrade>
     cleanup(sid: string): Promise<ServerCleanup>
     /** runs one cleanup by id (see ServerReclaim); docker-volumes is refused */
     cleanupRun(sid: string, id: string): Promise<void>
@@ -252,16 +273,30 @@ export interface Backend {
     users(sid: string): Promise<ServerUsers>
     addUser(sid: string, name: string, shell: string, sudo: boolean, key: string): Promise<void>
     deleteUser(sid: string, name: string, removeHome: boolean): Promise<void>
+    /** lock (password and account end) or unlock an account; refused for root, system accounts and this connection */
+    setUserLocked(sid: string, name: string, locked: boolean): Promise<void>
+    /** add an account to the sudo group, or take it out of all of them (never from the last one that has it) */
+    setUserSudo(sid: string, name: string, sudo: boolean): Promise<void>
+    /** one action on one saved host, for the Fleet page to do on many: 'updates' (looks only) or 'renew' (certbot renew) */
+    fleetAction(hostId: string, action: 'updates' | 'renew' | 'install'): Promise<ServerFleetResult>
     userKeys(sid: string, name: string): Promise<UserKey[]>
     addUserKey(sid: string, name: string, key: string): Promise<void>
     removeUserKey(sid: string, name: string, fingerprint: string): Promise<void>
     unban(sid: string, jail: string, ip: string): Promise<void>
+    audit(sid: string): Promise<ServerAudit>
+    logins(sid: string): Promise<ServerLogin[]>
+    /** ban an address on a fail2ban jail (the address of this connection is refused) */
+    ban(sid: string, jail: string, ip: string): Promise<void>
+    /** change PermitRootLogin ('root_login': no | prohibit-password | yes) or PasswordAuthentication ('password_auth': no | yes) of sshd; refused when it could lock the login out */
+    sshSet(sid: string, setting: 'root_login' | 'password_auth', value: string): Promise<void>
     schedule(sid: string): Promise<ServerSchedule>
     cronAdd(sid: string, owner: string, schedule: string, command: string): Promise<void>
     cronUpdate(sid: string, owner: string, oldSchedule: string, oldCommand: string, schedule: string, command: string): Promise<void>
     cronDelete(sid: string, owner: string, schedule: string, command: string): Promise<void>
     /** the newest file under path on the server */
     backup(sid: string, path: string): Promise<ServerBackup>
+    /** a desktop notification of the operating system */
+    notify(title: string, body: string): Promise<void>
     /** one saved host: connects on its own, answers or says why not (never asks a question) */
     fleetHost(hostId: string): Promise<ServerFleetHost>
     /** the TCP ports something listens on, with what the ufw firewall says about each, and its rules */
@@ -606,31 +641,52 @@ export function wailsBackend(): Backend {
       dockerStats: async s => (await u<DockerStat[]>('ServerService', 'DockerStats', s)) ?? [],
       dockerInspect: async (s, n) => { const r = await u<DockerInspect>('ServerService', 'DockerInspect', s, n); return {...r, env: r.env ?? [], mounts: r.mounts ?? [], ports: r.ports ?? [], networks: r.networks ?? [], labels: r.labels ?? {}} },
       dockerObjects: async s => { const r = await u<DockerObjects>('ServerService', 'DockerObjects', s); return {images: r.images ?? [], volumes: r.volumes ?? [], networks: r.networks ?? []} },
+      dockerPull: (s, i) => u('ServerService', 'DockerPull', s, i),
       dockerRemove: (s, k, i) => u('ServerService', 'DockerRemove', s, k, i),
       logs: (s, k, n, o) => (o ? u('ServerService', 'LogsFor', s, k, n, o.lines, o.since) : u('ServerService', 'Logs', s, k, n)),
       stackAction: (s, p, a) => u('ServerService', 'StackAction', s, p, a),
       certificates: async s => { const r = await u<ServerCerts>('ServerService', 'Certificates', s); return {...r, certs: r.certs ?? []} },
       web: async s => { const r = await u<ServerWeb>('ServerService', 'Web', s); return {...r, sites: (r.sites ?? []).map(x => ({...x, names: x.names ?? [], listen: x.listen ?? [], targets: x.targets ?? []}))} },
+      webSites: async s => (await u<WebSiteFile[]>('ServerService', 'WebSites', s)) ?? [],
+      webSiteSet: (s, n, e) => u('ServerService', 'WebSiteSet', s, n, e),
+      certRenew: (s, n, f) => u('ServerService', 'CertRenew', s, n, f),
+      certRenewTest: s => u('ServerService', 'CertRenewTest', s),
+      certRequest: (s, d, e) => u('ServerService', 'CertRequest', s, d, e),
       webTest: (s, k) => u('ServerService', 'WebTest', s, k),
       webReload: (s, k) => u('ServerService', 'WebReload', s, k),
+      system: s => u<ServerSystem>('ServerService', 'System', s),
+      setHostname: (s, n) => u('ServerService', 'SetHostname', s, n),
+      setTimezone: (s, z) => u('ServerService', 'SetTimezone', s, z),
+      swapCreate: (s, mb) => u('ServerService', 'SwapCreate', s, mb),
+      swapRemove: s => u('ServerService', 'SwapRemove', s),
       updates: async s => { const r = await u<ServerUpdates>('ServerService', 'Updates', s); return {...r, packages: r.packages ?? []} },
       updatesRefresh: s => u('ServerService', 'UpdatesRefresh', s),
+      updatesInstall: s => u('ServerService', 'UpdatesInstall', s),
+      updatesInstallStatus: s => u<ServerUpgrade>('ServerService', 'UpdatesInstallStatus', s),
       cleanup: async s => { const r = await u<ServerCleanup>('ServerService', 'Cleanup', s); return {disks: r.disks ?? [], items: r.items ?? []} },
       cleanupRun: (s, id) => u('ServerService', 'CleanupRun', s, id),
       diskUsage: async (s, p) => (await u<ServerFolder[]>('ServerService', 'DiskUsage', s, p)) ?? [],
       users: async s => { const r = await u<ServerUsers>('ServerService', 'Users', s); return {users: r.users ?? [], sessions: r.sessions ?? [], me: r.me ?? ''} },
       addUser: (s, n, sh, sudo, k) => u('ServerService', 'AddUser', s, n, sh, sudo, k),
+      setUserLocked: (s, n, l) => u('ServerService', 'SetUserLocked', s, n, l),
+      setUserSudo: (s, n, v) => u('ServerService', 'SetUserSudo', s, n, v),
+      fleetAction: (h, a) => u('ServerService', 'FleetAction', h, a),
       deleteUser: (s, n, h) => u('ServerService', 'DeleteUser', s, n, h),
       userKeys: async (s, n) => (await u<UserKey[]>('ServerService', 'UserKeys', s, n)) ?? [],
       addUserKey: (s, n, k) => u('ServerService', 'AddUserKey', s, n, k),
       removeUserKey: (s, n, f) => u('ServerService', 'RemoveUserKey', s, n, f),
       security: async s => { const r = await u<ServerSecurity>('ServerService', 'Security', s); return {...r, fail2ban: {...r.fail2ban, jails: (r.fail2ban.jails ?? []).map(j => ({...j, ips: j.ips ?? []}))}, failed: {...r.failed, top: r.failed.top ?? []}} },
+      audit: async s => { const r = await u<ServerAudit>('ServerService', 'Audit', s); return {...r, uid0: r.uid0 ?? [], empty_passwords: r.empty_passwords ?? []} },
+      logins: async s => (await u<ServerLogin[]>('ServerService', 'Logins', s)) ?? [],
       unban: (s, j, ip) => u('ServerService', 'Unban', s, j, ip),
+      ban: (s, j, ip) => u('ServerService', 'Ban', s, j, ip),
+      sshSet: (s, k, v) => u('ServerService', 'SSHSet', s, k, v),
       schedule: async s => { const r = await u<ServerSchedule>('ServerService', 'Schedule', s); return {timers: r.timers ?? [], cron: r.cron ?? [], me: r.me ?? ''} },
       cronAdd: (s, o, sc, c) => u('ServerService', 'CronAdd', s, o, sc, c),
       cronUpdate: (s, o, os, oc, sc, c) => u('ServerService', 'CronUpdate', s, o, os, oc, sc, c),
       cronDelete: (s, o, sc, c) => u('ServerService', 'CronDelete', s, o, sc, c),
       backup: (s, p) => u('ServerService', 'Backup', s, p),
+      notify: (ti, b) => u('ServerService', 'Notify', ti, b),
       fleetHost: h => u('ServerService', 'FleetHost', h),
       ports: async s => { const r = await u<ServerPorts>('ServerService', 'Ports', s); return {...r, ports: r.ports ?? [], rules: r.rules ?? []} },
       firewallAdd: (s, a, p, pr, f, force) => u('ServerService', 'FirewallAdd', s, a, p, pr, f, force),

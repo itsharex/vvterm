@@ -148,6 +148,8 @@ var stackActions = map[string][]string{
 	"stop":    {"stop"},
 	"restart": {"restart"},
 	"update":  {"pull", "up -d"},
+	"up":      {"up -d"},
+	"down":    {"down"}, // removes the containers and the network of the project; its volumes stay
 }
 
 // StackAction starts, stops or restarts every container of a Compose project, or updates it (pulls the images, then up -d).
@@ -160,7 +162,7 @@ func (s *ServerService) StackAction(sid, project, action string) error {
 		return errors.New("unknown action")
 	}
 	limit := serverTimeout
-	if action == "update" {
+	if action == "update" || action == "up" {
 		limit = serverLongTimeout
 	}
 	_, err := s.runTimeout(sid, asRoot+composeScript(project, cmds...), limit)
@@ -345,6 +347,8 @@ true`, find), 30*time.Second)
 
 const fleetScript = overviewScript + `
 echo '##failed'; systemctl list-units --type=service --state=failed --plain --no-legend --no-pager 2>/dev/null | wc -l
+echo '##certs'; $SUDO find /etc/letsencrypt/live -mindepth 2 -maxdepth 2 -name cert.pem 2>/dev/null | while read -r f; do $SUDO openssl x509 -in "$f" -noout -enddate 2>/dev/null; done
+echo '##now'; date +%s
 `
 
 // FleetHost looks at one saved host on a connection of its own that never asks a question (a host key that is not trusted yet
@@ -362,11 +366,12 @@ func (s *ServerService) FleetHost(hostID string) (ServerFleetHost, error) {
 	}
 	defer cl.Close()
 	res.LatencyMs = time.Since(start).Milliseconds()
-	out, err := runScript(cl, fleetScript, 15*time.Second)
+	out, err := runScript(cl, asRoot+fleetScript, 15*time.Second)
 	if err != nil && strings.TrimSpace(out) == "" {
 		res.Error = err.Error()
 		return res, nil
 	}
 	res.Overview, res.FailedUnits = parseFleet(out)
+	res.CertDays = parseFleetCertDays(out)
 	return res, nil
 }

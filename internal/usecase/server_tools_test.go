@@ -390,7 +390,7 @@ func TestServerToolsRefuseWhatIsNotCheckedBeforeAnyCommand(t *testing.T) {
 	cases := map[string]error{
 		"stack name":    s.StackAction("x", "Shop; rm -rf /", "start"),
 		"stack caps":    s.StackAction("x", "Shop", "start"),
-		"stack action":  s.StackAction("x", "shop", "down"),
+		"stack action":  s.StackAction("x", "shop", "destroy"),
 		"web kind":      func() error { _, e := s.WebReload("x", "apache"); return e }(),
 		"web test kind": func() error { _, e := s.WebTest("x", "nginx; id"); return e }(),
 		"cleanup id":    s.CleanupRun("x", "docker-volumes"),
@@ -462,5 +462,60 @@ func TestServerToolScriptsAreValidShell(t *testing.T) {
 		if out, err := exec.Command(sh, "-n", "-c", script).CombinedOutput(); err != nil {
 			t.Errorf("%s: %v\n%s", name, err, out)
 		}
+	}
+}
+
+func TestDockerPullAndStackUpDownChecks(t *testing.T) {
+	s := &ServerService{sessions: map[string]*serverSession{}}
+	for _, img := range []string{"", "Nginx", "nginx; reboot", "-v", "a b"} {
+		if _, err := s.DockerPull("x", img); err == nil || err.Error() == "the connection to the server is closed: reconnect" {
+			t.Fatalf("%q should be refused before the server is asked: %v", img, err)
+		}
+	}
+	for _, img := range []string{"nginx", "nginx:1.27", "ghcr.io/org/app:v1", "registry:5000/a/b@sha256:abc"} {
+		if !imageRefRe.MatchString(img) {
+			t.Fatalf("%q should pass", img)
+		}
+	}
+	if _, ok := stackActions["up"]; !ok {
+		t.Fatal("up")
+	}
+	if _, ok := stackActions["down"]; !ok {
+		t.Fatal("down")
+	}
+}
+
+func TestParseFleetCertDays(t *testing.T) {
+	out := "##certs\nnotAfter=Jan 12 00:00:00 2027 GMT\nnotAfter=Jan  2 00:00:00 2027 GMT\n##now\n1798000000\n"
+	// 1798000000 = 2026-12-23 04:26:40 UTC; the soonest end is 2027-01-02 00:00:00 UTC, 9 days and a few hours later
+	if d := parseFleetCertDays(out); d == nil || *d != 9 {
+		t.Fatalf("%v", d)
+	}
+	if d := parseFleetCertDays("##certs\n##now\n1798000000\n"); d != nil {
+		t.Fatalf("%v", *d)
+	}
+	if d := parseFleetCertDays("##certs\nnotAfter=Dec 20 00:00:00 2026 GMT\n##now\n1798000000\n"); d == nil || *d != -4 {
+		t.Fatalf("%v", d)
+	}
+}
+
+func TestClipNotificationText(t *testing.T) {
+	if got := clip("a\nb\r\nc", 80); got != "a b  c" {
+		t.Fatalf("%q", got)
+	}
+	if got := clip("abcdef", 4); got != "abc…" {
+		t.Fatalf("%q", got)
+	}
+	if err := (&ServerService{}).Notify("", "x"); err == nil {
+		t.Fatal("title")
+	}
+}
+
+func TestFleetActionRefusesUnknownAction(t *testing.T) {
+	if _, err := (&ServerService{}).FleetAction("h", "reboot"); err == nil || err.Error() != "unknown action" {
+		t.Fatal(err)
+	}
+	if lastLine("a\nb\n\n") != "b" {
+		t.Fatal("lastLine")
 	}
 }

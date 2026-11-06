@@ -3,7 +3,7 @@ import {BackendContext, Backend} from '../lib/backend'
 import {ToastProvider} from '../lib/ui/Toast'
 import {DEFAULT_SETTINGS} from '../lib/settings/defaults'
 import {k8sApi, makeK8s, type K8sFake} from './fakeK8s'
-import type {ServerUsers, UserKey, DockerObjects, ExecRun, ServerBackup, ServerCerts, ServerCleanup, ServerContainers, ServerFleetHost, ServerFolder, ServerSchedule, ServerSecurity, ServerUpdates, ServerWeb, ServerWebResult, ServerOverview, ServerPorts, ServerProcess, ServerUnit, SSHLink, VaultHealth, ActivityEntry, KnownHost, QueueJob, RemoteEntry, SyncDiff, TransferResult, ConnectionTest, ForwardStatus, Group, Host, Identity, PortForward, Settings, Snippet, VaultStatus,
+import type {ServerUsers, UserKey, DockerObjects, ExecRun, ServerBackup, ServerCerts, ServerCleanup, ServerContainers, ServerFleetHost, ServerFolder, ServerSchedule, ServerAudit, ServerFleetResult, ServerUpgrade, ServerLogin, ServerSecurity, ServerSystem, ServerUpdates, ServerWeb, ServerWebResult, WebSiteFile, ServerOverview, ServerPorts, ServerProcess, ServerUnit, SSHLink, VaultHealth, ActivityEntry, KnownHost, QueueJob, RemoteEntry, SyncDiff, TransferResult, ConnectionTest, ForwardStatus, Group, Host, Identity, PortForward, Settings, Snippet, VaultStatus,
   CacheReport, AiCommandCheck, AiModelList, AiPreview, AiProvider, AiReply, AiSessionState, AiSettings, McpImportItem, McpServer, McpTool, Cluster, ClusterPreview} from '../lib/types'
 
 export interface Fake extends Backend {
@@ -60,7 +60,13 @@ export interface Fake extends Backend {
       logs: string
       ports: ServerPorts
       certs: ServerCerts
+      system: ServerSystem
+      audit: ServerAudit
+      upgrade: ServerUpgrade
+      upgradePolls: number
+      logins: ServerLogin[]
       web: ServerWeb
+      webSites: WebSiteFile[]
       webResult: ServerWebResult
       updates: ServerUpdates
       cleanup: ServerCleanup
@@ -193,8 +199,14 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       logs: '2026-11-04T09:41:07+0700 host app-worker[2210]: Error: ECONNREFUSED 127.0.0.1:6380\n2026-11-04T09:41:12+0700 host sshd[88]: Accepted publickey for ubuntu',
       ports: {firewall: 'active', ports: [{port: 22, process: 'sshd', local: false, open: true}, {port: 5432, process: 'postgres', local: true, open: false}, {port: 9000, process: 'minio', local: false, open: false}], rules: [{num: 1, to: '22/tcp', action: 'ALLOW', from: 'Anywhere'}]},
       certs: {found: true, certs: [{name: 'example.com', domains: ['example.com', 'www.example.com'], not_after: 1788000000, days_left: 9}, {name: 'api.example.com', domains: ['api.example.com'], not_after: 1795000000, days_left: 88}]},
+      webSites: [{name: 'shop.conf', enabled: true}, {name: 'staging.conf', enabled: false}],
       web: {kind: 'nginx', version: 'nginx/1.24.0', running: true, sites: [{names: ['example.com', 'www.example.com'], listen: ['443 ssl'], targets: ['proxy_pass http://127.0.0.1:3000']}]},
       webResult: {ok: true, output: 'nginx: configuration file /etc/nginx/nginx.conf test is successful'},
+      upgrade: {started: false, running: false, done: false, ok: false, code: 0, log: ''},
+      upgradePolls: 0,
+      audit: {firewall: 'ufw-off', auto_updates: 'none', uid0: [], empty_passwords: [], passwords_known: true, nopasswd: 1, reboot_required: false},
+      logins: [{user: 'root', tty: 'pts/0', from: '203.0.113.7', when: 'Fri Nov 6 09:00:12 2026', status: 'still logged in'}, {user: 'ubuntu', tty: 'pts/1', from: '198.51.100.4', when: 'Thu Nov 5 22:10:01 2026', status: '- Thu Nov 5 22:40:00 2026  (00:29)'}],
+      system: {hostname: 'web-1', timezone: 'UTC', systemd: true, swap_total: 0, swap_file: 0, swap_other: false, ram: 2 * 1024 ** 3, disk_free: 20 * 1024 ** 3},
       updates: {manager: 'apt', count: 12, security: 3, reboot_required: true, lists_age_sec: 3 * 86400, packages: [{name: 'openssl', version: '3.0.13-0ubuntu3.5', security: true}, {name: 'curl', version: '8.5.0-2ubuntu10.6', security: false}]},
       cleanup: {disks: [{mount: '/', device: '/dev/sda1', total: 50 * GB, used: 39 * GB}], items: [{id: 'docker-dangling', size: GB, note: 'Dangling images and build cache'}, {id: 'journal', size: GB / 2, note: 'Journal'}, {id: 'docker-volumes', size: 3 * GB, note: 'Volumes'}]},
       folders: {'/var': [{path: '/var/lib', size: 12 * GB}, {path: '/var/log', size: 2 * GB}], '/var/lib': [{path: '/var/lib/docker', size: 10 * GB}]},
@@ -569,7 +581,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       serviceAction: async (sid, name, action) => {
         rec('server.serviceAction', name, action)
         if (state.server.failAction) throw state.server.failAction
-        state.server.units = state.server.units.map(u => (u.name === name ? {...u, active: action === 'stop' ? 'inactive' : 'active', sub: action === 'stop' ? 'dead' : 'running'} : u))
+        state.server.units = state.server.units.map(u => (u.name === name ? {...u, ...(action === 'enable' || action === 'disable' ? {enabled: action === 'enable' ? 'enabled' : 'disabled'} : {active: action === 'stop' ? 'inactive' : 'active', sub: action === 'stop' ? 'dead' : 'running'})} : u))
       },
       containers: async () => ({installed: state.server.docker.installed, containers: state.server.docker.containers.map(c => ({...c}))}),
       containerAction: async (sid, name, action) => {
@@ -581,6 +593,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       dockerStats: async () => state.server.docker.containers.filter(c => c.state === 'running').map((c, i) => ({name: c.name, cpu: 12 - i * 5, mem_pct: 4 + i, mem_usage: (60 + i * 40) + 'MiB'})),
       dockerInspect: async (sid, name) => ({name, image: 'registry/' + name, created: '2026-01-01T00:00:00Z', state: 'running', restart: 'always', command: 'node app.js', env: [{key: 'NODE_ENV', value: 'production'}, {key: 'DB_PASSWORD', value: 'hunter2'}], mounts: [{type: 'volume', source: '/var/lib/docker/volumes/data', dest: '/data', rw: true}], ports: ['0.0.0.0:3000 → 3000/tcp'], networks: ['bridge'], labels: {}}),
       dockerObjects: async () => ({images: state.server.dockerObjects.images.map(i => ({...i})), volumes: state.server.dockerObjects.volumes.map(v => ({...v})), networks: state.server.dockerObjects.networks.map(n => ({...n}))}),
+      dockerPull: async (sid, image) => { rec('server.dockerPull', image); if (state.server.failAction) throw state.server.failAction; return 'Status: Downloaded newer image for ' + image },
       dockerRemove: async (sid, kind, id) => {
         rec('server.dockerRemove', kind, id)
         if (state.server.failAction) throw state.server.failAction
@@ -606,13 +619,44 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       stackAction: async (sid, project, action) => {
         rec('server.stackAction', project, action)
         if (state.server.failAction) throw state.server.failAction
+        if (action === 'down') state.server.docker.containers = state.server.docker.containers.filter(c => c.project !== project)
         if (action === 'stop' || action === 'start') state.server.docker.containers = state.server.docker.containers.map(c => (c.project === project ? {...c, state: action === 'stop' ? 'exited' : 'running'} : c))
       },
       certificates: async () => ({found: state.server.certs.found, certs: state.server.certs.certs.map(c => ({...c}))}),
       web: async () => ({...state.server.web, sites: state.server.web.sites.map(x => ({...x}))}),
+      webSites: async () => state.server.webSites.map(x => ({...x})),
+      webSiteSet: async (sid, name, enabled) => {
+        rec('server.webSiteSet', name, enabled)
+        if (state.server.failAction) throw state.server.failAction
+        state.server.webSites = state.server.webSites.map(x => (x.name === name ? {...x, enabled} : x))
+      },
+      certRenew: async (sid, name, force) => { rec('server.certRenew', name, force); if (state.server.failAction) throw state.server.failAction; return 'Congratulations, all renewals succeeded' },
+      certRenewTest: async () => { rec('server.certRenewTest'); return 'Congratulations, all simulated renewals succeeded' },
+      certRequest: async (sid, domains, email) => { rec('server.certRequest', domains.join(','), email); if (state.server.failAction) throw state.server.failAction; return 'Successfully received certificate' },
       webTest: async (sid, kind) => { rec('server.webTest', kind); return {...state.server.webResult} },
       webReload: async (sid, kind) => { rec('server.webReload', kind); if (state.server.failAction) throw state.server.failAction; return {...state.server.webResult} },
+      audit: async () => ({...state.server.audit}),
+      logins: async () => state.server.logins.map(l => ({...l})),
+      system: async () => ({...state.server.system}),
+      setHostname: async (sid, name) => { rec('server.setHostname', name); if (state.server.failAction) throw state.server.failAction; state.server.system.hostname = name },
+      setTimezone: async (sid, zone) => { rec('server.setTimezone', zone); if (state.server.failAction) throw state.server.failAction; state.server.system.timezone = zone },
+      swapCreate: async (sid, mb) => { rec('server.swapCreate', mb); if (state.server.failAction) throw state.server.failAction; state.server.system.swap_file = mb * 1024 ** 2; state.server.system.swap_total = mb * 1024 ** 2 },
+      swapRemove: async () => { rec('server.swapRemove'); if (state.server.failAction) throw state.server.failAction; state.server.system.swap_file = 0; state.server.system.swap_total = 0 },
       updates: async () => ({...state.server.updates, packages: state.server.updates.packages.map(p => ({...p}))}),
+      updatesInstall: async () => {
+        rec('server.updatesInstall')
+        if (state.server.failAction) throw state.server.failAction
+        state.server.upgradePolls = 0
+        state.server.upgrade = {started: true, running: true, done: false, ok: false, code: 0, log: 'Reading package lists...'}
+      },
+      updatesInstallStatus: async () => {
+        rec('server.updatesInstallStatus')
+        if (state.server.upgrade.running && ++state.server.upgradePolls >= 2) {
+          state.server.upgrade = {started: true, running: false, done: true, ok: true, code: 0, log: 'Reading package lists...\n12 upgraded, 0 newly installed.'}
+          state.server.updates = {...state.server.updates, count: 0, security: 0, packages: [], reboot_required: true}
+        }
+        return {...state.server.upgrade}
+      },
       updatesRefresh: async () => { rec('server.updatesRefresh'); if (state.server.failAction) throw state.server.failAction },
       cleanup: async () => ({disks: state.server.cleanup.disks.map(d => ({...d})), items: state.server.cleanup.items.map(i => ({...i}))}),
       cleanupRun: async (sid, id) => {
@@ -626,6 +670,25 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
         rec('server.addUser', name, shell, sudo, key)
         if (state.server.failAction) throw state.server.failAction
         state.server.users.users.push({name, uid: 1002, home: '/home/' + name, shell, sudo, keys: key ? 1 : 0, login: ''})
+      },
+      setUserLocked: async (sid, name, locked) => {
+        rec('server.setUserLocked', name, locked)
+        if (state.server.failAction) throw state.server.failAction
+        state.server.users.users = state.server.users.users.map(u => (u.name === name ? {...u, locked} : u))
+      },
+      setUserSudo: async (sid, name, sudo) => {
+        rec('server.setUserSudo', name, sudo)
+        if (state.server.failAction) throw state.server.failAction
+        state.server.users.users = state.server.users.users.map(u => (u.name === name ? {...u, sudo} : u))
+      },
+      fleetAction: async (hostId, action) => {
+        rec('server.fleetAction', hostId, action)
+        const err = state.server.fleetErrors[hostId]
+        if (err) return {host_id: hostId, error: err, output: '', manager: '', count: 0, security: 0, reboot_required: false}
+        if (action === 'install') return {host_id: hostId, error: '', output: 'started', manager: '', count: 0, security: 0, reboot_required: false}
+        return action === 'updates'
+          ? {host_id: hostId, error: '', output: '', manager: 'apt', count: 12, security: 3, reboot_required: hostId === 'a'}
+          : {host_id: hostId, error: '', output: 'Congratulations, all renewals succeeded', manager: '', count: 0, security: 0, reboot_required: false}
       },
       deleteUser: async (sid, name, removeHome) => {
         rec('server.deleteUser', name, removeHome)
@@ -644,6 +707,16 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
         state.server.userKeys[name] = (state.server.userKeys[name] ?? []).filter(k => k.fingerprint !== fp)
       },
       security: async () => JSON.parse(JSON.stringify(state.server.security)),
+      ban: async (sid, jail, ip) => {
+        rec('server.ban', jail, ip)
+        if (state.server.failAction) throw state.server.failAction
+        state.server.security.fail2ban.jails = state.server.security.fail2ban.jails.map(j => (j.name === jail ? {...j, banned: j.banned + 1, ips: [...j.ips, ip]} : j))
+      },
+      sshSet: async (sid, setting, value) => {
+        rec('server.sshSet', setting, value)
+        if (state.server.failAction) throw state.server.failAction
+        state.server.security.ssh = {...state.server.security.ssh, [setting]: value}
+      },
       unban: async (sid, jail, ip) => {
         rec('server.unban', jail, ip)
         if (state.server.failAction) throw state.server.failAction
@@ -666,6 +739,7 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
         state.server.schedule.cron = state.server.schedule.cron.filter(c => !(c.source === owner && c.schedule === schedule && c.command === command))
       },
       backup: async (sid, path) => { rec('server.backup', path); return {...state.server.backup} },
+      notify: async (title, body) => { rec('server.notify', title, body) },
       fleetHost: async hostId => {
         rec('server.fleetHost', hostId)
         const err = state.server.fleetErrors[hostId]

@@ -4,9 +4,12 @@ import {useT} from '../i18n'
 import {IconRefresh} from '../ui/Icons'
 import {useMinBusy} from '../ui/useMinBusy'
 import {errMsg} from '../util'
-import {FilterInput} from './shared'
+import {Card, FilterInput} from './shared'
+import {type FleetAlert, fleetAlertConfig, alertText, DEFAULT_ALERT_CONFIG, reportFleet, setFleetAlertConfig, useFleetAlertConfig, useFleetAlerts} from './fleetAlerts'
+import {useToast} from '../ui/Toast'
+import {useConfirm} from '../ui/Confirm'
 import {formatUptime, level, pct} from './format'
-import type {Host, ServerFleetHost} from '../types'
+import type {Host, ServerFleetHost, ServerFleetResult} from '../types'
 
 const WORKERS = 4
 
@@ -30,6 +33,10 @@ const FLEET_POLL_MS = 30000
 export function FleetPage({hosts, onPanel}: {hosts: Host[]; onPanel(h: Host): void}) {
   const be = useBackend()
   const t = useT()
+  const toast = useToast()
+  const confirm = useConfirm()
+  const alerts = useFleetAlerts()
+  const cfg = useFleetAlertConfig()
   const [rows, setRows] = useState<Record<string, Row>>({})
   const [q, setQ] = useState('')
   const [running, setRunning] = useState(false)
@@ -51,7 +58,7 @@ export function FleetPage({hosts, onPanel}: {hosts: Host[]; onPanel(h: Host): vo
         if (!quiet) setRows(p => ({...p, [h.id]: {state: 'checking'}}))
         let r: ServerFleetHost
         try { r = await be.server.fleetHost(h.id) } catch (e) { r = {host_id: h.id, error: errMsg(e), overview: {} as ServerFleetHost['overview'], failed_units: 0, latency_ms: 0} }
-        if (alive.current && mine === round.current) setRows(p => ({...p, [h.id]: {state: 'done', r}}))
+        if (alive.current && mine === round.current) { setRows(p => ({...p, [h.id]: {state: 'done', r}})); reportFleet(h, r) }
       }
     }
     await Promise.all(Array.from({length: Math.min(WORKERS, targets.length)}, worker))
@@ -66,7 +73,7 @@ export function FleetPage({hosts, onPanel}: {hosts: Host[]; onPanel(h: Host): vo
     alive.current = true
     void check(listRef.current)
     // asked again by itself: only while the page is in sight, and never on top of a round that is still going
-    const timer = window.setInterval(() => { if (!document.hidden && !busyNow.current) void check(listRef.current, true) }, FLEET_POLL_MS)
+    const timer = window.setInterval(() => { if ((!document.hidden || fleetAlertConfig().notify) && !busyNow.current) void check(listRef.current, true) }, FLEET_POLL_MS)
     return () => { alive.current = false; window.clearInterval(timer) }
   }, [check, ids])
 
@@ -81,6 +88,45 @@ export function FleetPage({hosts, onPanel}: {hosts: Host[]; onPanel(h: Host): vo
   const done = Object.values(rows).filter(r => r.state === 'done') as Array<{state: 'done'; r: ServerFleetHost}>
   const down = done.filter(r => r.r.error).length
 
+  const alertHosts = useMemo(() => {
+    const by = new Map<string, FleetAlert[]>()
+    for (const a of alerts) by.set(a.hostId, [...(by.get(a.hostId) ?? []), a])
+    return [...by.entries()].sort((x, y) => x[1][0].label.localeCompare(y[1][0].label))
+  }, [alerts])
+  // one action on the hosts that are ticked: each answers in its own row of the result box
+  const [picked, setPicked] = useState<string[]>([])
+  const [job, setJob] = useState<{action: 'updates' | 'renew' | 'install'; rows: Record<string, 'running' | ServerFleetResult>} | null>(null)
+  const pickedHosts = list.filter(h => picked.includes(h.id))
+  const doAll = async (action: 'updates' | 'renew' | 'install') => {
+    const targets = pickedHosts
+    if (targets.length === 0 || (job && Object.values(job.rows).includes('running'))) return
+    if (action === 'renew' && !(await confirm(t('Renew the certificates on {n} servers? certbot renews only the ones near their end, then each web server is reloaded.', {n: targets.length}), {confirmLabel: t('Renew')}))) return
+    if (action === 'install' && !(await confirm(t('Install the updates on {n} servers? Each one starts installing every waiting update in the background: services may restart and a reboot may be needed. Follow each one in its panel.', {n: targets.length}), {confirmLabel: t('Install updates'), danger: true}))) return
+    setJob({action, rows: Object.fromEntries(targets.map(h => [h.id, 'running' as const]))})
+    let next = 0
+    const worker = async () => {
+      while (alive.current && next < targets.length) {
+        const h = targets[next++]
+        let r: ServerFleetResult
+        try { r = await be.server.fleetAction(h.id, action) } catch (e) { r = {host_id: h.id, error: errMsg(e), output: '', manager: '', count: 0, security: 0, reboot_required: false} }
+        if (alive.current) setJob(j => (j && j.action === action ? {...j, rows: {...j.rows, [h.id]: r}} : j))
+      }
+    }
+    await Promise.all(Array.from({length: Math.min(3, targets.length)}, worker))
+  }
+  const working = !!job && Object.values(job.rows).includes('running')
+  // a limit is taken when the box is left, not on every key: typing 80 must not pass through 8
+  const [resetN, setResetN] = useState(0)
+  const setNum = (key: 'disk' | 'mem' | 'certDays', min: number, max: number) => (e: {target: {value: string}}) => {
+    const n = Number(e.target.value)
+    if (e.target.value.trim() !== '' && Number.isFinite(n) && n >= min && n <= max) setFleetAlertConfig({...cfg, [key]: Math.round(n)})
+    else setResetN(x => x + 1) // not a good number: the box shows the limit that is in force
+  }
+  const toggleNotify = async (on: boolean) => {
+    setFleetAlertConfig({...cfg, notify: on})
+    if (!on) return
+    try { await be.server.notify('Vutty', t('Notifications are on: you are told when a server needs a look.')) } catch (e) { toast.error(t('This system could not show a notification: {error}', {error: errMsg(e)})) }
+  }
   const cell = (p: number) => <span className={'sp-pill ' + level(p)}>{p}%</span>
   return (
     <div className="hosts-page" aria-label={t('Fleet')}>
@@ -89,6 +135,58 @@ export function FleetPage({hosts, onPanel}: {hosts: Host[]; onPanel(h: Host): vo
         <span className="sp-os">{list.length === 0 ? '' : t('{up} of {n} servers answered', {up: done.length - down, n: list.length})}</span>
         <button className="ghost-btn" aria-label={t('Check all servers again')} aria-busy={spinning} disabled={running} onClick={() => void check(list)}><IconRefresh size={14} /> {t('Check again')}</button>
       </div>
+      <Card title={t('Alerts')} right={alerts.length > 0 ? <span className="sp-pill bad">{alerts.length}</span> : <span className="sp-pill ok">{t('None')}</span>}>
+        {alerts.length > 0 && (
+          <ul className="sp-alerts">
+            {alertHosts.map(([id, items]) => (
+              <li key={id}>
+                {items.map(a => <span key={a.key} className={'sp-pill ' + (a.kind === 'down' ? 'bad' : 'warn')}>{a.label + ' · ' + alertText(t, a)}</span>)}
+                <button aria-label={t('Open the panel of {name}', {name: items[0].label})} onClick={() => { const h = list.find(x => x.id === id); if (h) onPanel(h) }}>{t('Open panel')}</button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="sp-bar">
+          <label className="sp-opt"><input type="checkbox" checked={cfg.notify} onChange={e => void toggleNotify(e.target.checked)} /> {t('Desktop notifications')}</label>
+          <label className="sp-opt">{t('Disk over')} <input className="sp-num" aria-label={t('Disk alert limit in percent')} inputMode="numeric" defaultValue={cfg.disk} key={'d' + resetN} onBlur={setNum('disk', 1, 100)} />%</label>
+          <label className="sp-opt">{t('Memory over')} <input className="sp-num" aria-label={t('Memory alert limit in percent')} inputMode="numeric" defaultValue={cfg.mem} key={'m' + resetN} onBlur={setNum('mem', 1, 100)} />%</label>
+          <label className="sp-opt">{t('Certificate under')} <input className="sp-num" aria-label={t('Certificate alert limit in days')} inputMode="numeric" defaultValue={cfg.certDays} key={'c' + resetN} onBlur={setNum('certDays', 1, 90)} /> {t('days')}</label>
+          <button onClick={() => { setFleetAlertConfig({...DEFAULT_ALERT_CONFIG, notify: cfg.notify}); setResetN(x => x + 1) }}>{t('Default limits')}</button>
+        </div>
+        <div className="sp-note">{t('A server counts as down after two failed checks in a row. With desktop notifications on, the servers are checked every minute while another page or another app is in front.')}</div>
+      </Card>
+      <Card title={t('Do on several servers')} right={job ? <button disabled={working} onClick={() => setJob(null)}>{t('Clear')}</button> : undefined}>
+        <div className="sp-bar">
+          <label className="sp-opt"><input type="checkbox" checked={list.length > 0 && picked.length === list.length} onChange={e => setPicked(e.target.checked ? list.map(h => h.id) : [])} /> {t('Select all')}</label>
+          <span className="sp-os">{t('{n} selected', {n: picked.length})}</span>
+          <button disabled={picked.length === 0 || working} onClick={() => void doAll('updates')}>{t('Look at the updates')}</button>
+          <button disabled={picked.length === 0 || working} onClick={() => void doAll('renew')}>{t('Renew certificates')}</button>
+          <button className="danger" disabled={picked.length === 0 || working} onClick={() => void doAll('install')}>{t('Install updates')}</button>
+        </div>
+        {job && (
+          <div className="sp-table"><table>
+            <tbody>
+              {list.filter(h => h.id in job.rows).map(h => {
+                const r = job.rows[h.id]
+                return (
+                  <tr key={h.id}>
+                    <td><b>{h.label}</b></td>
+                    <td>{r === 'running' ? <span className="sp-pill">{t('Working…')}</span>
+                      : r.error ? <span className="sp-pill bad" title={r.error}>{t('Failed')}</span>
+                      : job.action === 'updates' ? (r.manager ? <span className={'sp-pill ' + (r.security > 0 ? 'bad' : r.count > 0 ? 'warn' : 'ok')}>{r.count === 0 ? t('Up to date') : t('{n} updates, {s} security', {n: r.count, s: r.security})}</span> : <span className="sp-pill">{t('No package manager')}</span>)
+                      : job.action === 'install' ? <span className="sp-pill warn">{t('Started')}</span>
+                      : <span className="sp-pill ok">{t('Done')}</span>}
+                      {r !== 'running' && r.reboot_required && <> <span className="sp-pill warn">{t('Needs a reboot')}</span></>}
+                    </td>
+                    <td className="sp-note">{r !== 'running' && (r.error || (job.action === 'renew' ? r.output.split('\n').slice(-1)[0] : job.action === 'install' ? t('Follow it in the Maintenance tab of its panel.') : ''))}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table></div>
+        )}
+        <div className="sp-note">{t('Tick servers in the list below. Looking at the updates changes nothing; installing them starts in the background and is followed in each panel. Each server gets a short connection of its own.')}</div>
+      </Card>
       <h3 className="sec-title">{t('Fleet')}</h3>
       <div className="sp-table"><table>
         <thead><tr><th>{t('Server')}</th><th>{t('Status')}</th><th className="n">{t('CPU')}</th><th className="n">{t('Memory')}</th><th className="n">{t('Disk /')}</th><th className="n">{t('Load average')}</th><th>{t('Services')}</th><th>{t('Uptime')}</th><th /></tr></thead>
@@ -98,7 +196,7 @@ export function FleetPage({hosts, onPanel}: {hosts: Host[]; onPanel(h: Host): vo
             const o = r && !r.error ? r.overview : null
             return (
               <tr key={h.id}>
-                <td><b>{h.label}</b><div className="sp-note m">{h.hostname}</div></td>
+                <td><label className="sp-opt"><input type="checkbox" aria-label={t('Select {name}', {name: h.label})} checked={picked.includes(h.id)} onChange={e => setPicked(p => (e.target.checked ? [...p, h.id] : p.filter(x => x !== h.id)))} /><b>{h.label}</b></label><div className="sp-note m">{h.hostname}</div></td>
                 <td>
                   {row.state !== 'done' ? <span className="sp-pill">{row.state === 'checking' ? t('Checking…') : t('Waiting')}</span>
                     : r?.error ? <span className="sp-pill bad" title={r.error}>{t('Down')}</span>

@@ -3,14 +3,15 @@ import {useBackend} from '../backend'
 import {useT, useTn, type TFn} from '../i18n'
 import {useConfirm} from '../ui/Confirm'
 import {useToast} from '../ui/Toast'
-import {IconDownload, IconPower, IconTerminal} from '../ui/Icons'
+import {IconDownload, IconFolder, IconPower, IconTerminal} from '../ui/Icons'
+import {openInSftp} from '../sftp/openRequest'
 import {Select} from '../ui/Select'
 import {formatBytes} from '../sftp/format'
 import {errMsg} from '../util'
-import {actionQuestion, Err, stackQuestion, Toolbar, useLoad, useServerConnection, type ServerAction, type StackAction, FilterInput} from './shared'
+import {actionQuestion, Card, Err, stackQuestion, Toolbar, useLoad, useServerConnection, type ServerAction, type ServiceAction, type StackAction, FilterInput} from './shared'
 import {ansiSpans, stripAnsi} from '../ansi'
 import {backupLevel, certLevel, formatRate, formatUptime, level, logLevel, pct} from './format'
-import {Docker} from './Docker'
+import {Docker, RowMenu} from './Docker'
 import {addSample, bucketSeries, loadHistory, MINUTE, saveHistory, type HistPoint, type Series} from './history'
 import {Web} from './Web'
 import {Maintenance} from './Maintenance'
@@ -79,6 +80,7 @@ export function ServerPanel({host, visible, onAccess, onShell}: {host: Host; vis
         <h1>{host.label}</h1>
         <span>{host.username ? host.username + '@' : ''}{host.hostname}{host.port !== 22 ? ':' + host.port : ''}</span>
         {phase === 'ready' && sid && <button className="sp-reboot" onClick={reboot} title={t('Restart the server')}><IconPower size={14} /> {t('Reboot')}</button>}
+        {phase === 'ready' && <button className="sp-access" onClick={() => openInSftp(host)} title={t('Browse the files of this host in the SFTP tab')}><IconFolder size={14} /> {t('Files')}</button>}
         {onAccess && <button className="sp-access" onClick={onAccess} title={t('Open a terminal on this host in a new tab')}><IconTerminal size={14} /> {t('Access host')}</button>}
       </div>
       {phase === 'ready' && sid ? (
@@ -113,7 +115,7 @@ function Ready({sid, host, visible, onAccess, onShell, section, setSection, sour
             {section === 'web' && <Web sid={sid} onLogs={(kind, name) => showLogs({kind, name})} />}
             {section === 'logs' && <Logs sid={sid} visible={visible} source={source} onSource={setSource} k8sCtx={k8sCtx} k8sNs={k8sNs} />}
             {section === 'ports' && <Ports sid={sid} sshPort={host.port} />}
-            {section === 'maintenance' && <Maintenance sid={sid} />}
+            {section === 'maintenance' && <Maintenance sid={sid} host={host} />}
             {section === 'security' && <Security sid={sid} />}
             {section === 'users' && <Users sid={sid} />}
             {section === 'schedule' && <Schedule sid={sid} host={host} onLogs={(kind, name) => showLogs({kind, name})} />}
@@ -206,8 +208,7 @@ function Overview({sid, host, feed, onGo}: {sid: string; host: Host; feed: Feed;
         <div className="sp-note">{span === '30m' ? t('The charts show the last {n} min while this tab is open.', {n: minutes}) : t('Read while this tab is open; a gap is a time it was closed.')}</div>
       </div>
       <div className="sp-grid sp-grid-2">
-        <div className="sp-card">
-          <h3>{t('Needs attention')}</h3>
+        <Card title={t('Needs attention')}>
           {attention.length === 0 && <div className="sp-note">{units ? t('Nothing needs attention.') : t('Loading…')}</div>}
           {attention.map(a => (
             <div key={a.key} className="sp-attn">
@@ -215,9 +216,8 @@ function Overview({sid, host, feed, onGo}: {sid: string; host: Host; feed: Feed;
               {a.go !== 'overview' && <button onClick={() => onGo(a.go)}>{t('Open')}</button>}
             </div>
           ))}
-        </div>
-        <div className="sp-card">
-          <h3>{t('Details')}</h3>
+        </Card>
+        <Card title={t('Details')}>
           <table className="sp-kv"><tbody>
             <tr><td>{t('System')}</td><td>{o.os}</td></tr>
             <tr><td>{t('Kernel')}</td><td>{o.kernel}</td></tr>
@@ -225,7 +225,7 @@ function Overview({sid, host, feed, onGo}: {sid: string; host: Host; feed: Feed;
             <tr><td>{t('Uptime')}</td><td>{formatUptime(o.uptime_sec)}</td></tr>
           </tbody></table>
           {!o.root && <div className="sp-note">{t('Changes use sudo without a password. If the login cannot, they fail with the server\'s message.')}</div>}
-        </div>
+        </Card>
       </div>
     </div>
   )
@@ -307,9 +307,9 @@ function Services({sid, onLogs}: {sid: string; onLogs(name: string): void}) {
     const q = filter.trim().toLowerCase()
     return (data ?? []).filter(u => !q || u.name.toLowerCase().includes(q) || u.description.toLowerCase().includes(q))
   }, [data, filter])
-  const act = async (u: ServerUnit, action: ServerAction) => {
+  const act = async (u: ServerUnit, action: ServiceAction) => {
     const q = actionQuestion(t, 'service', action, u.name)
-    if (!(await confirm(q.message, {confirmLabel: q.label, danger: action !== 'start'}))) return
+    if (!(await confirm(q.message, {confirmLabel: q.label, danger: action !== 'start' && action !== 'enable'}))) return
     setWorking(u.name)
     try { await be.server.serviceAction(sid, u.name, action); toast.info(t('{name}: done', {name: u.name})) } catch (e) { toast.error(errMsg(e)) }
     setWorking('')
@@ -330,13 +330,14 @@ function Services({sid, onLogs}: {sid: string; onLogs(name: string): void}) {
                 <td>{u.active === 'failed' ? <span className="sp-pill bad">{t('Failed')}</span> : running ? <span className="sp-pill ok">{t('Running')}</span> : <span className="sp-pill">{t('Stopped')}</span>}</td>
                 <td className="sp-note">{u.enabled === 'enabled' ? t('Starts on boot') : t('Does not start on boot')}</td>
                 <td><div className="sp-acts">
-                  {running ? (
-                    <>
-                      <button aria-busy={working === u.name} disabled={working === u.name} onClick={() => void act(u, 'restart')}>{t('Restart')}</button>
-                      <button className="danger" aria-busy={working === u.name} disabled={working === u.name} onClick={() => void act(u, 'stop')}>{t('Stop')}</button>
-                    </>
-                  ) : <button className="primary" aria-busy={working === u.name} disabled={working === u.name} onClick={() => void act(u, 'start')}>{t('Start')}</button>}
-                  <button onClick={() => onLogs(u.name)}>{t('Logs')}</button>
+                  {running
+                    ? <button aria-busy={working === u.name} disabled={working === u.name} onClick={() => void act(u, 'restart')}>{t('Restart')}</button>
+                    : <button className="primary" aria-busy={working === u.name} disabled={working === u.name} onClick={() => void act(u, 'start')}>{t('Start')}</button>}
+                  <RowMenu name={u.name} items={[
+                    ...(running ? [{label: t('Stop'), danger: true, disabled: working === u.name, run: () => void act(u, 'stop')}] : []),
+                    ...(u.enabled === 'enabled' || u.enabled === 'disabled' ? [{label: u.enabled === 'enabled' ? t('Disable on boot') : t('Enable on boot'), disabled: working === u.name, run: () => void act(u, u.enabled === 'enabled' ? 'disable' : 'enable')}] : []),
+                    {label: t('Logs'), run: () => onLogs(u.name)},
+                  ]} />
                 </div></td>
               </tr>
             )
