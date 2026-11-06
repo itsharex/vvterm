@@ -53,6 +53,10 @@ export interface Backend {
     deleteHost(id: string): Promise<void>
     /** keeps the Telnet password of a host in the vault (empty forgets it) */
     setTelnetPassword(hostId: string, password: string): Promise<void>
+    /** keeps the FTP password of a host in the vault (empty forgets it) */
+    setFtpPassword(hostId: string, password: string): Promise<void>
+    /** starts the Remote Desktop client of this computer on a host that has RDP turned on */
+    openRdp(hostId: string): Promise<void>
   }
   session: {
     open(hostId: string, cols: number, rows: number): Promise<string>
@@ -108,6 +112,11 @@ export interface Backend {
     clearCache(): Promise<CacheReport>
     /** the folder session logs are written to now (the chosen one, else the default) */
     sessionLogFolder(): Promise<string>
+  }
+  /** a path to the VNC server of a host, for the viewer in a tab: connect a WebSocket to the url; the VNC password is typed in the viewer */
+  vnc: {
+    open(hostId: string, promptKey: string): Promise<{sid: string; url: string; host: string}>
+    close(sid: string): Promise<void>
   }
   sftp: {
     open(hostId: string, promptKey: string): Promise<SftpInfo>
@@ -511,6 +520,8 @@ export function wailsBackend(): Backend {
       saveHost: h => u('HostService', 'SaveHost', h),
       deleteHost: id => u('HostService', 'DeleteHost', id),
       setTelnetPassword: (id, pw) => u('HostService', 'SetTelnetPassword', id, pw),
+      setFtpPassword: (id, pw) => u('HostService', 'SetFTPPassword', id, pw),
+      openRdp: id => u('HostService', 'OpenRDP', id),
     },
     session: {
       open: (h, c, r) => u('SessionService', 'Open', h, c, r),
@@ -556,6 +567,10 @@ export function wailsBackend(): Backend {
       reset: () => u('SettingsService', 'ResetSettings'),
       clearCache: () => u('SettingsService', 'ClearCache'),
       sessionLogFolder: () => u('SettingsService', 'SessionLogFolder'),
+    },
+    vnc: {
+      open: (h, k) => u('VncService', 'Open', h, k),
+      close: s => u('VncService', 'Close', s),
     },
     sftp: {
       open: (h, k) => u('SftpService', 'Open', h, k),

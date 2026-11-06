@@ -32,6 +32,9 @@ async function unlock(be: ReturnType<typeof makeFake>) {
 
 const hostCard = (name: string) => screen.getByText(name, {selector: '.label'})
 
+// the VNC viewer draws on a canvas, which jsdom does not have: the App tests only see that its tab opens
+vi.mock('@novnc/novnc', () => ({default: class extends EventTarget { scaleViewport = false; resizeSession = false; background = ''; viewOnly = false; disconnect() {} focus() {} }}))
+
 describe('App', () => {
   it('starts on the unlock screen and shows hosts after unlocking', async () => {
     const be = setup()
@@ -1444,18 +1447,65 @@ describe('App: moving a host into a group by dragging', () => {
 })
 
 describe('App: ask which protocol to use', () => {
-  it('with the setting on, a plain host asks too; Telnet and Mosh are shown but cannot be picked when unavailable', async () => {
+  it('with the setting on, a plain host asks too; Telnet is not offered until the host has it', async () => {
     const be = setup({settings: {...DEFAULT_SETTINGS, ask_protocol: true}} as never)
     await unlock(be)
     await userEvent.dblClick(hostCard('web-1'))
     expect(screen.getByRole('radiogroup', {name: 'Protocol'})).toBeInTheDocument()
     expect(screen.getByRole('radio', {name: /SSH/})).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('radio', {name: /Mosh/})).toHaveAttribute('aria-disabled', 'true')
-    expect(screen.getByRole('radio', {name: /Telnet/})).toHaveAttribute('aria-disabled', 'true')
-    await userEvent.click(screen.getByRole('radio', {name: /Telnet/}))
-    expect(screen.getByRole('radio', {name: /SSH/})).toHaveAttribute('aria-checked', 'true') // the click did nothing
+    expect(screen.queryByRole('radio', {name: /Telnet/})).toBeNull()
     await userEvent.click(screen.getByRole('button', {name: 'Continue'}))
     expect(await screen.findByTestId('terminal')).toHaveAttribute('data-host', 'h1')
+  })
+
+  it('FTP is files, not a terminal: choosing it closes the question and opens the host (ftp:) in the SFTP tab', async () => {
+    const be = setup({settings: {...DEFAULT_SETTINGS, ask_protocol: true}, hosts: [host({id: 'h1', label: 'web-1', ftp_enabled: true, ftp_port: 21, ftp_security: 'explicit'} as never)]} as never)
+    await unlock(be)
+    await userEvent.dblClick(hostCard('web-1'))
+    await userEvent.click(screen.getByRole('radio', {name: /FTPS/}))
+    await userEvent.click(screen.getByRole('button', {name: 'Continue'}))
+    await waitFor(() => expect(be.state.calls.some(c => c[0] === 'sftp.open' && c[1] === 'ftp:h1')).toBe(true))
+    expect(screen.queryByRole('radiogroup', {name: 'Protocol'})).toBeNull() // the question went away with its tab
+    expect(screen.queryByTestId('terminal')).toBeNull()
+  })
+
+  it('RDP starts the system client for the host and closes the question; a failure is shown', async () => {
+    const be = setup({settings: {...DEFAULT_SETTINGS, ask_protocol: true}, hosts: [host({id: 'h1', label: 'web-1', rdp_enabled: true, rdp_port: 3389} as never)]} as never)
+    await unlock(be)
+    await userEvent.dblClick(hostCard('web-1'))
+    await userEvent.click(screen.getByRole('radio', {name: /RDP/}))
+    await userEvent.click(screen.getByRole('button', {name: 'Continue'}))
+    await waitFor(() => expect(be.state.calls.some(c => c[0] === 'hosts.openRdp' && c[1] === 'h1')).toBe(true))
+    expect(screen.queryByRole('radiogroup', {name: 'Protocol'})).toBeNull()
+    be.state.server.failAction = 'no app opened the .rdp file'
+    await userEvent.dblClick(hostCard('web-1'))
+    await userEvent.click(screen.getByRole('radio', {name: /RDP/}))
+    await userEvent.click(screen.getByRole('button', {name: 'Continue'}))
+    expect(await screen.findByText(/no app opened the \.rdp file/)).toBeInTheDocument()
+  })
+
+  it('Mosh opens a terminal of its own for the host (mosh:<id>) and names the tab', async () => {
+    const be = setup({settings: {...DEFAULT_SETTINGS, ask_protocol: true}} as never)
+    await unlock(be)
+    await userEvent.dblClick(hostCard('web-1'))
+    const mosh = screen.getByRole('radio', {name: /Mosh/})
+    expect(mosh).toHaveAttribute('aria-disabled', 'false')
+    await userEvent.click(mosh)
+    await userEvent.click(screen.getByRole('button', {name: 'Continue'}))
+    expect(await screen.findByTestId('terminal')).toHaveAttribute('data-host', 'mosh:h1')
+    expect(screen.getByRole('tab', {name: /web-1 \(Mosh\)/})).toBeInTheDocument()
+  })
+
+  it('VNC opens a tab of its own that draws the screen of the host', async () => {
+    const be = setup({settings: {...DEFAULT_SETTINGS, ask_protocol: true}, hosts: [host({id: 'h1', label: 'web-1', vnc_enabled: true, vnc_port: 5900, vnc_via_ssh: true} as never)]} as never)
+    await unlock(be)
+    await userEvent.dblClick(hostCard('web-1'))
+    await userEvent.click(screen.getByRole('radio', {name: /VNC/}))
+    await userEvent.click(screen.getByRole('button', {name: 'Continue'}))
+    expect(await screen.findByRole('region', {name: 'VNC of web-1'})).toBeInTheDocument()
+    expect(screen.getByRole('tab', {name: /web-1 \(VNC\)/})).toBeInTheDocument()
+    await waitFor(() => expect(be.state.calls.some(c => c[0] === 'vnc.open' && c[1] === 'h1')).toBe(true))
+    expect(screen.queryByTestId('terminal')).toBeNull()
   })
 })
 

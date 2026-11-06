@@ -6,7 +6,7 @@
 
 ## Go (unit + integration)
 
-### `app` (71)
+### `app` (74)
 
 - TestDataDirEnvOverride
 - TestBuildWiresRealAdapters
@@ -43,6 +43,9 @@
 - TestAcceleratorFromShortcutText
 - TestMenuShowsTheCurrentShortcutsOnMac
 - TestATwoStepShortcutHasNoMenuKey
+- TestFindMoshClientTriesThePathThenTheUsualFolders
+- TestTheKeyIsInTheEnvironmentNotTheArguments
+- TestRDPCommandPerSystem
 - TestBundleRootOf
 - TestCheckBundleOnlyLetsThroughThisApplicationInOneWholePiece
 - TestTheSwapScriptWaitsForTheAppToEndThenPutsTheNewCopyInPlaceAndKeepsTheOldOne
@@ -183,6 +186,15 @@
 - TestSocks5Connect
 - TestSocks5FailureCodes
 - TestSocks5RejectsWrongVersionAndAuthOnly
+
+### `internal/ftpx` (6)
+
+- TestBrowseAndChangeFiles
+- TestUploadDownloadAndResume
+- TestCancelStopsATransferAndKeepsWhatCame
+- TestLoginErrorsAndAnonymous
+- TestExplicitAndImplicitTLSCheckTheCertificate
+- TestUnknownSecurity
 
 ### `internal/importer` (22)
 
@@ -428,7 +440,7 @@
 - TestRequestsStayOnAllowedHostsAndOverHTTPS
 - TestLatestReleaseReadsTagAndAssets
 
-### `internal/usecase` (403)
+### `internal/usecase` (418)
 
 - TestLogRecordsConnectingAndClosingATab
 - TestLogRecordsAFailedConnectionAndALostOne
@@ -501,6 +513,12 @@
 - TestRunValidatesWhatItIsGiven
 - TestOnlyTheLastRunsAreKeptAndAForgottenRunIsGone
 - TestExpandHostVars
+- TestFTPHostRules
+- TestOpenFTPUsesTheLoginAndPasswordOfTheHost
+- TestOpenFTPFallsBackToTheUserNameOfTheHostAndToAnonymous
+- TestOpenFTPRefusesWhatCannotWork
+- TestFTPSessionEndsWhenThePingFails
+- TestDeletingAHostForgetsItsFTPPassword
 - TestParseShellHistoryKeepsNewestFirstWithoutRepeats
 - TestParseShellHistoryDropsMultiLineAndSecretsAndHugeLines
 - TestHostHistoryIsOffWhenSuggestionsAreOff
@@ -665,6 +683,12 @@
 - TestQueueClosingTheSessionStopsRunningJobs
 - TestEnqueueRefusesNonsense
 - TestSyncIsNotAffectedByWhatTheKeychainHolds
+- TestRDPFileHasTheAddressAndUserAndNoPassword
+- TestOpenRDPWritesTheFileAndStartsTheClient
+- TestOpenRDPRefuses
+- TestParseMoshConnect
+- TestMoshSessionStartsTheServerOverSSHAndThenTheLocalClient
+- TestMoshReportsWhatWentWrong
 - TestParseAudit
 - TestParseLogins
 - TestCronScheduleAndCommandChecks
@@ -833,6 +857,9 @@
 - TestHealthNeedsAnUnlockedVault
 - TestSyncSendsNothingWhenTheVaultKeyIsNotTheHeadersKey
 - TestLocalEmptyIsTrueUntilThisMachineHoldsSomething
+- TestVNCDirectConnectsToTheHostAddress
+- TestVNCThroughSSHReachesTheServerOnTheHostItself
+- TestVNCRefuses
 
 ### `internal/vault` (39)
 
@@ -876,12 +903,20 @@
 - TestKeyCheckSurvivesChangePasswordAndAdopt
 - TestCheckKeyAndUnreadable
 
+### `internal/vncx` (5)
+
+- TestBridgePassesBytesBothWaysAndEndsWithTheViewer
+- TestOnlyTheSecretPathGetsIn_AndOnlyOnce
+- TestServerThatHangsUpEndsTheViewer
+- TestAServerThatCannotBeReachedIsToldToTheViewerAndTheCaller
+- TestCloseIsSafeTwiceAndStopsTheConnections
+
 ### `tools/updatesign` (2)
 
 - TestKeygenSignVerifyRoundTripAndNeverOverwritesAKey
 - TestSigningKeyFromTheEnvironmentAndBadInput
 
-**Go test functions: 803** (table-driven cases and sub-tests are extra).
+**Go test functions: 832** (table-driven cases and sub-tests are extra).
 
 ## Frontend (Vitest)
 

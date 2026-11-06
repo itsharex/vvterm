@@ -16,6 +16,8 @@ Vutty itself is released under the MIT licence (see `LICENSE`). It includes the 
 | github.com/go-ole/go-ole | v1.3.0 | MIT |
 | github.com/godbus/dbus/v5 | v5.2.2 | BSD-2-Clause |
 | github.com/google/uuid | v1.6.0 | BSD-3-Clause |
+| github.com/gorilla/websocket | v1.5.3 | BSD-2-Clause |
+| github.com/jlaffaye/ftp | v0.2.4 | ISC |
 | github.com/kr/fs | v0.1.0 | BSD-3-Clause |
 | github.com/leaanthony/go-ansi-parser | v1.6.1 | MIT |
 | github.com/leaanthony/slicer | v1.6.0 | MIT |
@@ -47,6 +49,7 @@ Vutty itself is released under the MIT licence (see `LICENSE`). It includes the 
 
 | Package | Version | Licence |
 | --- | --- | --- |
+| @novnc/novnc | 1.7.0 | MPL-2.0 |
 | @xterm/addon-fit | 0.10.0 | MIT |
 | @xterm/addon-search | 0.15.0 | MIT |
 | @xterm/addon-web-links | 0.11.0 | MIT |
@@ -376,6 +379,51 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+### github.com/gorilla/websocket v1.5.3
+
+```text
+Copyright (c) 2013 The Gorilla WebSocket Authors. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+  Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+  Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+### github.com/jlaffaye/ftp v0.2.4
+
+```text
+Copyright (c) 2011-2013, Julien Laffaye <jlaffaye@FreeBSD.org>
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ```
 
 ### github.com/kr/fs v0.1.0
@@ -3388,6 +3436,73 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+### @novnc/novnc 1.7.0
+
+```text
+noVNC is Copyright (C) 2022 The noVNC authors
+(./AUTHORS)
+
+The noVNC core library files are licensed under the MPL 2.0 (Mozilla
+Public License 2.0). The noVNC core library is composed of the
+Javascript code necessary for full noVNC operation. This includes (but
+is not limited to):
+
+    core/**/*.js
+    app/*.js
+    test/playback.js
+
+The HTML, CSS, font and images files that included with the noVNC
+source distibution (or repository) are not considered part of the
+noVNC core library and are licensed under more permissive licenses.
+The intent is to allow easy integration of noVNC into existing web
+sites and web applications.
+
+The HTML, CSS, font and image files are licensed as follows:
+
+    *.html                     : 2-Clause BSD license
+
+    app/styles/*.css           : 2-Clause BSD license
+
+    app/styles/Orbitron*       : SIL Open Font License 1.1
+                                 (Copyright 2009 Matt McInerney)
+
+    app/images/                : Creative Commons Attribution-ShareAlike
+                                 http://creativecommons.org/licenses/by-sa/3.0/
+
+Some portions of noVNC are copyright to their individual authors.
+Please refer to the individual source files and/or to the noVNC commit
+history: https://github.com/novnc/noVNC/commits/master
+
+The are several files and projects that have been incorporated into
+the noVNC core library. Here is a list of those files and the original
+licenses (all MPL 2.0 compatible):
+
+    core/base64.js          : MPL 2.0
+
+    core/des.js             : Various BSD style licenses
+
+    vendor/pako/            : MIT
+
+Any other files not mentioned above are typically marked with
+a copyright/license header at the top of the file. The default noVNC
+license is MPL-2.0.
+
+The following license texts are included:
+
+    docs/LICENSE.MPL-2.0
+    docs/LICENSE.OFL-1.1
+    docs/LICENSE.BSD-3-Clause (New BSD)
+    docs/LICENSE.BSD-2-Clause (Simplified BSD / FreeBSD)
+    vendor/pako/LICENSE (MIT)
+
+Or alternatively the license texts may be found here:
+
+    http://www.mozilla.org/MPL/2.0/
+    http://scripts.sil.org/OFL
+    http://en.wikipedia.org/wiki/BSD_licenses
+    https://opensource.org/licenses/MIT
 ```
 
 ### @xterm/addon-fit 0.10.0

@@ -353,6 +353,8 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       },
       deleteHost: async i => { state.hosts = state.hosts.filter(h => h.id !== i) },
       setTelnetPassword: async (i, pw) => { rec('hosts.setTelnetPassword', i, pw) },
+      setFtpPassword: async (i, pw) => { rec('hosts.setFtpPassword', i, pw) },
+      openRdp: async i => { rec('hosts.openRdp', i); if (state.server.failAction) throw new Error(state.server.failAction) },
     },
     session: {
       open: async (h, c, r) => { rec('session.open', h, c, r); return id('s') },
@@ -400,6 +402,10 @@ export function makeFake(init: Partial<Fake['state']> = {}): Fake {
       reset: async () => { rec('settings.reset'); const {account_name, account_email, sync_url} = state.settings; state.settings = {...DEFAULT_SETTINGS, font_family: 'monospace', account_name, account_email, sync_url}; return state.settings },
       clearCache: async () => { rec('settings.clearCache'); return {...state.cache} },
       sessionLogFolder: async () => state.settings.session_log_dir || '/Users/me/Library/Application Support/vutty/session-logs',
+    },
+    vnc: {
+      open: async (h, k) => { rec('vnc.open', h, k); if (state.server.failAction) throw new Error(state.server.failAction); return {sid: 'vnc1', url: 'ws://127.0.0.1:1/secret', host: h} },
+      close: async s => { rec('vnc.close', s) },
     },
     sftp: {
       open: async (h, k) => { rec('sftp.open', h, k); return {sid: id('sf'), home: '/', host: state.hosts.find(x => x.id === h)?.label ?? 'host'} },

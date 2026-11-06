@@ -94,6 +94,24 @@ type Host struct {
 	// vault (see TelnetSecretRef). TelnetEncoding is "" or "utf-8" (the default), or "iso-8859-1".
 	TelnetUsername string `json:"telnet_username,omitempty"`
 	TelnetEncoding string `json:"telnet_encoding,omitempty"`
+	// FTP: the host can also be reached with FTP (plain, or FTPS: explicit TLS or implicit TLS) on FTPPort, to browse and
+	// transfer files in the SFTP tab. Plain FTP is unencrypted: opt in per host. FTPUsername is the login (empty: the host's user name);
+	// the password is in the vault (see FTPSecretRef).
+	FTPEnabled  bool   `json:"ftp_enabled,omitempty"`
+	FTPPort     int    `json:"ftp_port,omitempty"`
+	FTPSecurity string `json:"ftp_security,omitempty"` // "" (plain), "explicit" (FTPS, AUTH TLS) or "implicit" (FTPS on its own port)
+	FTPUsername string `json:"ftp_username,omitempty"`
+	// RDP: the host can also be reached with Remote Desktop on RDPPort; Vutty opens the system's own client for it (it does not draw the
+	// desktop itself). The password is never kept: the client asks for it.
+	RDPEnabled  bool   `json:"rdp_enabled,omitempty"`
+	RDPPort     int    `json:"rdp_port,omitempty"`
+	RDPUsername string `json:"rdp_username,omitempty"`
+	// VNC: the host can also be reached with VNC on VNCPort, drawn in a tab of the app. VNCViaSSH takes the connection through the SSH login
+	// (the usual way: a VNC server listens on the host itself and has no encryption of its own). The VNC password is asked for in the tab
+	// and never kept.
+	VNCEnabled bool `json:"vnc_enabled,omitempty"`
+	VNCPort    int  `json:"vnc_port,omitempty"`
+	VNCViaSSH  bool `json:"vnc_via_ssh,omitempty"`
 	// TerminalTheme is this host's own colour theme (an id from the UI catalogue); empty follows Settings.
 	TerminalTheme string `json:"terminal_theme,omitempty"`
 	// AIPolicy is the AI assistant switch for this host: "" (off on prod hosts, ask elsewhere), off, ask or on.
@@ -227,3 +245,6 @@ type ActivityFilter struct {
 
 // TelnetSecretRef is where the vault keeps the Telnet password of a host.
 func TelnetSecretRef(hostID string) string { return "telnet:" + hostID }
+
+// FTPSecretRef is where the vault keeps the FTP password of a host.
+func FTPSecretRef(hostID string) string { return "ftp:" + hostID }

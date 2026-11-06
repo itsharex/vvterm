@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"net"
 	"time"
 
 	"vutty/internal/domain"
@@ -173,3 +174,43 @@ type ToolGateway interface {
 type MCPConnector interface {
 	Connect(s assistant.MCPServer, env, headers map[string]string) (assistant.ToolServer, error)
 }
+
+// FTPConfig is how to reach an FTP server: Security is "" (plain), "explicit" (FTPS, AUTH TLS) or "implicit" (TLS from the first byte).
+type FTPConfig struct {
+	Addr, Security, User, Password string
+}
+
+// FTPOpener connects to an FTP or FTPS server and gives its files as a RemoteFS. The result may also have a `Ping() error`,
+// which the SFTP service calls now and then to keep the connection from being closed for idleness.
+type FTPOpener func(cfg FTPConfig) (RemoteFS, error)
+
+// RDPSpec is what the system's Remote Desktop client is started with: the host, the port, the user name (may be empty) and a
+// .rdp file with the same, which some clients take instead of arguments.
+type RDPSpec struct {
+	Host, User, File string
+	Port             int
+}
+
+// RDPLauncher starts the Remote Desktop client of this computer on a host and returns when it has been started (not when it ends).
+type RDPLauncher func(spec RDPSpec) error
+
+// MoshTarget is where a mosh-server waits: its address (an IP, as mosh-client takes one), its UDP port and the key of the session.
+type MoshTarget struct {
+	IP   string
+	Port int
+	Key  string
+}
+
+// MoshOpener starts the Mosh client of this computer on a target, in a terminal. The key goes to the client in its environment,
+// never on a command line.
+type MoshOpener func(t MoshTarget, cols, rows int, onData func([]byte)) (Shell, error)
+
+// VNCBridge is a path from the page of the app to a VNC server: a WebSocket address on this computer that the viewer connects to once.
+type VNCBridge interface {
+	Address() string
+	Close()
+}
+
+// VNCBridgeStarter opens a VNCBridge. dial opens the connection to the VNC server when the viewer connects; onEnd is told once
+// when the viewer or the server hangs up (nil for an ordinary end).
+type VNCBridgeStarter func(dial func() (net.Conn, error), onEnd func(error)) (VNCBridge, error)
