@@ -19,6 +19,13 @@ if [ ! -d "$APP" ]; then
   exit 1
 fi
 
+# A bundle without its executable is "damaged or incomplete" to macOS (and
+# offers no "Open Anyway"), so refuse to package one.
+if [ ! -x "$APP/Contents/MacOS/vutty" ]; then
+  echo "error: $APP/Contents/MacOS/vutty is missing or not executable (run 'make build' or pass --build)" >&2
+  exit 1
+fi
+
 mkdir -p "$OUT"
 rm -f "$OUT/$BASE.zip" "$OUT/$BASE.dmg"
 
